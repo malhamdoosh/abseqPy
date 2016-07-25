@@ -13,3 +13,5 @@ igLibraryQC 1.0.0 (8-6-2016)
 - added chain argument that takes 'hv', 'kv' or 'lv'
 - changed IGHV --> IGV
 - replaced distribution with abundance
+- changed "upighv" to "secretion"
+- added "identify" command

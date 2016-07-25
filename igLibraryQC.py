@@ -111,7 +111,7 @@ def parseArgs(args):
     else:
         argVals['bitscore'] = extractRanges(argVals['bitscore'], noFiles)
         
-    if (argVals['task'] in ['upighv', '5utr']):
+    if (argVals['task'] in ['secretion', '5utr']):
         if (argVals.get('upstream', None) is None):
             argVals['upstream'] = [1, Inf] 
         else:
@@ -120,7 +120,7 @@ def parseArgs(args):
         if (argVals.get('sites', None) is None):
             raise Exception("Restriction sites should be provided.")            
         argVals['sites'] = abspath(argVals['sites'])
-    if (argVals['task'] == 'cdrs'):
+    if (argVals['task'] == 'diversity'):
         argVals['5end'] = argVals.get('5end', None)
         if argVals['5end']:
             argVals['5end'] = abspath(argVals['5end'])
@@ -182,11 +182,41 @@ def main():
     try:
         argsVals = parseArgs(sys.argv)
         #print(argsVals)        
-         
-        if (argsVals['task'] == 'abundance'): 
+        if (argsVals['task'] == 'identify'): 
+            printFormattedTitle("Clone Identification and Classification")
+            igRepertoire = IgRepertoire(argsVals)        
+            igRepertoire.identifyClones()
+        elif (argsVals['task'] == 'abundance'): 
             printFormattedTitle("IGV Abundance and QC Plots")
             igRepertoire = IgRepertoire(argsVals)
-            igRepertoire.analyzeAbundance() # estimateIGVDist()
+            igRepertoire.analyzeAbundance() # estimateIGVDist()  
+        elif (argsVals['task'] == 'productivity'):
+            printFormattedTitle("IGV Abundance and QC Plots")
+            igRepertoire = IgRepertoire(argsVals)        
+            igRepertoire.analyzeProductivity()  
+        elif (argsVals['task'] == 'diversity'):
+            printFormattedTitle("CDR Sequence Analysis")
+            igRepertoire = IgRepertoire(argsVals)    
+            igRepertoire.analyzeDiversity()       
+        elif (argsVals['task'] == 'secretion'):
+            #analyze the sequences upstream of the IGV genes
+            igRepertoire = IgRepertoire(argsVals)        
+            igRepertoire.analyzeSecretionSignal()
+        elif (argsVals['task'] == '5utr'):
+            igRepertoire = IgRepertoire(argsVals)        
+            igRepertoire.analyze5UTR()        
+        elif (argsVals['task'] == 'enzymesimple'):
+            printFormattedTitle("Simple Restriction Sites Analysis")
+            igRepertoire = IgRepertoire(argsVals)    
+            igRepertoire.analyzeRestrictionSitesSimple()
+        elif (argsVals['task'] == 'enzymes'):
+            printFormattedTitle("Comprehensive Restriction Sites Analysis")
+            igRepertoire = IgRepertoire(argsVals)    
+            igRepertoire.analyzeRestrictionSites()
+        elif (argsVals['task'] == 'primer'):
+            printFormattedTitle("Primer Specificity Analysis")
+            igRepertoire = IgRepertoire(argsVals)    
+            igRepertoire.analyzePrimerSpecificity()
         elif (argsVals['task'] == 'seqlen'):
             printFormattedTitle("Sequence Length Distribution")
             # calculate the distribution of sequence lengths of a sample
@@ -202,25 +232,6 @@ def main():
             os.system("mkdir " + argsVals['o'])
             outputFile =  argsVals['o'] + argsVals['name'] + '_length_dist_classes.png'
             plotSeqLenDistClasses(argsVals['f1'], argsVals['name'], outputFile, argsVals['fmt'])
-        elif (argsVals['task'] == 'upighv'):
-            #analyze the sequences upstream of the IGV genes
-            igRepertoire = IgRepertoire(argsVals)        
-            igRepertoire.analyzeSecretionSignal()
-        elif (argsVals['task'] == '5utr'):
-            igRepertoire = IgRepertoire(argsVals)        
-            igRepertoire.analyze5UTR()
-        elif (argsVals['task'] == 'cdrs'):
-            printFormattedTitle("CDR Sequence Analysis")
-            igRepertoire = IgRepertoire(argsVals)    
-            igRepertoire.analyzeCDRs()
-        elif (argsVals['task'] == 'enzymesimple'):
-            printFormattedTitle("Simple Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)    
-            igRepertoire.analyzeRestrictionSitesSimple()
-        elif (argsVals['task'] == 'enzymes'):
-            printFormattedTitle("Comprehensive Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)    
-            igRepertoire.analyzeRestrictionSites()
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
     

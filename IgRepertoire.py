@@ -43,11 +43,11 @@ class IgRepertoire:
         self.format = args['fmt']
         self.chain = args['chain']
         self.name = args['name']
-        if (args['task'] in ['upighv', '5utr']):
+        if (args['task'] in ['secretion', '5utr']):
             self.upstream = args['upstream']
         if (args['task'] in ['enzymes', 'enzymesimple']):
             self.sitesFile = args['sites']
-        if (args['task'] == 'cdrs'):
+        if (args['task'] == 'diversity'):
             self.end5 = args['5end']
             self.end3 = args['3end']
             self.actualQstart = args['actualqstart']            
@@ -64,6 +64,11 @@ class IgRepertoire:
         
         self.seqsPerFile = 10.0 ** 5  / 2
         
+    def identifyClones(self):
+        
+    def analyzeProductivity(self):
+        
+    def analyzePrimerSpecificity(self):
         
     def analyzeIGSeqRead(self, fastaFile, bitScore, alignLen, subjStart,
                                operation, seqType='dna'):        
@@ -1038,7 +1043,7 @@ class IgRepertoire:
                     raise
         print("\t\tRestricting sites have been loaded")
                 
-    def analyzeCDRs(self):
+    def analyzeDiversity(self):
         print("The diversity of the CDRs of the VH regions is being analyzed ... ")
 #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
 #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]      
