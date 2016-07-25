@@ -1,0 +1,15 @@
+igLibraryQC 1.0.0 (1-6-2015)
+----------------------------
+- Released: the first version
+
+
+igLibraryQC 1.0.0 (8-6-2016)
+----------------------------
+- self.seqsPerFile = 10.0 ** 5  / 2
+- Added support to IGKV and IGLV sequences to analyze the light chains 
+- changed class name IGHVDist --> IgRepertoire
+- changed method name analyzeIGSequence --> analyzeAbundance
+- changed task ighvdist --> abundance 
+- added chain argument that takes 'hv', 'kv' or 'lv'
+- changed IGHV --> IGV
+- replaced distribution with abundance

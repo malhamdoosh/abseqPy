@@ -1,0 +1,12 @@
+## Analyze large FASTA file with igblast
+1. split the file into multiple files (each 10^5 sequences)
+- create a directory with the same name as the original file name (without .fasta)
+- number the files 0-N 
+2. Build a queue of file names
+3. Assign a file to a Process
+ - Run igblast on each partition
+ - Calculate the IGHV distribution 
+ - Insert results into the results queue
+4. Collect all results into one list
+
+## t
