@@ -1,5 +1,5 @@
 from multiprocessing import Process
-from NGSutils import runIgblastn, runIgblastp
+from igRepUtils import runIgblastn, runIgblastp
 from collections import Counter
 from pandas.core.frame import DataFrame
 import sys
@@ -56,13 +56,14 @@ def extractIGVStats(blastOutput, bitScore, alignLen, subjStart):
 #                                     print(line)                              
                                 igvDist[hit[2]] = igvDist.get(hit[2], 0) + 1
                                 # %identity, Alignment Length, bit-Score,q.start, s.start,
-                                stats.append([float(hit[3]), 
+                                stats.append([queryId, hit[2], float(hit[3]), 
                                               align, score,
                                               int(hit[8]), sStart, int(hit[5]), int(hit[7])])
                             else:
                                 filteredIDs.append(queryId)
     if stats != []:
-        stats = DataFrame(stats, columns = ['identity', 'alignlen', 'bitscore', 'qstart', 
+        stats = DataFrame(stats, columns = ['queryid', 'vgene', 'identity', 
+                        'alignlen', 'bitscore', 'qstart', 
                          'sstart', 'mismatches', 'gaps'])
     else:
         stats = DataFrame()                                                                                 
@@ -126,6 +127,7 @@ def extractIGVAlignInfo(blastOutput, bitScore, alignLen, subjStart):
 
 
 CDR_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
+              'identity', 'alignlen', 'bitscore',
                     'dgene', 'dqstart', 'dstart', 'dmismatches', 'dgaps', 
                     'jgene', 'jqstart', 'jqend', 'jstart', 'jmismatches', 'jgaps',  
                     'strand', 'stopcodon', 'v-jframe',
@@ -163,6 +165,7 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
     print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
     # process igblast output and extract top hit 
     cdrinfo = []
+    filteredIDs = []
     line = ""
     
     warning = False
@@ -246,6 +249,9 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                 if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
                     align >= alignLen[0] and align <= alignLen[1] and # check alignment length
                     sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
+                    cdrRecord['identity'] = float(hit[3])
+                    cdrRecord['aliglen'] = align
+                    cdrRecord['bitscore'] = score
                     cdrRecord['vqstart'] = to_int(hit[8])
                     cdrRecord['vstart'] = sStart
                     cdrRecord['vmismatches'] = to_int(hit[5])
@@ -287,6 +293,8 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                         cdrRecord['jmismatches'] = to_int(hit[5])
                         cdrRecord['jgaps'] = to_int(hit[7])
                     cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
+                else:
+                    filteredIDs.append(cdrRecord['queryid'])
             except:
 #                 print(line, cdrRecord)
                 warning = True
@@ -303,24 +311,17 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
         cdrinfo = DataFrame()
     if (warning):
         print("Warning: something went wrong while parsing %s" % (blastOutput))                                                            
-    return cdrinfo
+    return (cdrinfo, filteredIDs)
 
 
 def analyzeSmallFile(fastaFile, chain, igBlastDB, bitScore, alignLen, subjStart, 
-                     operation, seqType='dna', threads=8): # , bitScore = 0
+                     seqType='dna', threads=8): # , bitScore = 0
     # Run igblast
     if seqType.lower() == 'dna':
         blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB)   
     else:
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB)
-    if (operation == 'abundance'):
-        return extractIGVStats(blastOutput, bitScore, alignLen, subjStart)
-    elif (operation == 'aligninfo'):
-        return extractIGVAlignInfo(blastOutput, bitScore, alignLen, subjStart)
-    elif (operation == 'cdrinfo'):
-        return extractCDRInfo(blastOutput, bitScore, alignLen, subjStart)
-    else:
-        return None             
+    return extractCDRInfo(blastOutput, bitScore, alignLen, subjStart)
     
 
 class IgBlastWorker(Process):

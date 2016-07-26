@@ -3,7 +3,7 @@ igLibraryQC 1.0.0 (1-6-2015)
 - Released: the first version
 
 
-igLibraryQC 1.0.0 (8-6-2016)
+igLibraryQC 1.1.1 (25-7-2016)
 ----------------------------
 - self.seqsPerFile = 10.0 ** 5  / 2
 - Added support to IGKV and IGLV sequences to analyze the light chains 
