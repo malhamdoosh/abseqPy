@@ -11,119 +11,119 @@ Email: monther.alhamdoosh@csl.com.au / m.hamdoosh@gmail.com
 
 '''
 
-def extractIGVStats(blastOutput, bitScore, alignLen, subjStart):
-    # Extract the top hits  
-    print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
-    # process igblast output and extract top hit 
-    igvDist = Counter()
-    stats = []
-    filteredIDs = []
-    line = ""
-    with open(blastOutput) as blast:                   
-        while(True):                        
-            if (not line.startswith('# Query')):
-                line = blast.readline()                       
-            if (not line):
-                break
-            if (line.startswith('# Query')):
-                queryId = line.split()[2]                
-                line = blast.readline()                
-                while(line and 
-                      not line.startswith('# Query') and
-                       not line.startswith('# Hit')):
-                    line = blast.readline()
-                    
-                if (not line.startswith('# Query')):
-                    line = blast.readline()
-                    if (line.startswith('# Fields')):
-                        line = blast.readline()
-                        noHits = int(line.split()[1])    
-                        if (noHits != 0): 
-                            # retrieve the top hit
-                            line = blast.readline()
-                            if (not line.startswith("V")): 
-                                continue
-                            hit = line.split()
-                            score = float(hit[-1]) 
-                            align = int(hit[4])   
-                            sStart = int(hit[10])
-                            if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
-                                align >= alignLen[0] and align <= alignLen[1] and # check alignment length
-                                sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
-#                                 if (hit[1].split("|")[0] != "reversed"):
-#                                     print(hit[1])                    
-#                                 if (int(hit[7]) > 0):
-#                                     print(line)                              
-                                igvDist[hit[2]] = igvDist.get(hit[2], 0) + 1
-                                # %identity, Alignment Length, bit-Score,q.start, s.start,
-                                stats.append([queryId, hit[2], float(hit[3]), 
-                                              align, score,
-                                              int(hit[8]), sStart, int(hit[5]), int(hit[7])])
-                            else:
-                                filteredIDs.append(queryId)
-    if stats != []:
-        stats = DataFrame(stats, columns = ['queryid', 'vgene', 'identity', 
-                        'alignlen', 'bitscore', 'qstart', 
-                         'sstart', 'mismatches', 'gaps'])
-    else:
-        stats = DataFrame()                                                                                 
-    return (igvDist, stats, filteredIDs)
+# def extractIGVStats(blastOutput, bitScore, alignLen, subjStart):
+#     # Extract the top hits  
+#     print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
+#     # process igblast output and extract top hit 
+#     igvDist = Counter()
+#     stats = []
+#     filteredIDs = []
+#     line = ""
+#     with open(blastOutput) as blast:                   
+#         while(True):                        
+#             if (not line.startswith('# Query')):
+#                 line = blast.readline()                       
+#             if (not line):
+#                 break
+#             if (line.startswith('# Query')):
+#                 queryId = line.split()[2]                
+#                 line = blast.readline()                
+#                 while(line and 
+#                       not line.startswith('# Query') and
+#                        not line.startswith('# Hit')):
+#                     line = blast.readline()
+#                     
+#                 if (not line.startswith('# Query')):
+#                     line = blast.readline()
+#                     if (line.startswith('# Fields')):
+#                         line = blast.readline()
+#                         noHits = int(line.split()[1])    
+#                         if (noHits != 0): 
+#                             # retrieve the top hit
+#                             line = blast.readline()
+#                             if (not line.startswith("V")): 
+#                                 continue
+#                             hit = line.split()
+#                             score = float(hit[-1]) 
+#                             align = int(hit[4])   
+#                             sStart = int(hit[10])
+#                             if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
+#                                 align >= alignLen[0] and align <= alignLen[1] and # check alignment length
+#                                 sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
+# #                                 if (hit[1].split("|")[0] != "reversed"):
+# #                                     print(hit[1])                    
+# #                                 if (int(hit[7]) > 0):
+# #                                     print(line)                              
+#                                 igvDist[hit[2]] = igvDist.get(hit[2], 0) + 1
+#                                 # %identity, Alignment Length, bit-Score,q.start, s.start,
+#                                 stats.append([queryId, hit[2], float(hit[3]), 
+#                                               align, score,
+#                                               int(hit[8]), sStart, int(hit[5]), int(hit[7])])
+#                             else:
+#                                 filteredIDs.append(queryId)
+#     if stats != []:
+#         stats = DataFrame(stats, columns = ['queryid', 'vgene', 'identity', 
+#                         'alignlen', 'bitscore', 'qstart', 
+#                          'sstart', 'mismatches', 'gaps'])
+#     else:
+#         stats = DataFrame()                                                                                 
+#     return (igvDist, stats, filteredIDs)
 
 
-def extractIGVAlignInfo(blastOutput, bitScore, alignLen, subjStart):
-    # Extract the top hits  
-    print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
-    # process igblast output and extract top hit 
-    alignInfo = []
-    line = ""
-    with open(blastOutput) as blast:                   
-        while(True):                        
-            if (not line.startswith('# Query')):
-                line = blast.readline()                       
-            if (not line):
-                break
-            if (line.startswith('# Query')):                
-                line = blast.readline()
-                while(line and 
-                      not line.startswith('# Query') and
-                       not line.startswith('# Hit')):
-                    line = blast.readline()
-                    
-                if (not line.startswith('# Query')):
-                    line = blast.readline()
-                    if (line.startswith('# Fields')):
-                        line = blast.readline()
-                        noHits = int(line.split()[1])    
-                        if (noHits != 0): 
-                            # retrieve the top hit
-                            line = blast.readline()
-                            if (not line.startswith("V")): 
-                                continue
-                            hit = line.split()
-                            score = float(hit[-1]) 
-                            align = int(hit[4])   
-                            sStart = int(hit[10])
-                            if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
-                                align >= alignLen[0] and align <= alignLen[1] and # check alignment length
-                                sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
-#                                 if (hit[1].split("|")[0] != "reversed"):
-#                                     print(hit[1])                    
-#                                 if (int(hit[5]) > 30):
-#                                     print(line)                              
-                                # QueryID, SubjID, queryStart, SubjStart, +/-, 
-                                if (hit[1].split("|")[0] == "reversed"):
-                                    alignInfo.append([hit[1].split("|")[1].strip(), hit[2],
-                                                    int(hit[8]), sStart, 'reversed'])
-                                else:
-                                    alignInfo.append([hit[1].strip(), hit[2],
-                                                    int(hit[8]), sStart, 'forward']) 
-    
-    alignInfo = DataFrame(alignInfo, 
-                          columns = ['queryid', 'subjid', 'qstart', 'sstart', 'strand'])
-    alignInfo.index = alignInfo.queryid
-    del alignInfo['queryid']
-                                                                               
-    return alignInfo
+# def extractIGVAlignInfo(blastOutput, bitScore, alignLen, subjStart):
+#     # Extract the top hits  
+#     print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
+#     # process igblast output and extract top hit 
+#     alignInfo = []
+#     line = ""
+#     with open(blastOutput) as blast:                   
+#         while(True):                        
+#             if (not line.startswith('# Query')):
+#                 line = blast.readline()                       
+#             if (not line):
+#                 break
+#             if (line.startswith('# Query')):                
+#                 line = blast.readline()
+#                 while(line and 
+#                       not line.startswith('# Query') and
+#                        not line.startswith('# Hit')):
+#                     line = blast.readline()
+#                     
+#                 if (not line.startswith('# Query')):
+#                     line = blast.readline()
+#                     if (line.startswith('# Fields')):
+#                         line = blast.readline()
+#                         noHits = int(line.split()[1])    
+#                         if (noHits != 0): 
+#                             # retrieve the top hit
+#                             line = blast.readline()
+#                             if (not line.startswith("V")): 
+#                                 continue
+#                             hit = line.split()
+#                             score = float(hit[-1]) 
+#                             align = int(hit[4])   
+#                             sStart = int(hit[10])
+#                             if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
+#                                 align >= alignLen[0] and align <= alignLen[1] and # check alignment length
+#                                 sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
+# #                                 if (hit[1].split("|")[0] != "reversed"):
+# #                                     print(hit[1])                    
+# #                                 if (int(hit[5]) > 30):
+# #                                     print(line)                              
+#                                 # QueryID, SubjID, queryStart, SubjStart, +/-, 
+#                                 if (hit[1].split("|")[0] == "reversed"):
+#                                     alignInfo.append([hit[1].split("|")[1].strip(), hit[2],
+#                                                     int(hit[8]), sStart, 'reversed'])
+#                                 else:
+#                                     alignInfo.append([hit[1].strip(), hit[2],
+#                                                     int(hit[8]), sStart, 'forward']) 
+#     
+#     alignInfo = DataFrame(alignInfo, 
+#                           columns = ['queryid', 'subjid', 'qstart', 'sstart', 'strand'])
+#     alignInfo.index = alignInfo.queryid
+#     del alignInfo['queryid']
+#                                                                                
+#     return alignInfo
 
 
 CDR_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
@@ -140,14 +140,14 @@ CDR_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
                     'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
                     ]
 
-def createCdrRecord():
+def createCloneRecord():
     cdrRecord = {}    
     for field in CDR_FIELDS:
         cdrRecord[field] =  np.nan
     return cdrRecord
 
 
-def convertCdrRecordToOrderedList(cdrRecord):    
+def convertCloneRecordToOrderedList(cdrRecord):    
     orderedList = []
     for field in CDR_FIELDS:
         orderedList.append(cdrRecord[field])
@@ -160,11 +160,11 @@ def to_int(x):
     except:
         return None
 
-def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
+def extractCDRInfo(blastOutput,):
     # Extract the top hits  
     print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
     # process igblast output and extract top hit 
-    cdrinfo = []
+    cloneAnnot = []
     filteredIDs = []
     line = ""
     
@@ -177,8 +177,8 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                     if (not line):
                         break 
                     continue            
-                cdrRecord = createCdrRecord()
-                cdrRecord['queryid'] = line.split()[2].strip()
+                cloneRecord = createCloneRecord()
+                cloneRecord['queryid'] = line.split()[2].strip()
                 # parse  V-(D)-J rearrangement   
                 line = blast.readline()
                 while(line and 
@@ -186,18 +186,20 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                        not line.startswith('# V-(D)-J rearrangement')):
                     line = blast.readline()
                 if (not line):
+                    filteredIDs.append(cloneRecord['queryid'])
                     break
                 if (line.startswith('# Query')):
+                    filteredIDs.append(cloneRecord['queryid'])
                     continue
                 line = blast.readline().strip().split('\t')
-                cdrRecord['strand'] = 'forward' if line[-1] == '+' else 'reversed'
-#                 print line, cdrRecord['strand']
+                cloneRecord['strand'] = 'forward' if line[-1] == '+' else 'reversed'
+#                 print line, cloneRecord['strand']
 #                 sys.exit()
-                cdrRecord['stopcodon'] = line[4]
-                cdrRecord['v-jframe'] = line[5]
-                cdrRecord['vgene'] = line[0].split(',')[0]
-                cdrRecord['dgene'] = line[1].split(',')[0]
-                cdrRecord['jgene'] = line[2].split(',')[0]
+                cloneRecord['stopcodon'] = line[4]
+                cloneRecord['v-jframe'] = line[5]
+                cloneRecord['vgene'] = line[0].split(',')[0]
+                cloneRecord['dgene'] = line[1].split(',')[0]
+                cloneRecord['jgene'] = line[2].split(',')[0]
                 # parse Alignment Summary between query and top germline V gene
                 line = ' '.join(line)
                 while (line and 
@@ -205,24 +207,26 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                        not line.startswith("# Alignment")):
                     line = blast.readline()
                 if (not line):
+                    filteredIDs.append(cloneRecord['queryid'])
                     break
                 if (line.startswith('# Query')):
+                    filteredIDs.append(cloneRecord['queryid'])
                     continue
                 line = blast.readline()
                 for i in range(1,4):                
                     if (line.lower().startswith('fr' + `i`)):
                         line = line.split()
-                        cdrRecord['fr%d.start' % i] = to_int(line[1])
-                        cdrRecord['fr%d.end' % i] = to_int(line[2]) 
-                        cdrRecord['fr%d.mismatches' % i] = to_int(line[5])
-                        cdrRecord['fr%d.gaps' % i] = to_int(line[6])
+                        cloneRecord['fr%d.start' % i] = to_int(line[1])
+                        cloneRecord['fr%d.end' % i] = to_int(line[2]) 
+                        cloneRecord['fr%d.mismatches' % i] = to_int(line[5])
+                        cloneRecord['fr%d.gaps' % i] = to_int(line[6])
                         line = blast.readline()
                     if (line.lower().startswith('cdr' + `i`)):
                         line = line.replace('(germline)', '').split()
-                        cdrRecord['cdr%d.start' % i] = to_int(line[1])
-                        cdrRecord['cdr%d.end' % i] = to_int(line[2]) 
-                        cdrRecord['cdr%d.mismatches' % i] = to_int(line[5])
-                        cdrRecord['cdr%d.gaps' % i] = to_int(line[6])
+                        cloneRecord['cdr%d.start' % i] = to_int(line[1])
+                        cloneRecord['cdr%d.end' % i] = to_int(line[2]) 
+                        cloneRecord['cdr%d.mismatches' % i] = to_int(line[5])
+                        cloneRecord['cdr%d.gaps' % i] = to_int(line[6])
                         line = blast.readline()
                 # parse alignment information between query and V, D and J genes
                 while (line and 
@@ -230,110 +234,105 @@ def extractCDRInfo(blastOutput, bitScore, alignLen, subjStart):
                        not line.startswith("# Fields")):
                     line = blast.readline()
                 if (not line):
+                    filteredIDs.append(cloneRecord['queryid'])
                     break
                 if (line.startswith('# Query')):
+                    filteredIDs.append(cloneRecord['queryid'])
                     continue            
                 line = blast.readline()
                 noHits = to_int(line.split()[1])    
                 if (noHits == 0):
+                    filteredIDs.append(cloneRecord['queryid'])
                     continue 
                 # retrieve the top hit
                 # parse the top V gene info
                 line = blast.readline()
                 if (not line.startswith("V")): 
+                    filteredIDs.append(cloneRecord['queryid'])
                     continue
                 hit = line.split()
                 score = float(hit[-1]) 
                 align = to_int(hit[4])   
-                sStart = to_int(hit[10])
-                if (score >= bitScore[0] and score <= bitScore[1] and # check bit-Score
-                    align >= alignLen[0] and align <= alignLen[1] and # check alignment length
-                    sStart >= subjStart[0] and sStart <= subjStart[1]):  # check subject start
-                    cdrRecord['identity'] = float(hit[3])
-                    cdrRecord['aliglen'] = align
-                    cdrRecord['bitscore'] = score
-                    cdrRecord['vqstart'] = to_int(hit[8])
-                    cdrRecord['vstart'] = sStart
-                    cdrRecord['vmismatches'] = to_int(hit[5])
-                    cdrRecord['vgaps'] = to_int(hit[7])
-                    # parse the top D gene info
+                sStart = to_int(hit[10])                
+                cloneRecord['identity'] = float(hit[3])
+                cloneRecord['alignlen'] = align              
+                cloneRecord['bitscore'] = score
+                cloneRecord['vqstart'] = to_int(hit[8])
+                cloneRecord['vstart'] = sStart
+                cloneRecord['vmismatches'] = to_int(hit[5])
+                cloneRecord['vgaps'] = to_int(hit[7])
+                # parse the top D gene info
+                line = blast.readline()
+                while (line and
+                       not line.startswith("# Query") and
+                       not line.startswith("D") and 
+                       not line.startswith("J")):
                     line = blast.readline()
-                    while (line and
-                           not line.startswith("# Query") and
-                           not line.startswith("D") and 
-                           not line.startswith("J")):
-                        line = blast.readline()
-                    if (not line):
-                        cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
-                        break
-                    if (line.startswith('# Query')):
-                        cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
-                        continue         
-                    if (line.startswith("D")):
-                        hit = line.split()
-                        cdrRecord['dqstart'] = to_int(hit[8])
-                        cdrRecord['dstart'] = to_int(hit[10])
-                        cdrRecord['dmismatches'] = to_int(hit[5])
-                        cdrRecord['dgaps'] = to_int(hit[7])
-                        while (line and
-                           not line.startswith("# Query") and
-                           not line.startswith("J")):
-                            line = blast.readline()
-                        if (not line):
-                            cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
-                            break
-                        if (line.startswith('# Query')):
-                            cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
-                            continue 
-                    if (line.startswith("J")):
-                        hit = line.split()
-                        cdrRecord['jqstart'] = to_int(hit[8])
-                        cdrRecord['jqend'] = to_int(hit[9])
-                        cdrRecord['jstart'] = to_int(hit[10])
-                        cdrRecord['jmismatches'] = to_int(hit[5])
-                        cdrRecord['jgaps'] = to_int(hit[7])
-                    cdrinfo.append(convertCdrRecordToOrderedList(cdrRecord))
-                else:
-                    filteredIDs.append(cdrRecord['queryid'])
+                if (not line):
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    break
+                if (line.startswith('# Query')):
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    continue         
+                if (line.startswith("D")):
+                    hit = line.split()
+                    cloneRecord['dqstart'] = to_int(hit[8])
+                    cloneRecord['dstart'] = to_int(hit[10])
+                    cloneRecord['dmismatches'] = to_int(hit[5])
+                    cloneRecord['dgaps'] = to_int(hit[7])
+                # parse the top J gene info
+                while (line and
+                   not line.startswith("# Query") and
+                   not line.startswith("J")):
+                    line = blast.readline()
+                if (not line):
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    break
+                if (line.startswith('# Query')):
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    continue 
+                if (line.startswith("J")):
+                    hit = line.split()
+                    cloneRecord['jqstart'] = to_int(hit[8])
+                    cloneRecord['jqend'] = to_int(hit[9])
+                    cloneRecord['jstart'] = to_int(hit[10])
+                    cloneRecord['jmismatches'] = to_int(hit[5])
+                    cloneRecord['jgaps'] = to_int(hit[7])           
+                cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord)) 
             except:
 #                 print(line, cdrRecord)
                 warning = True
-                continue
-            
-    if (len(cdrinfo) > 0):
+                continue            
+    if (len(cloneAnnot) > 0):
         # productive = no stop and in-frame
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
-        cdrinfo = DataFrame(cdrinfo, columns =  CDR_FIELDS) 
-        cdrinfo.index = cdrinfo.queryid
-        del cdrinfo['queryid']
+        cloneAnnot = DataFrame(cloneAnnot, columns =  CDR_FIELDS) 
+        cloneAnnot.index = cloneAnnot.queryid
+        del cloneAnnot['queryid']
     else:
-        cdrinfo = DataFrame()
+        cloneAnnot = DataFrame()
     if (warning):
         print("Warning: something went wrong while parsing %s" % (blastOutput))                                                            
-    return (cdrinfo, filteredIDs)
+    return (cloneAnnot, filteredIDs)
 
 
-def analyzeSmallFile(fastaFile, chain, igBlastDB, bitScore, alignLen, subjStart, 
+def analyzeSmallFile(fastaFile, chain, igBlastDB,
                      seqType='dna', threads=8): # , bitScore = 0
     # Run igblast
     if seqType.lower() == 'dna':
         blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB)   
     else:
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB)
-    return extractCDRInfo(blastOutput, bitScore, alignLen, subjStart)
+    return extractCDRInfo(blastOutput)
     
 
 class IgBlastWorker(Process):
-    def __init__(self, chain, igBlastDB, bitScore, alignLen, subjStart, operation,
+    def __init__(self, chain, igBlastDB, 
                  seqType, threads):
         super(IgBlastWorker, self).__init__() 
         self.chain = chain     
-        self.igBlastDB = igBlastDB  
-        self.bitScore = bitScore
-        self.alignLen = alignLen
-        self.subjStart = subjStart
-        self.operation = operation
+        self.igBlastDB = igBlastDB        
         self.seqType = seqType
         self.threads = threads
         self.tasksQueue = None
@@ -357,10 +356,7 @@ class IgBlastWorker(Process):
 #                 self.terminate()
                 break
             try:
-                result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB, 
-                                                     self.bitScore, self.alignLen,
-                                                     self.subjStart,
-                                                     self.operation,
+                result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,                                                                                                      
                                                      self.seqType, self.threads)                        
 #                 print("process has completed analysis... " + self.name) 
                 self.resultsQueue.put(result)            

@@ -27,7 +27,7 @@ def fastq2fasta(fastqFile, outputDir):
     if exists(filename):
         print ("\tThe FASTA file was found!")
         return filename
-    print(fastqFile + " is being converted into FASTA ...")
+    print("\t" + fastqFile.split('/')[-1]  + " is being converted into FASTA ...")
     command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
                "{print $0}' " + fastqFile + " > " + filename
                )
@@ -108,7 +108,7 @@ def writeCountsToFile(dist, filename):
         out.write('IGHV Class, Count, Proportion \n')
         total = sum(dist.values()) * 1.0
         for k in sorted(dist, key=dist.get, reverse=True):
-            out.write(k + ',' + `dist[k]` + ',' + ("%.2f" % (dist[k] / total * 100)) + '\n')
+            out.write(str(k) + ',' + `dist[k]` + ',' + ("%.2f" % (dist[k] / total * 100)) + '\n')
         out.write('TOTAL, ' + `total` + ', 100 ')
     print("A text file has been created ... " + filename)
 
@@ -168,41 +168,42 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
 
     
 def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):    
-    readFile = readFile1.split("/")[-1]
-    outputPrefix = readFile.replace("_" + readFile.split('_')[-1], '')
     seqOut = outDir + "seq/"
     if (not os.path.isdir(seqOut)):
         os.system("mkdir " + seqOut)
-    mergedFastq = seqOut 
+    readFile = readFile1.split("/")[-1]
+    outputPrefix = seqOut + readFile.replace("_" + readFile.split('_')[-1], '')    
+    mergedFastq = "" 
     if (merger == 'pear'):        ### MERGE using PEAR            
-        mergedFastq += outputPrefix + '.assembled.fastq'
+        mergedFastq = outputPrefix + '.assembled.fastq'
         if (not exists(mergedFastq)):
             print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                               , readFile2.split('/')[-1])) 
             command = "pear -f %s -r %s -o %s -j %d -v 15 -n 350"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
-            os.system("mv %s.* %s" % (outputPrefix, seqOut))            
+            #os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
             print(".../" + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'leehom'):        
-        mergedFastq += outputPrefix + '.fq'
+        mergedFastq = outputPrefix + '.fq'
         if (not exists(mergedFastq)):
             print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                               , readFile2.split('/')[-1])) 
             command = "leeHom -fq1 %s -fq2 %s -fqo %s --ancientdna --verbose"
             os.system(command % (readFile1, readFile2, outputPrefix))
             os.system('gunzip ' + mergedFastq + '.gz')
-            os.system("mv %s.* %s" % (outputPrefix, seqOut))
-            os.system("mv %s_r* %s" % (outputPrefix, seqOut))
+            #os.system("mv %s.* %s" % (outputPrefix, seqOut))
+            #os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
             print(".../" + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'flash'):        
-        mergedFastq += outputPrefix + '.extendedFrags.fastq'
+        mergedFastq = outputPrefix + '.extendedFrags.fastq'
+        outputPrefix = outputPrefix.split("/")[-1]
         if (not exists(mergedFastq)):
             print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                               , readFile2.split('/')[-1])) 
             # the merger params souldn't be hardcoded
-            command = "flash %s %s -t %d -o %s -r 300 -f 500 -s 150"            
+            command = "flash %s %s -t %d -o %s -r 300 -f 450 -s 50"            
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
             os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
@@ -520,7 +521,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
     if (not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ext) and 
         not exists(filesDir + "/" + prefix + "part"  + `int(totalFiles)` + ".out")):        
         # Split the FASTA file into multiple chunks
-        print("\tThe file is partitioned into multiple files")    
+        print("\tThe clones are distributed into multiple workers .. ")    
         if (not os.path.isdir(filesDir)):        
             os.system("mkdir " + filesDir)
         i = 1  

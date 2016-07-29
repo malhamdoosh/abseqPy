@@ -9,7 +9,7 @@ from Bio.Seq import Seq
 from pandas.core.frame import DataFrame
 from pandas.io.parsers import read_csv
 from NGSmotifs import generateMotifs
-from numpy import Inf, random, isnan, NaN
+from numpy import Inf, random, isnan, NaN, logical_not
 from igRepUtils import  writeCountsCategoriesToFile
 import gc
 from igRepUtils import compressSeqGeneLevel, calMaxIUPACAlignScores, compressSeqFamilyLevel, loadIGVSeqsFromFasta, findBestMatchedPattern
@@ -21,7 +21,7 @@ from pandas.tools.merge import concat
 from igRepUtils import compressCountsGeneLevel
 from config import MEM_GB
 import traceback
-from igRepAuxiliary import analyzeIGSeqRead, writeIGVAbundanceToFiles
+from igRepAuxiliary import annotateIGSeqRead, writeAbundanceToFiles
 from igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist,\
     plotSeqDuplication, plotSeqDiversity
 
@@ -52,13 +52,9 @@ class IgRepertoire:
             self.end5offset = args['5endoffset']
             self.fr4cut = args['fr4cut']
         self.readFile1 = args['f1']
-        self.readFile2 = args['f2']
-        if args.get('merge') != 'yes':            
-            self.readFile = self.readFile1                                          
-        else:            
-            mergedFastq = mergeReads(self.readFile1 , self.readFile2,
-                                     self.threads, args.get('merger'), self.outputDir)
-            self.readFile = mergedFastq                          
+        self.readFile2 = args['f2']                                
+        self.merge = args.get('merge')
+        self.merger = args.get('merger')
         
         self.seqsPerFile = 10.0 ** 5  / 2
         self.cloneAnnot = None
@@ -66,23 +62,29 @@ class IgRepertoire:
     def runFastqc(self):
         pass
         
-    def identifyClones(self):    
+    def identifyClones(self, outDirFilter= None):    
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
-        self.cdrInfoFile = outDir + self.name
-        self.cdrInfoFile += "_clones_annot.tab"  
+        self.cloneAnnotFile = outDir + self.name
+        self.cloneAnnotFile += "_clones_annot.tab"  
         
-        if (exists(self.cdrInfoFile) and self.cloneAnnot is None):       
-            print("\tClones annotation file was found! ... " + self.cdrInfoFile.split('/')[-1])
+        if (exists(self.cloneAnnotFile) and self.cloneAnnot is None):       
+            print("Clones annotation file found and is being loaded ... " + 
+                  self.cloneAnnotFile.split('/')[-1])
             sys.stdout.flush()
-            self.cloneAnnot = read_csv(self.cdrInfoFile, sep='\t',
-                                       header=0, index_col=0) 
+            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
+                                       header=0, index_col=0)             
         else:                    
+            if self.merge != 'yes':            
+                self.readFile = self.readFile1                                          
+            else:            
+                mergedFastq = mergeReads(self.readFile1 , self.readFile2,
+                                         self.threads, self.merger, self.outputDir)
+                self.readFile = mergedFastq  
             if (not exists(self.readFile)):
                 raise Exception(self.readFile + " does not exist!")            
-            if (self.readFile2 is not None and not exists(self.readFile2)):
-                raise Exception(self.readFile2 + " does not exist!")          
+                     
             # Convert FASTQ file into FASTA format
             if self.format == 'fastq':        
                 self.readFasta = fastq2fasta(self.readFile, self.outputDir)                
@@ -92,46 +94,60 @@ class IgRepertoire:
                 raise Exception('unknown file format! ' + self.format)            
             sys.stdout.flush()
             # Estimate the IGV family abundance for each library        
-            (self.cloneAnnot, filteredIDs) = analyzeIGSeqRead(self, self.readFasta,
-                                                          self.bitScore[0],
-                                                          self.alignLen[0],
-                                                          self.sStart[0],                                                      
+            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, self.readFasta,                                                                                                            
                                                           self.seqType)
             sys.stdout.flush()            
             gc.collect()
-            writeListToFile(filteredIDs, outDir + self.name + "_igv_filteredIDs.txt")
+            writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
             # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-            print("Text file has been written to " + self.cdrInfoFile)         
+            print("Clones annotation file is being written to " + self.cloneAnnotFile)         
+            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+        if outDirFilter:    
+            ## Filter clones based on bitscore, alignLen and sStart
+            print("Clones are filtered based on the following criteria: ")
+            print("\tBit score: " + `self.bitScore` )
+            print("\tAlignment length: " + `self.alignLen` )
+            print("\tV gene start: " + `self.sStart`)
+            selectedRows = ((self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
+                    (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
+                    (self.cloneAnnot['alignlen'] >= self.alignLen[0]) & # check alignment length
+                    (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
+                    (self.cloneAnnot['vstart'] >= self.sStart[0]) & # check subject (V gene) start position
+                    (self.cloneAnnot['vstart'] <= self.sStart[1]))
+            filteredIDs = self.cloneAnnot[logical_not(selectedRows)]            
+            filteredIDs = filteredIDs.index.tolist() 
+            writeListToFile(filteredIDs, outDirFilter + self.name + "_filtered_out_clones.txt")            
+            self.cloneAnnot = self.cloneAnnot[selectedRows]        
 
-    def analyzeAbundance(self):                 
-        self.identifyClones()
+    def analyzeAbundance(self):    
         # Estimate the IGV family abundance for each library        
         outDir = self.outputDir + "abundance/"
         if (not os.path.isdir(outDir)):
-            os.system("mkdir " + outDir)            
-        writeIGVAbundanceToFiles(self.cloneAnnot, self.name, outDir)        
+            os.system("mkdir " + outDir)              
+        self.identifyClones(outDir)                 
+              
+        writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
         gc.collect()
         
     def analyzeProductivity(self):
-        self.identifyClones()
+        self.identifyClones(True)
         
         self.cdrSeqFile = self.outputDir + "cdrs/" + self.name
         self.cdrSeqFile += "_clones_seq.tab"     
         
-        if (not exists(self.cdrInfoFile)):       
+        if (not exists(self.cloneAnnotFile)):       
             self.analyzeAbundance('cdrinfo')
             # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-            print("Text file has been written to " + self.cdrInfoFile) 
+            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+            print("Text file has been written to " + self.cloneAnnotFile) 
             # Refine the annotation of CDR3 and FR4
             self.refineCDRInfoAnnotation()  
             self.refineInFramePrediction()
             
         else:
-            print("\tCDRs information file was found! ... " + self.cdrInfoFile.split('/')[-1])
+            print("\tCDRs information file was found! ... " + self.cloneAnnotFile.split('/')[-1])
             sys.stdout.flush()
-            self.cloneAnnot = read_csv(self.cdrInfoFile, sep='\t',
+            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
                                        header=0, index_col=0)            
             if (not exists(self.cdrSeqFile)):                
                 self.refineCDRInfoAnnotation() 
@@ -490,8 +506,8 @@ class IgRepertoire:
                 print(updated[i])
             updated = None 
         # export the CDR/FR annotation to a file
-        self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-        print("Text file has been written to " + self.cdrInfoFile) 
+        self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+        print("Text file has been written to " + self.cloneAnnotFile) 
         sys.stdout.flush()
         gc.collect()   
     
@@ -741,8 +757,8 @@ class IgRepertoire:
         self.cdrSeqs.to_csv(self.cdrSeqFile, sep='\t', header=True, index=True)
         
         # export the CDR/FR annotation to a file
-        self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-        print("Text file has been written to " + self.cdrInfoFile) 
+        self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+        print("Text file has been written to " + self.cloneAnnotFile) 
         sys.stdout.flush()
         gc.collect()
      
@@ -838,21 +854,21 @@ class IgRepertoire:
             print("Restriction sites were already searched at ... " + self.siteHitsFile.split('/')[-1])
             return
         
-        self.cdrInfoFile = self.outputDir + self.name
-        self.cdrInfoFile += "_cdr_info.tab" 
+        self.cloneAnnotFile = self.outputDir + self.name
+        self.cloneAnnotFile += "_cdr_info.tab" 
         
         self.cdrSeqFile = self.outputDir + self.name
         self.cdrSeqFile += "_cdr_seq.tab"
-        if (not exists(self.cdrInfoFile)):       
+        if (not exists(self.cloneAnnotFile)):       
             self.analyzeAbundance('cdrinfo')  
             # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-            print("Text file has been written to " + self.cdrInfoFile) 
+            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+            print("Text file has been written to " + self.cloneAnnotFile) 
             # Refine the annotation of CDR3 and FR4
             self.refineCDRInfoAnnotation()  
         else:
-            print("\tCDRs information file was found! ... " + self.cdrInfoFile.split('/')[-1])
-            self.cloneAnnot = read_csv(self.cdrInfoFile, sep='\t',
+            print("\tCDRs information file was found! ... " + self.cloneAnnotFile.split('/')[-1])
+            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
                                        header=0, index_col=0)            
             if (not exists(self.cdrSeqFile)):                
                 self.refineCDRInfoAnnotation()  
@@ -984,25 +1000,25 @@ class IgRepertoire:
 #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]      
         if (not os.path.isdir(self.outputDir + "cdrs/")):
             os.system("mkdir " + self.outputDir + "cdrs/")
-        self.cdrInfoFile = self.outputDir + "cdrs/" + self.name
-        self.cdrInfoFile += "_cdr_info.tab"   
+        self.cloneAnnotFile = self.outputDir + "cdrs/" + self.name
+        self.cloneAnnotFile += "_cdr_info.tab"   
         
         self.cdrSeqFile = self.outputDir + "cdrs/" + self.name
         self.cdrSeqFile += "_cdr_seq.tab"     
         
-        if (not exists(self.cdrInfoFile)):       
+        if (not exists(self.cloneAnnotFile)):       
             self.analyzeAbundance('cdrinfo')
             # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cdrInfoFile, sep='\t', header=True, index=True)    
-            print("Text file has been written to " + self.cdrInfoFile) 
+            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
+            print("Text file has been written to " + self.cloneAnnotFile) 
             # Refine the annotation of CDR3 and FR4
             self.refineCDRInfoAnnotation()  
             self.refineInFramePrediction()
             
         else:
-            print("\tCDRs information file was found! ... " + self.cdrInfoFile.split('/')[-1])
+            print("\tCDRs information file was found! ... " + self.cloneAnnotFile.split('/')[-1])
             sys.stdout.flush()
-            self.cloneAnnot = read_csv(self.cdrInfoFile, sep='\t',
+            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
                                        header=0, index_col=0)            
             if (not exists(self.cdrSeqFile)):                
                 self.refineCDRInfoAnnotation() 
@@ -1014,7 +1030,7 @@ class IgRepertoire:
                                        header=0, index_col=0)            
             
                  
-#         self.alignInfo = read_csv(self.cdrInfoFile.replace('cdr', 'align'), 
+#         self.alignInfo = read_csv(self.cloneAnnotFile.replace('cdr', 'align'), 
 #                                   sep ='\t', header= 0, index_col=0)
 #         cdrids = set(self.cloneAnnot.index)
 #         alignids = set(self.alignInfo.index)
@@ -1080,9 +1096,9 @@ class IgRepertoire:
         self.format = 'fasta'
         self.readFile2 = None
         self.seqType = 'protein'
-        self.bitScore = [[0, Inf]] 
-        self.alignLen = [[0, Inf]] 
-        self.sStart = [[1, Inf]]
+        self.bitScore = [0, Inf] 
+        self.alignLen = [0, Inf]
+        self.sStart = [1, Inf]
         if (exists(self.outputDir + "/abundance/")):
             print("Protein sequences have been already analyzed ... ")
         else:

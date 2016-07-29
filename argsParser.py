@@ -53,12 +53,12 @@ def parseArgs(args):
         raise Exception("One sequence file at least must be provided.")    
     argVals['f1'] = abspath(argVals['f1'])
         
-    if (argVals.get('f2', None) is not None):
-        noFiles = 2
-        argVals['f2'] = abspath(argVals['f2'])
-    else:
-        argVals['f2'] = None
-        noFiles = 1
+#     if (argVals.get('f2', None) is not None):
+#         noFiles = 2
+#         argVals['f2'] = abspath(argVals['f2'])
+#     else:
+#         argVals['f2'] = None
+#         noFiles = 1
                 
     if (argVals.get('o', None) is None):
         argVals['o'] = './'
@@ -84,8 +84,8 @@ def parseArgs(args):
         argVals['merger'] = 'flash'
     else:
         argVals['merger'] = argVals['merger'].lower()
-    
-    if ((argVals['merge'] == 'no' and noFiles == 2) or argVals.get('name', None) is None):
+    # (argVals['merge'] == 'no' and noFiles == 2) or 
+    if (argVals.get('name', None) is None):
         sampleName = f1name.split("_")[0] + '_'  
         sampleName += f1name.split("_")[-1].split('.')[0]
         argVals['name'] = sampleName
@@ -96,9 +96,9 @@ def parseArgs(args):
         argVals['fmt'] = argVals['fmt'].lower()
     
     if (argVals.get('bitscore', None) is None):
-        argVals['bitscore'] = [[0, Inf]] * noFiles
+        argVals['bitscore'] = [0, Inf]
     else:
-        argVals['bitscore'] = extractRanges(argVals['bitscore'], noFiles)
+        argVals['bitscore'] = extractRanges(argVals['bitscore'])[0]
         
     if (argVals['task'] in ['secretion', '5utr']):
         if (argVals.get('upstream', None) is None):
@@ -130,14 +130,14 @@ def parseArgs(args):
             argVals['fr4cut'] = (argVals['fr4cut'].upper() == 'YES')
         
     if (argVals.get('sstart', None) is None):
-        argVals['sstart'] = [[1, Inf]] * noFiles
+        argVals['sstart'] = [1, Inf]
     else:
-        argVals['sstart'] = extractRanges(argVals['sstart'], noFiles)        
+        argVals['sstart'] = extractRanges(argVals['sstart'])[0]  
     
     if (argVals.get('alignlen', None) is None):
-        argVals['alignlen'] = [[0, Inf]] * noFiles
+        argVals['alignlen'] = [0, Inf]
     else:
-        argVals['alignlen'] = extractRanges(argVals['alignlen'], noFiles)        
+        argVals['alignlen'] = extractRanges(argVals['alignlen'])[0]    
             
     if (argVals.get('primer', None) is None):
         argVals['primer'] = -1

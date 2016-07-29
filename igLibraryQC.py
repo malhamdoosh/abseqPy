@@ -70,7 +70,7 @@ def main():
         elif (argsVals['task'] == 'seqlen'):
             printFormattedTitle("Sequence Length Distribution")
             # calculate the distribution of sequence lengths of a sample
-            argsVals['o'] += 'abundance/'
+            argsVals['o'] += 'annot/'
             os.system("mkdir " + argsVals['o'])
             outputFile =  argsVals['o'] + argsVals['name'] + '_seq_length_dist.png'            
             plotSeqLenDist(argsVals['f1'], argsVals['name'], outputFile, argsVals['fmt'],
@@ -78,7 +78,7 @@ def main():
         elif (argsVals['task'] == 'seqlenclass'):
             # calculate the distribution of sequences in different IGV families
             # input file must be a file of IGV genes
-            argsVals['o'] += 'abundance/'
+            argsVals['o'] += 'annot/'
             os.system("mkdir " + argsVals['o'])
             outputFile =  argsVals['o'] + argsVals['name'] + '_length_dist_classes.png'
             plotSeqLenDistClasses(argsVals['f1'], argsVals['name'], outputFile, argsVals['fmt'])
