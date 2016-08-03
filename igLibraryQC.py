@@ -32,16 +32,16 @@ def main():
             printFormattedTitle("Sequencing QC Analysis")
             igRepertoire = IgRepertoire(argsVals)        
             igRepertoire.runFastqc()
-        elif (argsVals['task'] == 'identify'): 
+        elif (argsVals['task'] == 'annotate'): 
             printFormattedTitle("Clone Identification and Classification")
             igRepertoire = IgRepertoire(argsVals)        
-            igRepertoire.identifyClones()
+            igRepertoire.annotateClones()
         elif (argsVals['task'] == 'abundance'): 
             printFormattedTitle("IGV Abundance and QC Plots")
             igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeAbundance() # estimateIGVDist()  
         elif (argsVals['task'] == 'productivity'):
-            printFormattedTitle("IGV Abundance and QC Plots")
+            printFormattedTitle("Clone Productivity Analysis")
             igRepertoire = IgRepertoire(argsVals)        
             igRepertoire.analyzeProductivity()  
         elif (argsVals['task'] == 'diversity'):

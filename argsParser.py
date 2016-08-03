@@ -72,7 +72,8 @@ def parseArgs(args):
         raise Exception("The merger requires two sequence files (use both -f1 and -f2).")
     ## output directory
     f1name = argVals['f1'].split('/')[-1]
-    if (f1name.find("_R") != -1 and argVals['merge'] == 'yes'):
+    if (f1name.find("_R") != -1 and 
+        (argVals['merge'] == 'yes' or argVals['task'] == "fastqc")):
         ext = '_' + f1name.split('_')[-1]
     else:
         ext = f1name[f1name.find('.'):]    

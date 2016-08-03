@@ -278,8 +278,12 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
 
 
 def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):    
+    if (exists(filename)):
+        print("File found ... " + filename.split('/')[-1])
+        return
     x = data[xyCol[0]].tolist()
     y = data[xyCol[1]].tolist()
+    total = len(x)
     BINS = 10
 #     fig, ax = plt.subplots()        
 #     ax.scatter(x, y, s=3, alpha=0.5, edgecolors='none' )
@@ -301,7 +305,9 @@ def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):
                     extent=extent)
     ax.set_xlabel(axlabels[0])   
     ax.set_ylabel(axlabels[1])    
-    ax.set_title('Alignment Quality of Sample ' + sampleName)
+    title = 'Alignment Quality of Sample '
+    title += '\nTotal is {:,}'.format(int(total)) 
+    ax.set_title(title + sampleName)
     ax.set_xticks(np.array(xedges).astype(int))
     ax.set_yticks(np.array(yedges).astype(int))
     ax.tick_params(axis='both', which='major', labelsize=8)

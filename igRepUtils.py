@@ -110,7 +110,7 @@ def writeCountsToFile(dist, filename):
         for k in sorted(dist, key=dist.get, reverse=True):
             out.write(str(k) + ',' + `dist[k]` + ',' + ("%.2f" % (dist[k] / total * 100)) + '\n')
         out.write('TOTAL, ' + `total` + ', 100 ')
-    print("A text file has been created ... " + filename)
+    print("A text file has been created ... " + filename.split("/")[-1])
 
 
 def findBestAlignment(seq, query, dna=False, offset=0, show=False):
@@ -152,19 +152,13 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
         elif s == e:
             frag = protein[e-1]
         else:
-            return None
-        if (frag is None):
-            print("Extract Protein Fragment",protein, start, end)
-            return None
+            return None        
         if trimAtStop and ('*' in frag):
             frag = frag[:frag.index('*')]
         return frag
     except:
-        print("Extract Protein Fragment",protein, start, end)
+        print("ERROR at Extract Protein Fragment",protein, start, end)
         return None
-    
-
-
 
     
 def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):    
