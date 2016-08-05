@@ -14,7 +14,7 @@ from collections import Counter
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 import re
-from igRepPlots import plotDist
+from IgRepReporting.igRepPlots import plotDist
 
 def fastq2fasta(fastqFile, outputDir):
     # FASTQ to FASTA
@@ -124,35 +124,48 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     if (len(scores) == 0):
 #         print(seq, query, alignments)
 #         raise
-        return -1, -1
+        return -1, -1, True
     best = scores.index(max(scores))
     if show:
         print(format_alignment(*alignments[best]))
+        print(alignments[best])
     # return alignment start and end
-    return int(offset + alignments[best][-2] + 1), int(offset + alignments[best][-1]) # 1-based
+    start = int(offset + alignments[best][-2] + 1)
+    end = int(offset + alignments[best][-1])
+    gapped = False  
+    if '-' in alignments[best][0]:
+        start -= alignments[best][0][:(alignments[best][-2]+1)].count('-')
+        end -= alignments[best][0][:(alignments[best][-1]+1)].count('-')
+        gapped = True
+    return start, end, gapped # 1-based
 
 '''
     Extract a protein fragment from a protein sequence based on DNA positions
+    start and end are 1-based
 '''
 def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
     if (np.isnan(start) or np.isnan(end)):
-        return None
-    # start and end are 0-based positions
-    try:
+        return ''
+    if (start != -1 and end != -1 and end - start < 1):
+        return ''
+    # start and end are 1-based positions
+    start = (start - offset) if start != -1 else start
+    end = (end - offset) if end != -1 else end
+    try:        
         if (start != -1):
-            s = int(round((start - offset - (start-offset)%3) / 3.))
+            s = int((start  - 1 ) / 3)# 0-based
         else:
             s = 0
         if end != -1:
-            e = int(round((end - offset- (start-offset)%3) / 3.))
+            e = int(end  / 3) # 1-based
         else:
             e = len(protein)
-        if s < e:        
+        if (s+1) < e:        
             frag = protein[s:e]
-        elif s == e:
-            frag = protein[e-1]
-        else:
-            return None        
+        elif (s + 1) == e:
+            frag = protein[s]
+        else:            
+            return ''       
         if trimAtStop and ('*' in frag):
             frag = frag[:frag.index('*')]
         return frag
@@ -160,6 +173,58 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
         print("ERROR at Extract Protein Fragment",protein, start, end)
         return None
 
+def extractCDRsandFRsProtein(protein, qsRec, offset):
+    try:
+        seqs = []
+        newProtein = ""
+        # Extract protein sequence of FR1             
+        seqs.append(extractProteinFrag(protein, qsRec['fr1.start'], qsRec['fr1.end'], offset))
+        # Extract protein sequence of CDR1
+        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], offset))
+        # Extract protein sequence of FR2
+        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], offset))
+        # Extract protein sequence of CDR2
+        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], offset))
+        # Extract protein sequence of FR3
+        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], offset))
+        # Extract protein sequence of CDR3 and FR4
+        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], offset))
+        # check whether FR and CDR sequences were extracted correctly
+        newProtein = ''.join(seqs)
+        assert newProtein in protein
+    except Exception as e:            
+        print("ERROR at partitioning the protein sequence: ")
+        print (protein, newProtein, seqs, offset)  
+        raise e
+    return (newProtein, seqs)
+
+def extractCDRsandFRsDNA(dna, qsRec):
+    try:
+        seqs = []
+        newDna = ""
+        seqs.append(dna[int(qsRec['fr1.start']-1):int(qsRec['fr1.end'])])
+        seqs.append(dna[int(qsRec['cdr1.start']-1):int(qsRec['cdr1.end'])])
+        seqs.append(dna[int(qsRec['fr2.start']-1):int(qsRec['fr2.end'])])
+        seqs.append(dna[int(qsRec['cdr2.start']-1):int(qsRec['cdr2.end'])])
+        seqs.append(dna[int(qsRec['fr3.start']-1):int(qsRec['fr3.end'])])
+        if (isnan(qsRec['cdr3.start']) or isnan(qsRec['cdr3.end']) or 
+            qsRec['cdr3.end'] - qsRec['cdr3.start'] < 0):
+            seqs.append('')
+        else:
+            seqs.append(dna[int(qsRec['cdr3.start']-1):int(qsRec['cdr3.end'])])
+        if isnan(qsRec['fr4.start']) or isnan(qsRec['fr4.end']):
+            seqs.append('')
+        else:
+            seqs.append(dna[int(qsRec['fr4.start']-1):int(qsRec['fr4.end'])])
+        newDna = ''.join(seqs)
+        assert newDna in dna
+    except Exception as e:            
+        print("ERROR at partitioning the nucleotide sequence: ")
+        print (dna, newDna, seqs)  
+        raise e
+    return seqs
+        
     
 def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):    
     seqOut = outDir + "seq/"

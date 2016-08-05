@@ -1,6 +1,5 @@
 from multiprocessing import Process
-from igRepUtils import runIgblastn, runIgblastp
-from collections import Counter
+from IgRepertoire.igRepUtils import runIgblastn, runIgblastp
 from pandas.core.frame import DataFrame
 import sys
 import numpy as np
@@ -11,7 +10,7 @@ Email: monther.alhamdoosh@csl.com.au / m.hamdoosh@gmail.com
 
 '''
 
-CDR_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
+ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
               'identity', 'alignlen', 'bitscore',
                     'dgene', 'dqstart', 'dstart', 'dmismatches', 'dgaps', 
                     'jgene', 'jqstart', 'jqend', 'jstart', 'jmismatches', 'jgaps',  
@@ -27,14 +26,14 @@ CDR_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
 
 def createCloneRecord():
     cdrRecord = {}    
-    for field in CDR_FIELDS:
+    for field in ANNOTATION_FIELDS:
         cdrRecord[field] =  np.nan
     return cdrRecord
 
 
 def convertCloneRecordToOrderedList(cdrRecord):    
     orderedList = []
-    for field in CDR_FIELDS:
+    for field in ANNOTATION_FIELDS:
         orderedList.append(cdrRecord[field])
     
     return orderedList
@@ -192,7 +191,7 @@ def extractCDRInfo(blastOutput,):
         # productive = no stop and in-frame
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
-        cloneAnnot = DataFrame(cloneAnnot, columns =  CDR_FIELDS) 
+        cloneAnnot = DataFrame(cloneAnnot, columns =  ANNOTATION_FIELDS) 
         cloneAnnot.index = cloneAnnot.queryid
         del cloneAnnot['queryid']
     else:

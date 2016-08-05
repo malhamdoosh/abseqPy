@@ -1,31 +1,28 @@
-from igRepUtils import writeCountsToFile, \
-    fastq2fasta, mergeReads, writeListToFile
+from igRepUtils import fastq2fasta, mergeReads, writeListToFile
 from collections import Counter
 from os.path import exists
 import os
 import sys
 from Bio import SeqIO
 from Bio.Seq import Seq
-from pandas.core.frame import DataFrame
 from pandas.io.parsers import read_csv
 from NGSmotifs import generateMotifs
-from numpy import Inf, random, isnan, NaN, logical_not
+from numpy import Inf, random, isnan, logical_not
 from igRepUtils import  writeCountsCategoriesToFile
 import gc
-from igRepUtils import compressSeqGeneLevel, calMaxIUPACAlignScores, compressSeqFamilyLevel, loadIGVSeqsFromFasta, findBestMatchedPattern
-from igRepUtils import compressCountsFamilyLevel, findHitsRegion, replaceIUPACLetters, extractProteinFrag, findBestAlignment,  findHits
+from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
+from igRepUtils import findHitsRegion, replaceIUPACLetters,  findHits
 from NGSmotifs import generateProteinLogos
 from Bio.SeqRecord import SeqRecord
-from pandas.core.series import Series
-from pandas.tools.merge import concat
 from igRepUtils import compressCountsGeneLevel
-from config import MEM_GB, FASTQC
-import traceback
-from igRepCloneAuxiliary import annotateIGSeqRead, writeAbundanceToFiles,\
-    refineClonesAnnotation
-from igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist,\
+from config import  FASTQC
+from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
+from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist,\
     plotSeqDuplication, plotSeqDiversity
 from pandas.io.pytables import read_hdf
+from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
+from IgRepReporting.abundanceReport import writeAbundanceToFiles
+from IgRepReporting.productivityReport import generateProductivityReport
 
 class IgRepertoire:    
     def __init__(self, args):        
@@ -44,12 +41,14 @@ class IgRepertoire:
             self.upstream = args['upstream']
         if (args['task'] in ['enzymes', 'enzymesimple']):
             self.sitesFile = args['sites']
-        if (args['task'] == 'diversity'):
-            self.end5 = args['5end']
-            self.end3 = args['3end']
-            self.actualQstart = args['actualqstart']            
-            self.end5offset = args['5endoffset']
+        if (args['task'] in ['productivity', 'diversity']):
+            self.actualQstart = args['actualqstart'] 
             self.fr4cut = args['fr4cut']
+        if (args['task'] == 'primer'):
+            self.end5 = args['5end']
+            self.end3 = args['3end']                       
+            self.end5offset = args['5endoffset']
+            
         self.readFile1 = args['f1']
         self.readFile2 = args['f2']                                
         self.merge = args.get('merge')
@@ -117,7 +116,7 @@ class IgRepertoire:
             self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')
         if outDirFilter:    
             ## Filter clones based on bitscore, alignLen and sStart
-            print("Clones are filtered based on the following criteria: ")
+            print("Clones are being filtered based on the following criteria: ")
             print("\tBit score: " + `self.bitScore` )
             print("\tAlignment length: " + `self.alignLen` )
             print("\tV gene start: " + `self.sStart`)
@@ -140,9 +139,11 @@ class IgRepertoire:
         # Estimate the IGV family abundance for each library        
         outDir = self.outputDir + "abundance/"
         if (not os.path.isdir(outDir)):
-            os.system("mkdir " + outDir)              
+            os.system("mkdir " + outDir)        
+        else:
+            print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")      
         self.annotateClones(outDir)                 
-              
+             
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
         gc.collect()
         
@@ -150,13 +151,15 @@ class IgRepertoire:
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
+        else:
+            print("WARNING: remove the 'productivity' directory if you changed the filtering criteria.")
         self.refinedCloneAnnotFile = outDir + self.name
         self.refinedCloneAnnotFile += "_refined_clones_annot.h5"
         
         self.cloneSeqFile = outDir + self.name
         self.cloneSeqFile += "_clones_seq.h5"      
         
-        if (not exists(self.refinedCloneAnnot)):
+        if (not exists(self.refinedCloneAnnotFile)):
             self.annotateClones(outDir)
             #sys.exit()            
             (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(self.cloneAnnot, self.readFile,
@@ -165,17 +168,22 @@ class IgRepertoire:
                                                       self.seqsPerFile)                   
             # export the CDR/FR annotation to a file                
             print("The refined clone annotation file is being written to " + self.refinedCloneAnnotFile)
-            self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w')
+            self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', 
+                                   complib='blosc')
             sys.stdout.flush()
-            print("The clone protein sequences are being written to " + self.refinedCloneAnnotFile)
-            self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w')
+            print("The clone protein sequences are being written to " + 
+                  self.refinedCloneAnnotFile)
+            self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
+                                  complib='blosc')
             gc.collect()            
             sys.stdout.flush()              
         else:
-            print("\tCDRs sequence file was found! ... " + self.cloneSeqFile.split('/')[-1])
+            print("\The refined clone annotation file was found! ... " + 
+                  self.cloneSeqFile.split('/')[-1])
             self.cloneAnnot = read_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot")            
             self.cloneSeqs = read_hdf(self.cloneSeqFile, "cloneSequences")  
-            
+        # display statistics 
+        generateProductivityReport(self.cloneAnnot, self.name, outDir)
         
     def analyzePrimerSpecificity(self):
         pass
@@ -203,10 +211,10 @@ class IgRepertoire:
         procSeqs = 0  # processed sequences
         fileHandle = open(self.upstreamFile, 'w')
         fileHandle.close()
-        if (MEM_GB > 20):
-            records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
-        else:
-            records = SeqIO.index(self.readFile1, self.format)
+#         if (MEM_GB > 20):
+#             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
+#         else:
+        records = SeqIO.index(self.readFile1, self.format)
         for id in queryIds:
             record = records[id]  
             
@@ -236,8 +244,7 @@ class IgRepertoire:
                         records = []
             else:
                 trimmedBegin += 1
-#                         print("The query sequence is not aligned at the start of the IGV sequence! " + record.id)                        
-                
+#                         print("The query sequence is not aligned at the start of the IGV sequence! " + record.id)                            
                        
         if (len(records) > 0):
             print('%d/%d sequences have been processed ... ' % (procSeqs, len(queryIds)))
@@ -250,6 +257,7 @@ class IgRepertoire:
             print("\t\t\tUpstream sequences shorter than the expected length are detected ... %d found" % (trimmedUpstream))
         if (noSeq > 0):
             print("\t\t\tNo upstream sequence can be extracted, too short, for %d sequences." % (noSeq))
+        records.close()
         gc.collect()
             
     def analyzeSecretionSignal(self):        
@@ -298,10 +306,10 @@ class IgRepertoire:
         noStartCodonCounts = Counter()
         faultyTrans = []
         faultyTransCounts = Counter()
-        if (MEM_GB > 20):
-            records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
-        else:
-            records = SeqIO.index(self.upstreamFile, 'fasta')
+#         if (MEM_GB > 20):
+#             records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
+#         else:
+        records = SeqIO.index(self.upstreamFile, 'fasta')
         for id in records:
             rec = records[id]
             ighv = rec.id.split('|')[1]
@@ -333,6 +341,7 @@ class IgRepertoire:
                     if (noStartCodonCounts.get(ighv, None) is None):
                         noStartCodonCounts[ighv] = 0
                     noStartCodonCounts[ighv] += 1
+        records.close()        
         if (sum(ighvSignalsCounts.values()) > 0):
             print("\tThere are %d VALID secretion signals within expected length %s and startCodon=%s " % 
                   (sum(ighvSignalsCounts.values()), str(expectLength), startCodon))
@@ -490,10 +499,10 @@ class IgRepertoire:
 #             siteHitsSeqsIGV[site] = set()
         
         procSeqs = 0
-        if (MEM_GB > 20):
-            records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
-        else:
-            records = SeqIO.index(self.readFile1, self.format)
+#         if (MEM_GB > 20):
+#             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
+#         else:
+        records = SeqIO.index(self.readFile1, self.format)
         for id in records.keys():
             record = records[id]
             try:              
@@ -520,8 +529,9 @@ class IgRepertoire:
 #                 break
             except BaseException as e:                
                 print(e)
-                raise
+                raise        
         print('%d/%d sequences have been searched ... ' % (procSeqs, len(records.keys())))
+        records.close()
         # # print out the results
         f = open(self.siteHitsFile, 'w')
         f.write("Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),No.Molecules,Percentage of Molecules (%) \n")
@@ -597,10 +607,10 @@ class IgRepertoire:
             siteHitsSeqsIGV[site] = set()
         germline = set(['fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'])
         procSeqs = 0
-        if (MEM_GB > 20):
-            records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
-        else:
-            records = SeqIO.index(self.readFile1, self.format)
+#         if (MEM_GB > 20):
+#             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
+#         else:
+        records = SeqIO.index(self.readFile1, self.format)
         for id in queryIds:
             record = records[id]
             try:
@@ -640,6 +650,7 @@ class IgRepertoire:
                 print(qstart, end, len(record.seq), str(record.seq))
                 print(e)
                 raise
+        records.close()
         print('%d/%d sequences have been searched ... ' % (procSeqs, len(queryIds)))
         # # print out the results
         f = open(self.siteHitsFile, 'w')
@@ -741,7 +752,7 @@ class IgRepertoire:
         outDir = self.outputDir
         self.outputDir = outDir + "/cdrs/"
                 
-        self.extractProductiveRNAs()
+        self.generateProductivityReport()
         sys.stdout.flush()
         
         self.cloneSeqs = self.cloneSeqs[map(lambda x: x in self.cloneAnnot.index, self.cloneSeqs.index)]
@@ -942,155 +953,155 @@ class IgRepertoire:
             gc.collect()
         
     
-    def extractProductiveRNAs(self):
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        # v-j rearrangement frame distribution 
-        vjframeDist = Counter(self.cloneAnnot['v-jframe'].tolist())
-        if NaN in vjframeDist.keys():
-            nanCounts = vjframeDist[NaN]
-            vjframeDist = Counter({'In-frame': vjframeDist['In-frame'],
-                                   'Out-of-frame': vjframeDist['Out-of-frame'] + nanCounts})
-        plotDist(vjframeDist, self.name, self.outputDir + self.name + 
-                 '_vjframe_dist.png', title='V-D-J Rearrangement',
-                 proportion=False, rotateLabels=False)
-        print(vjframeDist)
-        del vjframeDist
-        if self.end5:
-            print("5-end analysis of all clones ... ")
-            self.write5EndPrimerStats(self.cloneAnnot, self.outputDir+self.name+
-                                      '_all_5end_')
-            invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
-        if self.end3:
-            valid3End = Counter(self.cloneAnnot['3end'].tolist())
-            plotDist(valid3End, self.name, self.outputDir + self.name + 
-                 '_all_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence',
-                 proportion=True, rotateLabels=False)
-            invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
-            print("Example of Indelled 3`-end:", invalid3Clones[1:10])
-            try:
-                plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-                          self.outputDir + self.name + 
-                     '_all_invalid_primers.png')
-                del invalid5Clones, invalid3Clones
-            except:
-                pass
-            del valid3End
-        
-        OutOfFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] != 'In-frame']
-        OutOfFrameFamilyDist = compressCountsFamilyLevel(Counter(OutOfFrame['vgene'].tolist()))
-        plotDist(OutOfFrameFamilyDist, self.name, self.outputDir + self.name + 
-                 '_notinframe_igv_dist.png',
-                  title='IGV Abundance of Not In-frame Sequences',
-                 proportion=True)
-        del OutOfFrameFamilyDist
-        OutOfFrame = OutOfFrame[OutOfFrame['v-jframe'] == 'Out-of-frame']
-        cdrLength = (OutOfFrame['cdr1.end'] - OutOfFrame['cdr1.start'] + 1) / 3
-        cdrLength = cdrLength.tolist()
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_outframe_cdr1_len_dist.png', dna=False,
-                  seqName='CDR1', normed=True, maxbins=10)
-        cdrGaps = Counter(OutOfFrame['cdr1.gaps'].tolist())
-        plotDist(cdrGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_cdr1_gaps_dist.png', title='Gaps in CDR1',
-                 proportion=False, rotateLabels=False)
-        frGaps = Counter(OutOfFrame['fr1.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_fr1_gaps_dist.png', title='Gaps in FR1',
-                 proportion=False, rotateLabels=False)
-        del cdrLength, cdrGaps, frGaps
-        cdrLength = (OutOfFrame['cdr2.end'] - OutOfFrame['cdr2.start'] + 1) / 3
-        cdrLength = cdrLength.tolist()
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_outframe_cdr2_len_dist.png', dna=False,
-                  seqName='CDR2', normed=True, maxbins=10)
-        cdrGaps = Counter(OutOfFrame['cdr2.gaps'].tolist())
-        plotDist(cdrGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_cdr2_gaps_dist.png', title='Gaps in CDR2',
-                 proportion=False, rotateLabels=False)
-        frGaps = Counter(OutOfFrame['fr2.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_fr2_gaps_dist.png', title='Gaps in FR2',
-                 proportion=False, rotateLabels=False)
-        del cdrLength, cdrGaps, frGaps
-        cdrGaps = Counter([x if not isnan(x) else 'NA' for x in OutOfFrame['cdr3.gaps'] ])
-#         print(len(cdrGaps))
-        plotDist(cdrGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_cdr3_gaps_dist.png', title='Gaps in Germline CDR3',
-                 proportion=False, rotateLabels=False)
-        frGaps = Counter(OutOfFrame['fr3.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_outframe_fr3_gaps_dist.png', title='Gaps in FR3',
-                 proportion=False, rotateLabels=False)
-        del cdrGaps, frGaps
-        if self.end5:
-            print("5-end analysis of out-of-frame clones ... ")
-            self.write5EndPrimerStats(OutOfFrame, self.outputDir+self.name+
-                                      '_outframe_5end_', 'Out-of-frame') 
-            invalid5Clones = OutOfFrame.index[OutOfFrame['5end'] == 'Indelled'].tolist()                     
-        if self.end3:
-            valid3End = Counter(OutOfFrame['3end'].tolist())
-            plotDist(valid3End, self.name, self.outputDir + self.name + 
-                 '_outframe_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Out-of-frame)',
-                 proportion=True, rotateLabels=False)
-            invalid3Clones = OutOfFrame.index[OutOfFrame['3end'] == 'Indelled'].tolist()
-            print("Example of out-of-frame Indelled 3`-end:", invalid3Clones[1:10])
-            print("Example of out-of-frame valid 3`-end:", OutOfFrame.index[OutOfFrame['3end'] != 'Indelled'].tolist()[1:10])
-            try:
-                plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-                          self.outputDir + self.name + 
-                     '_outframe_invalid_primers.png')
-                del invalid5Clones, invalid3Clones
-            except Exception as e:
-                raise e
-            del valid3End
-        del OutOfFrame
-        # choose only In-frame RNA sequences
-        self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-        # Stop Codon 
-        stopcodonInFrameDist = Counter(self.cloneAnnot['stopcodon'].tolist())
-        plotDist(stopcodonInFrameDist, self.name, self.outputDir + self.name + 
-                 '_inframe_stopcodon_dist.png', title='In-frame Stop Codons',
-                 proportion=False, rotateLabels=False)
-        print(stopcodonInFrameDist)
-        # stop codon family distribution
-        stopcodFamily = Counter(self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'Yes']['vgene'].tolist())
-        stopcodFamily = compressCountsFamilyLevel(stopcodFamily)
-        plotDist(stopcodFamily, self.name, self.outputDir + self.name + 
-                 '_inframe_stopcodfam_dist.png',
-                  title='IGV Abundance of In-frame Unproductive Sequences',
-                 proportion=True)
-        del stopcodonInFrameDist, stopcodFamily
-#         print(stopcodFamily)
-        # choose only productive RNA sequences 
-        self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'No']
-        productiveFamilyDist = compressCountsFamilyLevel(Counter(self.cloneAnnot['vgene'].tolist()))
-        plotDist(productiveFamilyDist, self.name, self.outputDir + self.name + 
-                 '_productive_igv_dist.png',
-                  title='IGV Abundance of Productive Sequences',
-                 proportion=True)
-        del productiveFamilyDist
-        if self.end5:
-            valid5End = Counter(self.cloneAnnot['5end'].tolist())
-            plotDist(valid5End, self.name, self.outputDir + self.name + 
-                 '_productive_5end_integrity_dist.png', title='Integrity of 5`-end Primer Sequence(Productive)',
-                 proportion=True, rotateLabels=False)
-            invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
-            print("Example of invalid 5`-end:", invalid5Clones[1:10])
-        if self.end3:
-            valid3End = Counter(self.cloneAnnot['3end'].tolist())
-            plotDist(valid3End, self.name, self.outputDir + self.name + 
-                 '_productive_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Productive)',
-                 proportion=True, rotateLabels=False)
-            invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
-            print("Example of invalid 3`-end:", invalid3Clones[1:10])
-            try:
-                plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-                          self.outputDir + self.name + 
-                     '_productive_invalid_primers.png')
-            except Exception as e:
-                raise e
-        gc.collect()
+#     def extractProductiveRNAs(self):
+# #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
+# #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
+#         # v-j rearrangement frame distribution 
+#         vjframeDist = Counter(self.cloneAnnot['v-jframe'].tolist())
+#         if NaN in vjframeDist.keys():
+#             nanCounts = vjframeDist[NaN]
+#             vjframeDist = Counter({'In-frame': vjframeDist['In-frame'],
+#                                    'Out-of-frame': vjframeDist['Out-of-frame'] + nanCounts})
+#         plotDist(vjframeDist, self.name, self.outputDir + self.name + 
+#                  '_vjframe_dist.png', title='V-D-J Rearrangement',
+#                  proportion=False, rotateLabels=False)
+#         print(vjframeDist)
+#         del vjframeDist
+#         if self.end5:
+#             print("5-end analysis of all clones ... ")
+#             self.write5EndPrimerStats(self.cloneAnnot, self.outputDir+self.name+
+#                                       '_all_5end_')
+#             invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
+#         if self.end3:
+#             valid3End = Counter(self.cloneAnnot['3end'].tolist())
+#             plotDist(valid3End, self.name, self.outputDir + self.name + 
+#                  '_all_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence',
+#                  proportion=True, rotateLabels=False)
+#             invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
+#             print("Example of Indelled 3`-end:", invalid3Clones[1:10])
+#             try:
+#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
+#                           self.outputDir + self.name + 
+#                      '_all_invalid_primers.png')
+#                 del invalid5Clones, invalid3Clones
+#             except:
+#                 pass
+#             del valid3End
+#         
+#         OutOfFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] != 'In-frame']
+#         OutOfFrameFamilyDist = compressCountsFamilyLevel(Counter(OutOfFrame['vgene'].tolist()))
+#         plotDist(OutOfFrameFamilyDist, self.name, self.outputDir + self.name + 
+#                  '_notinframe_igv_dist.png',
+#                   title='IGV Abundance of Not In-frame Sequences',
+#                  proportion=True)
+#         del OutOfFrameFamilyDist
+#         OutOfFrame = OutOfFrame[OutOfFrame['v-jframe'] == 'Out-of-frame']
+#         cdrLength = (OutOfFrame['cdr1.end'] - OutOfFrame['cdr1.start'] + 1) / 3
+#         cdrLength = cdrLength.tolist()
+#         histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
+#                  '_outframe_cdr1_len_dist.png', dna=False,
+#                   seqName='CDR1', normed=True, maxbins=10)
+#         cdrGaps = Counter(OutOfFrame['cdr1.gaps'].tolist())
+#         plotDist(cdrGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_cdr1_gaps_dist.png', title='Gaps in CDR1',
+#                  proportion=False, rotateLabels=False)
+#         frGaps = Counter(OutOfFrame['fr1.gaps'].tolist())
+#         plotDist(frGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_fr1_gaps_dist.png', title='Gaps in FR1',
+#                  proportion=False, rotateLabels=False)
+#         del cdrLength, cdrGaps, frGaps
+#         cdrLength = (OutOfFrame['cdr2.end'] - OutOfFrame['cdr2.start'] + 1) / 3
+#         cdrLength = cdrLength.tolist()
+#         histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
+#                  '_outframe_cdr2_len_dist.png', dna=False,
+#                   seqName='CDR2', normed=True, maxbins=10)
+#         cdrGaps = Counter(OutOfFrame['cdr2.gaps'].tolist())
+#         plotDist(cdrGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_cdr2_gaps_dist.png', title='Gaps in CDR2',
+#                  proportion=False, rotateLabels=False)
+#         frGaps = Counter(OutOfFrame['fr2.gaps'].tolist())
+#         plotDist(frGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_fr2_gaps_dist.png', title='Gaps in FR2',
+#                  proportion=False, rotateLabels=False)
+#         del cdrLength, cdrGaps, frGaps
+#         cdrGaps = Counter([x if not isnan(x) else 'NA' for x in OutOfFrame['cdr3.gaps'] ])
+# #         print(len(cdrGaps))
+#         plotDist(cdrGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_cdr3_gaps_dist.png', title='Gaps in Germline CDR3',
+#                  proportion=False, rotateLabels=False)
+#         frGaps = Counter(OutOfFrame['fr3.gaps'].tolist())
+#         plotDist(frGaps, self.name, self.outputDir + self.name + 
+#                  '_outframe_fr3_gaps_dist.png', title='Gaps in FR3',
+#                  proportion=False, rotateLabels=False)
+#         del cdrGaps, frGaps
+#         if self.end5:
+#             print("5-end analysis of out-of-frame clones ... ")
+#             self.write5EndPrimerStats(OutOfFrame, self.outputDir+self.name+
+#                                       '_outframe_5end_', 'Out-of-frame') 
+#             invalid5Clones = OutOfFrame.index[OutOfFrame['5end'] == 'Indelled'].tolist()                     
+#         if self.end3:
+#             valid3End = Counter(OutOfFrame['3end'].tolist())
+#             plotDist(valid3End, self.name, self.outputDir + self.name + 
+#                  '_outframe_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Out-of-frame)',
+#                  proportion=True, rotateLabels=False)
+#             invalid3Clones = OutOfFrame.index[OutOfFrame['3end'] == 'Indelled'].tolist()
+#             print("Example of out-of-frame Indelled 3`-end:", invalid3Clones[1:10])
+#             print("Example of out-of-frame valid 3`-end:", OutOfFrame.index[OutOfFrame['3end'] != 'Indelled'].tolist()[1:10])
+#             try:
+#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
+#                           self.outputDir + self.name + 
+#                      '_outframe_invalid_primers.png')
+#                 del invalid5Clones, invalid3Clones
+#             except Exception as e:
+#                 raise e
+#             del valid3End
+#         del OutOfFrame
+#         # choose only In-frame RNA sequences
+#         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
+#         # Stop Codon 
+#         stopcodonInFrameDist = Counter(self.cloneAnnot['stopcodon'].tolist())
+#         plotDist(stopcodonInFrameDist, self.name, self.outputDir + self.name + 
+#                  '_inframe_stopcodon_dist.png', title='In-frame Stop Codons',
+#                  proportion=False, rotateLabels=False)
+#         print(stopcodonInFrameDist)
+#         # stop codon family distribution
+#         stopcodFamily = Counter(self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'Yes']['vgene'].tolist())
+#         stopcodFamily = compressCountsFamilyLevel(stopcodFamily)
+#         plotDist(stopcodFamily, self.name, self.outputDir + self.name + 
+#                  '_inframe_stopcodfam_dist.png',
+#                   title='IGV Abundance of In-frame Unproductive Sequences',
+#                  proportion=True)
+#         del stopcodonInFrameDist, stopcodFamily
+# #         print(stopcodFamily)
+#         # choose only productive RNA sequences 
+#         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'No']
+#         productiveFamilyDist = compressCountsFamilyLevel(Counter(self.cloneAnnot['vgene'].tolist()))
+#         plotDist(productiveFamilyDist, self.name, self.outputDir + self.name + 
+#                  '_productive_igv_dist.png',
+#                   title='IGV Abundance of Productive Sequences',
+#                  proportion=True)
+#         del productiveFamilyDist
+#         if self.end5:
+#             valid5End = Counter(self.cloneAnnot['5end'].tolist())
+#             plotDist(valid5End, self.name, self.outputDir + self.name + 
+#                  '_productive_5end_integrity_dist.png', title='Integrity of 5`-end Primer Sequence(Productive)',
+#                  proportion=True, rotateLabels=False)
+#             invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
+#             print("Example of invalid 5`-end:", invalid5Clones[1:10])
+#         if self.end3:
+#             valid3End = Counter(self.cloneAnnot['3end'].tolist())
+#             plotDist(valid3End, self.name, self.outputDir + self.name + 
+#                  '_productive_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Productive)',
+#                  proportion=True, rotateLabels=False)
+#             invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
+#             print("Example of invalid 3`-end:", invalid3Clones[1:10])
+#             try:
+#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
+#                           self.outputDir + self.name + 
+#                      '_productive_invalid_primers.png')
+#             except Exception as e:
+#                 raise e
+#         gc.collect()
         
     def writeFRStats(self):
 #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  

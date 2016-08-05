@@ -5,11 +5,11 @@
 import sys
 import os
 from numpy import Inf
-from IgRepertoire import IgRepertoire
+from IgRepertoire.IgRepertoire import IgRepertoire
 import time
 from os.path import abspath
 import traceback
-from igRepPlots import plotSeqLenDist, plotSeqLenDistClasses
+from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses
 from argsParser import parseArgs
   
 

@@ -1,7 +1,7 @@
 from Bio.Seq import  Seq
 from Bio.Alphabet.IUPAC import IUPACProtein
 from Bio.Alphabet import Alphabet
-from igRepUtils import alignListOfSeqs
+from IgRepertoire.igRepUtils import alignListOfSeqs
 from os.path import exists
 import os
 from Bio import SeqIO, motifs

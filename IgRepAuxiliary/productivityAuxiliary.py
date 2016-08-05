@@ -1,328 +1,100 @@
-from collections import Counter
-from math import ceil
-from os.path import exists
-import os
-from multiprocessing import Queue
-from igBlastWorker import analyzeSmallFile, IgBlastWorker
 import sys
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
 from pandas.core.frame import DataFrame
-import gc
-from config import MEM_GB, FR4_CONSENSUS
-from igRepUtils import splitFastaFile, writeListToFile, writeCountsToFile,\
-    compressCountsGeneLevel, compressCountsFamilyLevel, extractProteinFrag,\
-    findBestAlignment
-from igRepPlots import plotDist, plotStatsHeatmap
-import numpy as np
+from config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
+from IgRepertoire.igRepUtils import extractProteinFrag,\
+    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA
 from numpy import isnan, random
 import traceback
-
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):        
-        noWorkers = igRep.threads
-        
-        if (fastaFile == None):
-            return Counter()
-        # Estimate the IGV diversity in a library from igblast output 
-        print('The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
-        with open(fastaFile) as f:
-            noSeqs = sum(1 for line in f if line.startswith(">"))    
-        totalFiles = int(ceil(noSeqs / (igRep.seqsPerFile)))   
-#         print(fastaFile, totalFiles, igRep.seqsPerFile)
-#         sys.exit()
-        if (totalFiles == 1):
-            if igRep.primer > 0:
-                recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
-                records = []
-                for id in recordsAll:
-                    rec = recordsAll[id]
-                    rec.description = ''
-                    rec.seq = rec.seq[:igRep.primer]
-                    records.append(rec)
-                filesDir = igRep.outputDir + "tmp"
-                SeqIO.write(records, filesDir + "/seqs.fasta", 'fasta')
-                newFastFile = filesDir + "/seqs.fasta"
-            else:
-                newFastFile = fastaFile
-            (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,                                                 
-                                                  seqType, noWorkers)
-            sys.stdout.flush()
-        else:
-            # split FASTA file into smaller files 
-            ext = '.' + fastaFile.split('/')[-1].split('.')[-1]
-            filesDir = igRep.outputDir + "tmp"
-            prefix = fastaFile.split('/')[-1].split('.')[0]
-            prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
-            splitFastaFile(fastaFile, totalFiles, igRep.seqsPerFile, 
-                           filesDir, igRep.primer, prefix, ext)               
-
-            # # Prepare the multiprocessing queues     
-            tasks = Queue()    
-            outcomes = Queue()   
-            exitQueue = Queue()
-            if (noWorkers > totalFiles):
-                noWorkers = totalFiles          
-            cloneAnnot = DataFrame()
-            fileteredIDs = []
-            try:    
-                # Initialize workers 
-                workers = []        
-                for i in range(noWorkers):
-                    w = IgBlastWorker(igRep.chain, igRep.db,
-                                      seqType, int(ceil(noWorkers * 1.0/ totalFiles)))
-                    w.tasksQueue = tasks
-                    w.resultsQueue = outcomes
-                    w.exitQueue = exitQueue      
-                    workers.append(w)
-                    w.start()       
-                    sys.stdout.flush()
-                # initialize tasks queue with file names     
-                if (noSeqs > igRep.seqsPerFile): 
-                    for i in range(totalFiles):
-                        tasks.put(filesDir + "/" + prefix + "part"  + `int(i + 1)` + ext)
-                else:
-                    tasks.put(fastaFile)
-                # Add a poison pill for each worker
-                for i in range(noWorkers + 10):
-                    tasks.put(None)                  
-               
-                # Wait all process workers to terminate    
-                i = 0 
-                while i < noWorkers:    
-                    m = exitQueue.get()
-                    if m == "exit":
-                        i += 1
-                
-                # Collect results
-                print("Results are being collated from all workers ...")  
-                sys.stdout.flush()
-                while totalFiles:
-                    outcome = outcomes.get()
-                    totalFiles -= 1                    
-                    if (outcome is None):
-                        continue                    
-                    (cloneAnnoti, fileteredIDsi) = outcome
-                    cloneAnnot = cloneAnnot.append(cloneAnnoti)
-                    fileteredIDs += fileteredIDsi
-                    sys.stdout.flush()
-                    gc.collect()
-                print("\tResults were collated successfully.")
-                    
-                    
-            except Exception:
-                print("Something went wrong during the analysis process!")
-                raise
-            finally:
-                for w in workers:
-                    w.terminate()
-        #     print("here3")
-            # Clean folders to save space
-            #TODO: remove .fasta and .out files 
-            if (noSeqs > igRep.seqsPerFile and 
-                os.path.exists(filesDir + "/" + prefix + "part1" + ext)): 
-                os.system("rm " + filesDir + "/*" + ext)        
-        return (cloneAnnot, fileteredIDs)
-    
-
-def writeVAbundanceToFiles(stats, sampleName, outDir):
-    igvDist = Counter(stats["vgene"].tolist())
-    if (len(igvDist) == 0):
-        print("WARNING: No IGV hits were detected.")
-        return        
-    
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igvDist, outDir + sampleName + 
-                      '_igv_dist_variant_level.csv')
-    
-    # Group IGVs based on the subfamilies (gene level) and then write into a text file
-    igvDistSub = compressCountsGeneLevel(igvDist)
-#         for k in igvDist.keys():
-#             ksub = k.split('*')[0]
-#             igvDistSub[ksub] = igvDistSub.get(ksub, 0) + igvDist[k]
-    writeCountsToFile(igvDistSub, outDir + sampleName + 
-                      '_igv_dist_gene_level.csv')
-    plotDist(igvDistSub, sampleName, outDir + sampleName + 
-             '_igv_dist_gene_level.png', rotateLabels=False, vertical=False)
-    
-    # Group IGVs based on the families and then write into a text file
-    igvDistfam = compressCountsFamilyLevel(igvDistSub)
-#         for k in igvDistSub.keys():
-#             kfam = k.split('-')[0].split('/')[0]
-#             igvDistfam[kfam] = igvDistfam.get(kfam, 0) + igvDistSub[k]
-    writeCountsToFile(igvDistfam, outDir + sampleName + 
-                       '_igv_dist_family_level.csv')
-    
-    # Plot the family level distribution
-    plotDist(igvDistfam, sampleName, outDir + sampleName + 
-             '_igv_dist_family_level.png')
-    
-    # plot alignment length vs %identity
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
-                     ['Alignment Length', '%Identity'] , outDir + sampleName + 
-              '_igv_align_quality_identity_hm.png')
-    # plot alignment length vs bitScore
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'bitscore'],
-                     ['Alignment Length', 'bitScore'] , outDir + sampleName + 
-              '_igv_align_quality_bitscore_hm.png')
-    # plot query start vs. subject start
-    plotStatsHeatmap(stats, sampleName, ['vqstart', 'vstart'],
-                     ['Query Start', 'Subject Start'] , outDir + sampleName + 
-              '_igv_align_quality_start_hm.png')
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'vmismatches'],
-                     ['Alignment Length', 'Mismatches'] , outDir + sampleName + 
-              '_igv_align_quality_mismatches_hm.png')
-    c = Counter(stats['vmismatches'].tolist())
-    plotDist(c, sampleName, outDir + sampleName + 
-             '_igv_mismatches_dist.png', title='Number of Mismatches in V gene',
-             proportion=True, rotateLabels=False, top=20) 
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
-                     ['Alignment Length', 'Gaps'] , outDir + sampleName + 
-              '_igv_align_quality_gaps_hm.png')
-    c = Counter(stats['vgaps'].tolist())
-    plotDist(c, sampleName, outDir + sampleName + 
-             '_igv_gaps_dist.png', title='Number of Gaps in V gene',
-             proportion=True, rotateLabels=False, top=20) 
-    #     print(np.percentile(stats, [0, 100], 0))
-    #     summarizeStats(stats, outputDir+sampleName+'_stats_summary.txt')
-
-
-def writeJAbundanceToFiles(stats, sampleName, outDir):
-    igjDist = Counter(stats["jgene"].tolist())
-    igjDist = {str(k) : igjDist[k] for k in igjDist}
-    if (len(igjDist) == 0):
-        print("WARNING: No IGJ hits were detected.")
-        return        
-    
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igjDist, outDir + sampleName + 
-                      '_igj_dist_variant_level.csv')
-    plotDist(igjDist, sampleName, outDir + sampleName + 
-                  '_igj_dist_variant_level.png', rotateLabels=False, vertical=False)
-    
-    # Group IGVs based on the subfamilies (gene level) and then write into a text file
-    igjDistSub = compressCountsGeneLevel(igjDist)
-#     writeCountsToFile(igjDistSub, outDir + sampleName + 
-#                       '_igj_dist_gene_level.csv')
-#     plotDist(igjDistSub, sampleName, outDir + sampleName + 
-#              '_igj_dist_gene_level.png', rotateLabels=False, vertical=False)
-#     
-    # Group IGVs based on the families and then write into a text file
-    igjDistfam = compressCountsFamilyLevel(igjDistSub)
-    writeCountsToFile(igjDistfam, outDir + sampleName + 
-                       '_igj_dist_family_level.csv')    
-    # Plot the family level distribution
-    plotDist(igjDistfam, sampleName, outDir + sampleName + 
-             '_igj_dist_family_level.png',
-             title = 'IGJ Abundance in Sample ' + sampleName )
-
-
-def writeDAbundanceToFiles(stats, sampleName, outDir):
-    igdDist = Counter(stats["dgene"].tolist())
-    igdDist = Counter({str(k) : igdDist[k] for k in igdDist})
-    if (len(igdDist) == 0):
-        print("WARNING: No IGD hits were detected.")
-        return        
-    
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igdDist, outDir + sampleName + 
-                      '_igd_dist_variant_level.csv')
-    
-    # Group IGVs based on the subfamilies (gene level) and then write into a text file
-    igdDistSub = compressCountsGeneLevel(igdDist)
-    writeCountsToFile(igdDistSub, outDir + sampleName + 
-                      '_igd_dist_gene_level.csv')
-    plotDist(igdDistSub, sampleName, outDir + sampleName + 
-             '_igd_dist_gene_level.png', rotateLabels=False, vertical=False,
-             title = 'IGD Abundance in Sample ' + sampleName )
-    
-    # Group IGVs based on the families and then write into a text file
-    igdDistfam = compressCountsFamilyLevel(igdDistSub)
-    writeCountsToFile(igdDistfam, outDir + sampleName + 
-                       '_igd_dist_family_level.csv')    
-    # Plot the family level distribution
-    plotDist(igdDistfam, sampleName, outDir + sampleName + 
-             '_igd_dist_family_level.png',
-             title = 'IGD Abundance in Sample ' + sampleName)
-
-
-def writeAbundanceToFiles(stats, sampleName, outDir, chain = "hv"):
-        writeVAbundanceToFiles(stats, sampleName, outDir)
-        writeJAbundanceToFiles(stats, sampleName, outDir)
-        if (chain == "hv"):
-            writeDAbundanceToFiles(stats, sampleName, outDir)
+ 
 
 def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut, chain, flags):
-    try:
-        seqs = [record.id, qsRec['vgene']]    
-        if (qsRec['strand'] == "reversed"):
-            record.seq = record.seq.reverse_complement()
-        # grab the beginning of the VH clone  
+    try:        
+        seqs = [record.id, qsRec['vgene']]        
+        if (qsRec['strand'] == "reversed"):            
+            record = SeqRecord(record.seq.reverse_complement(), id = record.id, 
+                               name="", description="")
+        # grab the beginning of the VH clone
+#         print("started")  
         if actualQstart > -1:
-            qstart = actualQstart # zero-based
+            offset = actualQstart # zero-based
         else:                                  
-            qstart = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
-        if  qstart < 0:
-            qstart = 0                   
-        vh = record.seq[qstart:]                       
+            offset = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
+        if  offset < 0:
+            offset = 0                   
+        vh = record.seq[offset:]                       
         # check whether the VH sequence can be translated successfully
         if len(vh) % 3 != 0:
             vh = vh[:-1 * (len(vh) % 3)]#                   
-        protein = str(vh.translate())
+        protein = str(vh.translate())        
         # check whether the start of the V gene is the same as the start of FR1
         if qsRec['vqstart'] != qsRec['fr1.start']:
-            flags['fr1NotAtBegin'] += [record.id]
-        # Extract protein sequence of FR1             
-        seqs.append(extractProteinFrag(protein, qstart, qsRec['fr1.end'], qstart))
-        # Extract protein sequence of CDR1
-        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], qstart))
-        # Extract protein sequence of FR2
-        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], qstart))
-        # Extract protein sequence of CDR2
-        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], qstart))
-        # Extract protein sequence of FR3
-        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], qstart))
+            flags['fr1NotAtBegin'] += [record.id]    
+        qsRec['fr1.start'] = offset+1    
         # Identification of FR4 so that CDR3 can be defined 
-        if isnan(qsRec['fr4.end']):
-            fr4start, fr4end = findBestAlignment(
-                        extractProteinFrag(protein, qsRec['fr3.end'] + 1,
-                     - 1, qstart, trimAtStop=False), FR4_CONSENSUS[chain])#                     
-            if (fr4start != -1 and fr4end != -1 and fr4end > fr4start):
+        if isnan(qsRec['fr4.end']):            
+            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1,
+                     - 1, offset, trimAtStop=False)
+            if (searchRegion is None):
+                raise Exception("ERROR: undefined search region to find FR3 consensus.")
+            qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
+            fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
+                                                         FR4_CONSENSUS[chain])# , show=True
+#             print ("Protein", searchRegion, fr4start, fr4end)                 
+            if (not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start):
                 qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
+                # CDR3                
+                qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
                 ## Check whether to cut the Ig sequence after FR4 or not
                 if not fr4cut: 
                     qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']     
                 else:
-                    qsRec['fr4.end'] = fr4end * 3 + qsRec['fr3.end']                                   
-                # CDR3
-                qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
-                qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-            else:
-                #TODO: check this case 
-                qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
-                qsRec['cdr3.end'] = qsRec['jqend']
-        # Extract protein sequence of CDR3 and FR4     
-        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], qstart))
-        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], qstart))
-        # check whether FR and CDR sequences were extracted correctly
-        tmp = ''.join(seqs[2:])
-        if (tmp not in protein):
-            raise Exception("ERROR at CDR refinement: ", protein, seqs)   
-        protein = tmp
-                       
+                    qsRec['fr4.end'] = fr4end * 3 + qsRec['fr3.end'] 
+            else:                
+                # try to use the DNA consensus
+                searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
+                fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
+                                                     FR4_CONSENSUS_DNA[chain], 
+                                                     True) # , show=True
+#                 print ("DNA", searchRegion, fr4start, fr4end)  
+                if (fr4start != -1 and fr4end != -1 and fr4end > fr4start):
+                    qsRec['fr4.start']  = qsRec['fr3.end'] + fr4start
+                    # CDR3                
+                    qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
+                    if not fr4cut: 
+                        qsRec['fr4.end'] = len(record.seq) 
+                    else:
+                        qsRec['fr4.end']  = qsRec['fr3.end'] + fr4end
+                    flags['CDR3dna'] += [record.id]
+                else:
+                    #TODO: check this case                
+                    qsRec['cdr3.end'] = qsRec['jqend']
+#                     qsRec['fr4.end'] = len(record.seq) 
+#                     qsRec['fr4.start'] =  len(record.seq)
+        # Extract the CDR and FR protein sequences
+        (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset)
+        seqs += tmp
+        if (seqs[-1][:len(FR4_CONSENSUS[chain])] != FR4_CONSENSUS[chain]):
+            flags['fr4NotAsExpected'] += [record.id]
+        if (seqs[-1] == ''):
+            flags['noFR4'] += [record.id]
+        # Extract the CDR and FR nucleotide sequences
+        tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)        
+        #TODO: consider adding the DNA sequences 
+#         seqs += tmp
+#         if (record.id == 'HWI-M00123R:106:000000000-ACUM9:1:2109:19850:13859'):
+#             sys.exit()
+#         print("pass")
         if ('*' in protein):
             flags['endsWithStopCodon'] += [record.id]                     
             ### update the StopCodon value if it was set to No
             if qsRec['stopcodon'] == 'No':
                 flags['updatedStopCodon'] += [record.id]
                 qsRec['stopcodon'] = 'Yes' 
-       
-        if (seqs[-1][:len(FR4_CONSENSUS[chain])] != FR4_CONSENSUS[chain]):
-            flags['fr4NotAsExpected'] += [record.id]
-        if (seqs[-1] is None):
-            flags['noFR4'] += [record.id]
         
-        #TODO: update the annotation fields with the new calculated values
-        qsRec['fr1.start'] = qstart+1                
-        gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - qstart                
+        #TODO: update the annotation fields with the new calculated values                        
+        gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - offset                
         mismatches = qsRec['vstart'] - 1
         if (qsRec['vstart'] > qsRec['vqstart'] and gaps > 0):
             mismatches -= gaps
@@ -337,45 +109,50 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut, chain, flags):
             qsRec['vstart']  -= mismatches
             qsRec['vqstart']  -= mismatches                  
     except Exception as e:                
-        print("ERROR: exception in the CDR Annotation Refinement")
-        print(protein, record.id, str(vh), qsRec)
+        print("ERROR: exception in the Clone Annotation Refinement method")
+        print(record.id)
+        print(str(vh))
+        print(qsRec)
+        print(protein)        
         traceback.print_exc(file=sys.stdout)
         raise e
     return seqs
 
-refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 
+def loadRefineFlagInfo():
+    refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 
              'fr4NotAsExpected', 'updatedStopCodon', 'noFR4',
              'updatedInFrame' , 'updatedInFrameNA', 'updatedInFrameConc',
              'updatedInFrameNo3or4', 'updatedInFrame3x' ,
-             'updatedInFrameIndel']
-refineFlagMsgs = {}
-refineFlagMsgs['fr1NotAtBegin'] = "{:,} clones have FR1 start not equal to query start (Excluded)" 
-refineFlagMsgs['endsWithStopCodon'] = "{:,} clones contain a stop codon "
-refineFlagMsgs['updatedStopCodon'] = "The stopcodon flag was updated for {:,} clones "
-refineFlagMsgs['fr4NotAsExpected'] = "{:,} clones do not have an expected FR4 clones "
-refineFlagMsgs['noFR4'] = "{:,} clones do not have FR4 "
-refineFlagMsgs['updatedInFrame'] = "The v-j frame rearrangement status has been corrected for {:,} clones "
-refineFlagMsgs['updatedInFrameNA'] = "{:,} clones have undefined in-frame status"
-refineFlagMsgs['updatedInFrameConc'] = "{:,} clones show discordance between the query and v gene starts"
-refineFlagMsgs['updatedInFrameNo3or4'] = "{:,} clones have no CDR3 or FR4"
-refineFlagMsgs['updatedInFrame3x'] = "{:,} clones are not multiple of 3 "
-refineFlagMsgs['updatedInFrameIndel'] = "{:,} clones have indels in one of the FRs or CDRs"
+             'updatedInFrameIndel', 'CDR3dna']
+    refineFlagMsgs = {}
+    refineFlagMsgs['fr1NotAtBegin'] = "{:,} clones have FR1 start not equal to query start (Excluded)" 
+    refineFlagMsgs['endsWithStopCodon'] = "{:,} clones contain a stop codon "
+    refineFlagMsgs['updatedStopCodon'] = "The stopcodon flag was updated for {:,} clones "
+    refineFlagMsgs['fr4NotAsExpected'] = "{:,} clones do not have an expected FR4 clones "
+    refineFlagMsgs['noFR4'] = "{:,} clones do not have FR4 "
+    refineFlagMsgs['updatedInFrame'] = "The v-j frame rearrangement status has been corrected for {:,} clones "
+    refineFlagMsgs['updatedInFrameNA'] = "{:,} clones have undefined in-frame status"
+    refineFlagMsgs['updatedInFrameConc'] = "{:,} clones show discordance between the query and v gene starts"
+    refineFlagMsgs['updatedInFrameNo3or4'] = "{:,} clones have no CDR3 or FR4"
+    refineFlagMsgs['updatedInFrame3x'] = "{:,} clones are not multiple of 3 "
+    refineFlagMsgs['updatedInFrameIndel'] = "{:,} clones have indels in one of the FRs or CDRs"
+    refineFlagMsgs['CDR3dna'] = "The CDR3 of {:,} clones was determined using DNA consensus"
+    return (refineFlagNames, refineFlagMsgs)
 
 def refineClonesAnnotation(cloneAnnotOriginal, readFile, format, 
                             actualQstart, chain, fr4cut, seqsPerFile):
         print("Clone annotation and in-frame prediction are being refined ...")
         cloneAnnot = cloneAnnotOriginal.copy()        
-        queryIds = cloneAnnot.index
+        queryIds = cloneAnnot.index #[1450000:]
         transSeqs = []
+        (refineFlagNames, refineFlagMsgs) = loadRefineFlagInfo()
         flags = {}
         for f in refineFlagNames:
             flags[f] = [] 
         procSeqs = 0
         # process clones from the FASTA/FASTQ file
-        if (MEM_GB > 20):
-            records = SeqIO.to_dict(SeqIO.parse(readFile, format))
-        else:
-            records = SeqIO.index(readFile, format)
+        records = SeqIO.index(readFile, format)    
+        print("\tIndex created and refinement started")    
         for id in queryIds:            
             # retrieve the clone record from the CloneAnnot dataframe
             record = records[id] 
@@ -407,16 +184,17 @@ def refineClonesAnnotation(cloneAnnotOriginal, readFile, format,
                 sys.stdout.flush()
         print('%d/%d clones have been processed ... ' % (procSeqs, len(queryIds)))
         # print refine flags 
-        printRefineFlags(flags, chain)
+        printRefineFlags(flags, chain, refineFlagNames, refineFlagMsgs)
         flags = None
         # Create data frame of FR and CDR clones
-        cloneSeqs = DataFrame(transSeqs, columns=['queryid', 'germline', 'fr1', 'cdr1', 'fr2', 'cdr2',
-                                                  'fr3', 'cdr3', 'fr4'])
+        cloneSeqs = DataFrame(transSeqs, columns=['queryid', 'germline', 
+                                'fr1', 'cdr1', 'fr2', 'cdr2', 'fr3', 'cdr3', 'fr4'])
         cloneSeqs.index = cloneSeqs.queryid
         del cloneSeqs['queryid']
+        records.close()
         return (cloneAnnot, cloneSeqs)
         
-def printRefineFlags(flags, chain):
+def printRefineFlags(flags, chain, refineFlagNames, refineFlagMsgs):
     ## print statistics and a few of the flagged clones 
     for f in refineFlagNames:
         if (len(flags[f]) > 0):
@@ -433,9 +211,9 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
             flags['updatedInFrameNA'] += [record.id]
             inframe = False
         # the query clone is not in concordance with the start of the germline gene
-        qstart = qsRec['vqstart'] - qsRec['vstart'] + 1 # 1-based 
-        if (inframe and (qstart < 1 or 
-            (actualQstart != -1 and (qstart - 1 - actualQstart) % 3 != 0))):            
+        offset = qsRec['vqstart'] - qsRec['vstart'] + 1 # 1-based 
+        if (inframe and (offset < 1 or 
+            (actualQstart != -1 and (offset - 1 - actualQstart) % 3 != 0))):            
             inframe = False     
             flags['updatedInFrameConc'] += [record.id]           
         # if no CDR3 or FR4 ==> Out-of-frame
@@ -445,7 +223,7 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
             inframe = False
             flags['updatedInFrameNo3or4'] += [record.id]
         # doesn't start/end properly .. not multiple of 3
-        if (inframe and ((qsRec['fr4.end'] - qstart + 1) % 3 != 0 or 
+        if (inframe and ((qsRec['fr4.end'] - qsRec['fr1.start'] + 1) % 3 != 0 or 
             (actualQstart != -1 and 
              ((qsRec['fr4.end'] - actualQstart) % 3 != 0)))):
             inframe = False
@@ -515,18 +293,18 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                 # retrive the clone record from the CDRInfo file
 #                 qsRec = cloneAnnot.loc[record.id].to_dict()
 #                 seqs = [record.id, qsRec['vgene']]                
-# #                 if qstart <= igRep.actualQstart:
+# #                 if offset <= igRep.actualQstart:
 # #                     continue
 #                 if (qsRec['strand'] == "reversed"):
 #                     record.seq = record.seq.reverse_complement()
 #                 # grab the beginning of the VH clone  
 #                 if igRep.actualQstart > -1:
-#                     qstart = igRep.actualQstart # zero-based
+#                     offset = igRep.actualQstart # zero-based
 #                 else:                                  
-#                     qstart = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
-#                 if  qstart < 0:
-#                     qstart = 0                   
-#                 vh = record.seq[qstart:]                       
+#                     offset = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
+#                 if  offset < 0:
+#                     offset = 0                   
+#                 vh = record.seq[offset:]                       
 #                 # check whether the VH clone can be translated successfully
 #                 if len(vh) % 3 != 0:
 #                     vh = vh[:-1 * (len(vh) % 3)]#                   
@@ -536,25 +314,25 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                     fr1NotAtBegin += [record.id]
 # 
 #                 # FR1             
-#                 seqs.append(extractProteinFrag(protein, qstart,
-#                                                qsRec['fr1.end'], qstart))
+#                 seqs.append(extractProteinFrag(protein, offset,
+#                                                qsRec['fr1.end'], offset))
 #                 # CDR1
 #                 seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'],
-#                                                qsRec['cdr1.end'], qstart))
+#                                                qsRec['cdr1.end'], offset))
 #                 # FR2
 #                 seqs.append(extractProteinFrag(protein, qsRec['fr2.start'],
-#                                                qsRec['fr2.end'], qstart))
+#                                                qsRec['fr2.end'], offset))
 #                 # CDR2
 #                 seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'],
-#                                                qsRec['cdr2.end'], qstart))
+#                                                qsRec['cdr2.end'], offset))
 #                 # FR3
 #                 seqs.append(extractProteinFrag(protein, qsRec['fr3.start'],
-#                                                qsRec['fr3.end'], qstart))
+#                                                qsRec['fr3.end'], offset))
 #                 # Identification of FR4 so that CDR3 can be defined 
 #                 if isnan(qsRec['fr4.end']):
 #                     fr4start, fr4end = findBestAlignment(
 #                                 extractProteinFrag(protein, qsRec['fr3.end'] + 1,
-#                              - 1, qstart, trimAtStop=False), FR4_CONSENSUS)#                     
+#                              - 1, offset, trimAtStop=False), FR4_CONSENSUS)#                     
 #                     if (fr4start != -1 and fr4end != -1 and fr4end > fr4start):
 #                         qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
 #                         if not igRep.fr4cut: 
@@ -569,9 +347,9 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                         qsRec['cdr3.end'] = qsRec['jqend']
 #                     
 #                 seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'],
-#                                                    qsRec['cdr3.end'], qstart))
+#                                                    qsRec['cdr3.end'], offset))
 #                 seqs.append(extractProteinFrag(protein, qsRec['fr4.start'],
-#                                                qsRec['fr4.end'], qstart))
+#                                                qsRec['fr4.end'], offset))
 #                 ## Check whether to cut the Ig clone after FR4 or not
 #                 if igRep.fr4cut:
 #                     try:                        
@@ -579,7 +357,7 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                     except:
 #                         pass
 #                     try:
-#                         vh = record.seq[qstart:int(qsRec['fr4.end'])]
+#                         vh = record.seq[offset:int(qsRec['fr4.end'])]
 #                     except:
 #                         pass
 #                 if ('*' in protein):
@@ -612,10 +390,10 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                     if igRep.end5offset == 0:
 #                         prim = str(vh[:L5])
 #                     else:
-#                         if qstart + igRep.end5offset >= 0:
-#                             prim = str(record.seq[qstart + igRep.end5offset: qstart + L5 + igRep.end5offset])
+#                         if offset + igRep.end5offset >= 0:
+#                             prim = str(record.seq[offset + igRep.end5offset: offset + L5 + igRep.end5offset])
 #                         else:
-#                             prim = str(record.seq[: qstart + L5 + igRep.end5offset])
+#                             prim = str(record.seq[: offset + L5 + igRep.end5offset])
 #                     (id, tag, indelPos) = findBestMatchedPattern(prim, end5Seqs)
 #                     valid5End[record.id] = tag
 #                     primer5End[record.id] = id                    
@@ -631,8 +409,8 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
 #                     noFR4 += [record.id]
 #                 transSeqs.append(seqs)
 #                 #TODO: update the annotation fields with the new calculated values
-#                 cloneAnnot.set_value(record.id, 'fr1.start', qstart+1)                
-#                 gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - qstart                
+#                 cloneAnnot.set_value(record.id, 'fr1.start', offset+1)                
+#                 gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - offset                
 #                 mismatches = qsRec['vstart'] - 1
 #                 if (qsRec['vstart'] > qsRec['vqstart']):
 #                     mismatches -= gaps

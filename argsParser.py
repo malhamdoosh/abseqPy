@@ -52,13 +52,6 @@ def parseArgs(args):
     if (argVals.get('f1', None) is None):
         raise Exception("One sequence file at least must be provided.")    
     argVals['f1'] = abspath(argVals['f1'])
-        
-#     if (argVals.get('f2', None) is not None):
-#         noFiles = 2
-#         argVals['f2'] = abspath(argVals['f2'])
-#     else:
-#         argVals['f2'] = None
-#         noFiles = 1
                 
     if (argVals.get('o', None) is None):
         argVals['o'] = './'
@@ -110,25 +103,26 @@ def parseArgs(args):
         if (argVals.get('sites', None) is None):
             raise Exception("Restriction sites should be provided.")            
         argVals['sites'] = abspath(argVals['sites'])
-    if (argVals['task'] == 'diversity'):
+    if (argVals['task'] in ['diversity', 'productivity']):        
+        if argVals.get('actualqstart', None) is not None:
+            argVals['actualqstart'] = int(argVals['actualqstart']) - 1
+        else:
+            argVals['actualqstart'] = -1        
+        if (argVals.get('fr4cut', None) is None):
+            argVals['fr4cut'] = False
+        else:
+            argVals['fr4cut'] = (argVals['fr4cut'].upper() == 'YES')
+    if (argVals['task'] == 'primer'):
         argVals['5end'] = argVals.get('5end', None)
         if argVals['5end']:
             argVals['5end'] = abspath(argVals['5end'])
         argVals['3end'] = argVals.get('3end', None)
         if argVals['3end']:
             argVals['3end'] = abspath(argVals['3end'])
-        if argVals.get('actualqstart', None) is not None:
-            argVals['actualqstart'] = int(argVals['actualqstart']) - 1
-        else:
-            argVals['actualqstart'] = -1
         if (argVals.get('5endoffset', None) is None):
             argVals['5endoffset'] = 0
         else:
-            argVals['5endoffset'] = int(argVals['5endoffset'])
-        if (argVals.get('fr4cut', None) is None):
-            argVals['fr4cut'] = False
-        else:
-            argVals['fr4cut'] = (argVals['fr4cut'].upper() == 'YES')
+            argVals['5endoffset'] = int(argVals['5endoffset'])            
         
     if (argVals.get('sstart', None) is None):
         argVals['sstart'] = [1, Inf]
