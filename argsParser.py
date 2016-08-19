@@ -27,7 +27,7 @@ def parseArgs(args):
                   '-bitscore', '-primer', '-alignlen', '-sstart',
                   '-db', '-threads', '-merger', '-upstream',
                   '-sites', '-5end', '-3end', '-actualqstart',
-                  '-5endoffset', '-fr4cut']
+                  '-5endoffset', '-fr4cut', '-trim3', '-trim5']
     argVals = {}
     for i in range(1, len(args), 2):
 #         print(args[i].lower(), validArgs)
@@ -35,6 +35,7 @@ def parseArgs(args):
 #             print(args[i], args[i+1])
             argVals[args[i].replace('-', '').lower()] = args[i+1]
         else:
+            print(args[i], validArgs)
             raise Exception(args[i] + ' is invalid argument.')
     
     if (argVals.get('chain', None) is None):
@@ -63,6 +64,11 @@ def parseArgs(args):
         
     if (argVals['merge'] == 'yes' and (argVals['f2'] is None)):
         raise Exception("The merger requires two sequence files (use both -f1 and -f2).")
+    if (argVals.get('f2', None) is None):
+        argVals['f2'] = ''
+    else:
+        argVals['f2'] = abspath(argVals['f2'])
+    
     ## output directory
     f1name = argVals['f1'].split('/')[-1]
     if (f1name.find("_R") != -1 and 
@@ -111,7 +117,15 @@ def parseArgs(args):
         if (argVals.get('fr4cut', None) is None):
             argVals['fr4cut'] = False
         else:
-            argVals['fr4cut'] = (argVals['fr4cut'].upper() == 'YES')
+            argVals['fr4cut'] = (argVals['fr4cut'].upper() == 'YES')    
+    if (argVals.get('trim5', None) is not None):
+        argVals['trim5'] = int(argVals['trim5']) - 1
+    else:
+        argVals['trim5'] = 0
+    if (argVals.get('trim3', None) is not None):
+        argVals['trim3'] = int(argVals['trim3'])
+    else:
+        argVals['trim3'] = 0
     if (argVals['task'] == 'primer'):
         argVals['5end'] = argVals.get('5end', None)
         if argVals['5end']:

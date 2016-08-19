@@ -6,13 +6,13 @@ import sys
 from Bio import SeqIO
 from Bio.Seq import Seq
 from pandas.io.parsers import read_csv
-from NGSmotifs import generateMotifs
+from IgRepAuxiliary.SeqUtils import generateMotifs
 from numpy import Inf, random, isnan, logical_not
 from igRepUtils import  writeCountsCategoriesToFile
 import gc
 from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
 from igRepUtils import findHitsRegion, replaceIUPACLetters,  findHits
-from NGSmotifs import generateProteinLogos
+from IgRepAuxiliary.SeqUtils import generateProteinLogos
 from Bio.SeqRecord import SeqRecord
 from igRepUtils import compressCountsGeneLevel
 from config import  FASTQC
@@ -23,6 +23,7 @@ from pandas.io.pytables import read_hdf
 from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from IgRepReporting.abundanceReport import writeAbundanceToFiles
 from IgRepReporting.productivityReport import generateProductivityReport
+from IgRepReporting.diversityReport import generateDiversityReport
 
 class IgRepertoire:    
     def __init__(self, args):        
@@ -44,6 +45,8 @@ class IgRepertoire:
         if (args['task'] in ['productivity', 'diversity']):
             self.actualQstart = args['actualqstart'] 
             self.fr4cut = args['fr4cut']
+        self.trim5End = args['trim5']
+        self.trim3End = args['trim3']    
         if (args['task'] == 'primer'):
             self.end5 = args['5end']
             self.end3 = args['3end']                       
@@ -102,7 +105,10 @@ class IgRepertoire:
             elif self.format == 'fasta':
                 readFasta = self.readFile                
             else:
-                raise Exception('unknown file format! ' + self.format)            
+                raise Exception('unknown file format! ' + self.format)
+#             if self.trim3End > 0 or self.trim5End > 0:
+#                 trimSequences(readFasta)   
+#                 self.trimmed = True         
             sys.stdout.flush()
             # Estimate the IGV family abundance for each library        
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,                                                                                                            
@@ -113,7 +119,7 @@ class IgRepertoire:
             # export the CDR/FR annotation to a file
             print("Clones annotation file is being written to " + self.cloneAnnotFile)         
 #             self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)         
-            self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')
+            self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')            
         if outDirFilter:    
             ## Filter clones based on bitscore, alignLen and sStart
             print("Clones are being filtered based on the following criteria: ")
@@ -147,44 +153,83 @@ class IgRepertoire:
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
         gc.collect()
         
-    def analyzeProductivity(self):
+    def analyzeProductivity(self, generateReport=True):
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
         else:
             print("WARNING: remove the 'productivity' directory if you changed the filtering criteria.")
         self.refinedCloneAnnotFile = outDir + self.name
-        self.refinedCloneAnnotFile += "_refined_clones_annot.h5"
-        
+        self.refinedCloneAnnotFile += "_refined_clones_annot.h5" 
+               
         self.cloneSeqFile = outDir + self.name
         self.cloneSeqFile += "_clones_seq.h5"      
-        
+                 
         if (not exists(self.refinedCloneAnnotFile)):
             self.annotateClones(outDir)
-            #sys.exit()            
-            (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(self.cloneAnnot, self.readFile,
+#             if (self.trimmed):
+#                 self.trim3End = 0
+#                 self.trim5End = 0
+#             elif self.trim3End > 0 or self.trim5End > 0:
+#                 print("WARNING: if trimming was applied in the 'annotate' step, you may not need trimming")
+            #print(sys.getsizeof(self.cloneAnnot) / (1024.**3)) # in GB         
+            (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outDir, self.name,
+                                                   self.cloneAnnot, self.readFile,
                                                       self.format, self.actualQstart,
                                                       self.chain, self.fr4cut,
-                                                      self.seqsPerFile)                   
-            # export the CDR/FR annotation to a file                
-            print("The refined clone annotation file is being written to " + self.refinedCloneAnnotFile)
-            self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', 
-                                   complib='blosc')
-            sys.stdout.flush()
-            print("The clone protein sequences are being written to " + 
-                  self.refinedCloneAnnotFile)
-            self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
-                                  complib='blosc')
-            gc.collect()            
-            sys.stdout.flush()              
+                                                      self.trim5End, self.trim3End,
+                                                      self.seqsPerFile, self.threads)                   
+            gc.collect()  
+            if generateReport:
+                # export the CDR/FR annotation to a file                
+                print("The refined clone annotation file is being written to " + 
+                      self.refinedCloneAnnotFile.split("/")[-1])
+                self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', 
+                                       complib='blosc')
+                sys.stdout.flush()
+                print("The clone protein sequences are being written to " + 
+                      self.refinedCloneAnnotFile.split("/")[-1])
+                self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
+                                      complib='blosc')                      
+                sys.stdout.flush()              
         else:
             print("\The refined clone annotation file was found! ... " + 
                   self.cloneSeqFile.split('/')[-1])
             self.cloneAnnot = read_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot")            
             self.cloneSeqs = read_hdf(self.cloneSeqFile, "cloneSequences")  
-        # display statistics 
-        generateProductivityReport(self.cloneAnnot, self.name, outDir)
+        if generateReport:
+            # display statistics 
+            generateProductivityReport(self.cloneAnnot, self.name, outDir)
+            #TODO: analyze productive clones only 
+#             self.analyzeIgProtein()
+#             sys.stdout.flush()
         
+    '''
+    
+    '''
+    def analyzeDiversity(self):
+        outDir = self.outputDir + "diversity/"
+        if (not os.path.isdir(outDir)):
+            os.system("mkdir " + outDir)  
+        else:
+            print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
+        self.analyzeProductivity(False)
+        
+        inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
+        self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+        gc.collect() 
+         
+        self.cloneSeqs = self.cloneSeqs.loc[self.cloneSeqs.index]
+        
+        spectraTypes = identifySpectratypes(self.cloneAnnot)
+        clonoTypes = identifyClonotypes()
+        
+        generateDiversityReport(spectraTypes, clonoTypes)
+        #### HERE       
+       
+        
+      
+       
     def analyzePrimerSpecificity(self):
         pass
         
@@ -703,76 +748,7 @@ class IgRepertoire:
                     raise
         print("\t\tRestricting sites have been loaded")
                 
-    def analyzeDiversity(self):
-        print("The diversity of the CDRs of the VH regions is being analyzed ... ")
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]      
-        if (not os.path.isdir(self.outputDir + "cdrs/")):
-            os.system("mkdir " + self.outputDir + "cdrs/")
-        self.cloneAnnotFile = self.outputDir + "cdrs/" + self.name
-        self.cloneAnnotFile += "_cdr_info.tab"   
-        
-        self.cloneSeqFile = self.outputDir + "cdrs/" + self.name
-        self.cloneSeqFile += "_cdr_seq.tab"     
-        
-        if (not exists(self.cloneAnnotFile)):       
-            self.analyzeAbundance('cdrinfo')
-            # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)    
-            print("Text file has been written to " + self.cloneAnnotFile) 
-            # Refine the annotation of CDR3 and FR4
-            self.refineClonesAnnotation()  
-            self.refineInFramePrediction()
-            
-        else:
-            print("\tCDRs information file was found! ... " + self.cloneAnnotFile.split('/')[-1])
-            sys.stdout.flush()
-            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
-                                       header=0, index_col=0)            
-            if (not exists(self.cloneSeqFile)):                
-                self.refineClonesAnnotation() 
-                self.refineInFramePrediction() 
-            else:
-                print("\tCDRs sequence file was found! ... " + self.cloneSeqFile.split('/')[-1])
-                sys.stdout.flush()
-                self.cloneSeqs = read_csv(self.cloneSeqFile, sep='\t',
-                                       header=0, index_col=0)            
-            
-                 
-#         self.alignInfo = read_csv(self.cloneAnnotFile.replace('cdr', 'align'), 
-#                                   sep ='\t', header= 0, index_col=0)
-#         cdrids = set(self.cloneAnnot.index)
-#         alignids = set(self.alignInfo.index)
-#         incdr = cdrids.difference(alignids)
-#         inalign = alignids.difference(cdrids) 
-#         print(len(cdrids), len(alignids))
-#         print(len(incdr), len(inalign))
-#         print(list(inalign)[1:10])
-        
-        outDir = self.outputDir
-        self.outputDir = outDir + "/cdrs/"
-                
-        self.generateProductivityReport()
-        sys.stdout.flush()
-        
-        self.cloneSeqs = self.cloneSeqs[map(lambda x: x in self.cloneAnnot.index, self.cloneSeqs.index)]
-                
-        self.writeCDRStats()
-        sys.stdout.flush()
-        
-        self.writeFRStats()
-        sys.stdout.flush()
-        
-        self.writeVGeneStats()
-        sys.stdout.flush()
-        
-        self.generateCDRandFRLogos()
-        sys.stdout.flush()
-        # analyze productive clones only 
-        self.analyzeIgProtein()
-        sys.stdout.flush()
-        
-        self.outputDir = outDir
+    
         
     def analyzeIgProtein(self):
 #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
@@ -856,101 +832,7 @@ class IgRepertoire:
                      proportion=False, vertical=False, top=20, rotateLabels=False)
         gc.collect()
         
-    def generateCDRandFRLogos(self):
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        seqs = {}
-        for k in self.cloneSeqs.columns:
-            if k.startswith('cdr') :
-                seqs[k] = self.cloneSeqs[k].tolist()
-            if k.startswith('fr'):
-                seqs[k] = self.cloneSeqs[k].tolist()
-        # generate Toby's logos ?!?!
-        generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_fr_Toby')
-        
-        # generate CDR/FR logos without alignment
-        generateMotifs(seqs, False, self.outputDir + self.name + '_cdr_fr',
-                       protein=True) 
-        # generate CDR/FR logos after alignment
-        generateMotifs(seqs, True,
-                    self.outputDir + self.name + '_cdr_fr_aligned',
-                    protein=True)
-        # generate CDR3 logos per  germline 
-        seqs = {}
-        vgenes = self.cloneSeqs["germline"].tolist()
-        vgenes = map(lambda x: x.split('*')[0], vgenes)
-        for vgene in set(vgenes):
-            seqs["cdr3_"+vgene.replace("/", "-")] = self.cloneSeqs.loc[map(lambda x: x == vgene, vgenes), "cdr3"].tolist()            
-        # generate Toby's logos ?!?!
-        generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_Toby_gene')
-        # generate CDR/FR logos after alignment
-        generateMotifs(seqs, True,
-                    self.outputDir + self.name + '_cdr_gene_aligned',
-                    protein=True)
-        # generate CDR3 logos per family        
-        seqs = {}
-        vfams = map(lambda x: x.split('-')[0].split('/')[0], vgenes)
-        for vfam in set(vfams):
-            seqs["cdr3_"+vfam] = self.cloneSeqs.loc[map(lambda x: x == vgene, vgenes), "cdr3"].tolist()
-        # generate Toby's logos ?!?!
-        generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_fr_Toby')
-        # generate CDR/FR logos after alignment
-        generateMotifs(seqs, True,
-                    self.outputDir + self.name + '_cdr_fr_aligned',
-                    protein=True)
-        
-       
-    def writeVGeneStats(self):
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        # CDR1 statistics 
-        vLength = (self.cloneAnnot['fr3.end'] - self.cloneAnnot['fr1.start'] + 1) / 3
-        vLength = vLength.tolist()
-        histcals = plotSeqLenDist(vLength, self.name, self.outputDir + self.name + 
-                 '_vgene_len_dist.png', dna=False,
-                  seqName='V Gene', normed=True, maxbins=20)
-#         print(histcals)
-        vGaps = Counter(self.cloneAnnot['vgaps'].tolist())
-        plotDist(vGaps, self.name, self.outputDir + self.name + 
-                 '_vgene_gaps_dist.png', title='Gaps in V Gene',
-                 proportion=True, rotateLabels=False, top=20) 
-        cdrMismatches = Counter(self.cloneAnnot['vmismatches'].tolist())
-        plotDist(cdrMismatches, self.name, self.outputDir + self.name + 
-                 '_vgene_mismatches_dist.png', title='Mismatches in V Gene',
-                 proportion=True, rotateLabels=False, top=20) 
-        # quantify V domain sequence diversity                
-        if (not exists(self.outputDir + self.name + 
-                 '_Vdomain_duplication_family.png')):
-            print("Grouping V domain sequences per family ...")
-            VH = {}
-    #         i = 0
-            ighvs = map(lambda x : x.split('-')[0].split('/')[0], self.cloneSeqs['germline'].tolist())
-            for ighv in set(ighvs):
-                VH[ighv] = []
-            for (ighv, f1, c1, f2, c2, f3, c3, f4) in zip(ighvs,
-                                                        self.cloneSeqs['fr1'].tolist(),
-                                                          self.cloneSeqs['cdr1'].tolist(),
-                                                          self.cloneSeqs['fr2'].tolist(),
-                                                          self.cloneSeqs['cdr2'].tolist(),
-                                                          self.cloneSeqs['fr3'].tolist(),
-                                                          self.cloneSeqs['cdr3'].tolist(),
-                                                          self.cloneSeqs['fr4'].tolist()):           
-                try:
-                    VH[ighv].append(''.join([f1, c1, f2, c2, f3, c3, f4]))
-                except:
-                    if (f4 is None or isnan(f4)):  # or c3 is None or isnan(c3):
-                        VH += [''.join([f1, c1, f2, c2, f3, c3])]
-                    else:
-                        print(id, f1, c1, f2, c2, f3, c3, f4)
-            ighvs = VH.keys()
-            ighvs.sort()        
-            
-            plotSeqDuplication(map(lambda x:VH[x], ighvs),
-                             self.outputDir + self.name + 
-                     '_Vdomain_duplication_family.png',
-                             ighvs,
-                             'Duplication of V Domain Sequences Per Family', True)
-            gc.collect()
+    
         
     
 #     def extractProductiveRNAs(self):
@@ -1102,192 +984,6 @@ class IgRepertoire:
 #             except Exception as e:
 #                 raise e
 #         gc.collect()
-        
-    def writeFRStats(self):
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-
-        # FR1 statistics 
-        frLength = (self.cloneAnnot['fr1.end'] - self.cloneAnnot['fr1.start'] + 1) / 3
-        frLength = frLength.tolist()
-        histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-                 '_fr1_len_dist.png', dna=False,
-                  seqName='FR1', normed=True, maxbins=20)
-#         print(histcals)
-        frGaps = Counter(self.cloneAnnot['fr1.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_fr1_gaps_dist.png', title='Gaps in FR1',
-                 proportion=False, rotateLabels=False) 
-        frMismatches = Counter(self.cloneAnnot['fr1.mismatches'].tolist())
-        plotDist(frMismatches, self.name, self.outputDir + self.name + 
-                 '_fr1_mismatches_dist.png', title='Mismatches in FR1',
-                 proportion=False, rotateLabels=False) 
-        # FR2 statistics 
-        frLength = (self.cloneAnnot['fr2.end'] - self.cloneAnnot['fr2.start'] + 1) / 3
-        frLength = frLength.tolist()
-        histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-                 '_fr2_len_dist.png', dna=False,
-                  seqName='FR2', normed=True, maxbins=20)
-#         print(histcals)
-        frGaps = Counter(self.cloneAnnot['fr2.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_fr2_gaps_dist.png', title='Gaps in FR2',
-                 proportion=False, rotateLabels=False) 
-        frMismatches = Counter(self.cloneAnnot['fr2.mismatches'].tolist())
-        plotDist(frMismatches, self.name, self.outputDir + self.name + 
-                 '_fr2_mismatches_dist.png', title='Mismatches in FR2',
-                 proportion=False, rotateLabels=False) 
-        # FR3 statistics 
-        frLength = (self.cloneAnnot['fr3.end'] - self.cloneAnnot['fr3.start'] + 1) / 3
-        frLength = frLength.tolist()
-        histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-                 '_fr3_len_dist.png', dna=False,
-                  seqName='FR3', normed=True, maxbins=20)
-#         print(histcals)
-        frGaps = Counter(self.cloneAnnot['fr3.gaps'].tolist())
-        plotDist(frGaps, self.name, self.outputDir + self.name + 
-                 '_fr3_gaps_dist.png', title='Gaps in FR3',
-                 proportion=False, rotateLabels=False) 
-        frMismatches = Counter(self.cloneAnnot['fr3.mismatches'].tolist())
-        plotDist(frMismatches, self.name, self.outputDir + self.name + 
-                 '_fr3_mismatches_dist.png', title='Mismatches in FR3',
-                 proportion=False, rotateLabels=False)
-        # FR4
-        frLength = (self.cloneAnnot['fr4.end'] - self.cloneAnnot['fr4.start'] + 1) / 3
-        frLength = frLength.tolist()
-        histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-                 '_fr4_len_dist.png', dna=False,
-                  seqName='FR4', normed=True, maxbins=20)
-        gc.collect()
-        # Quantify FR sequence diversity
-        plotSeqDuplication([self.cloneSeqs['fr1'].tolist(),
-                          self.cloneSeqs['fr2'].tolist(),
-                          self.cloneSeqs['fr3'].tolist(),
-                          self.cloneSeqs['fr4'].tolist()],
-                         self.outputDir + self.name + 
-                 '_fr_duplication.png',
-                         ['FR1', 'FR2', 'FR3', 'FR4'],
-                         'Duplication of FR Sequences')
-        gc.collect()
-        plotSeqDiversity([self.cloneSeqs['fr1'].tolist(),
-                          self.cloneSeqs['fr2'].tolist(),
-                          self.cloneSeqs['fr3'].tolist(),
-                          self.cloneSeqs['fr4'].tolist()],
-                         self.outputDir + self.name + 
-                 '_fr_diversity.png',
-                         ['FR1', 'FR2', 'FR3', 'FR4'],
-                         'Diversity of FR Sequences')
-        
-    def writeCDRStats(self):
-#         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-#         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        # CDR1 statistics 
-        cdrLength = (self.cloneAnnot['cdr1.end'] - self.cloneAnnot['cdr1.start'] + 1) / 3
-        cdrLength = cdrLength.tolist()
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_cdr1_len_dist.png', dna=False,
-                  seqName='CDR1', normed=True, maxbins=20)
-#         print(histcals)
-        cdrGaps = Counter(self.cloneAnnot['cdr1.gaps'].tolist())
-        plotDist(cdrGaps, self.name, self.outputDir + self.name + 
-                 '_cdr1_gaps_dist.png', title='Gaps in CDR1',
-                 proportion=False, rotateLabels=False) 
-        cdrMismatches = Counter(self.cloneAnnot['cdr1.mismatches'].tolist())
-        plotDist(cdrMismatches, self.name, self.outputDir + self.name + 
-                 '_cdr1_mismatches_dist.png', title='Mismatches in CDR1',
-                 proportion=False, rotateLabels=False) 
-#         print(cdrGaps)
-        # CDR2 stats
-        cdrLength = (self.cloneAnnot['cdr2.end'] - self.cloneAnnot['cdr2.start'] + 1) / 3
-        cdrLength = cdrLength.tolist()
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_cdr2_len_dist.png', dna=False,
-                 seqName='CDR2', normed=True, maxbins=20)
-#         print(histcals)
-        cdrGaps = Counter(self.cloneAnnot['cdr2.gaps'].tolist())
-        plotDist(cdrGaps, self.name, self.outputDir + self.name + 
-                 '_cdr2_gaps_dist.png', title='Gaps in CDR2',
-                 proportion=False, rotateLabels=False)
-#         print(cdrGaps)
-        cdrMismatches = Counter(self.cloneAnnot['cdr2.mismatches'].tolist())
-        plotDist(cdrMismatches, self.name, self.outputDir + self.name + 
-                 '_cdr2_mismatches_dist.png', title='Mismatches in CDR2',
-                 proportion=False, rotateLabels=False)
-        # CDR3 stats
-        cdrLength = (self.cloneAnnot['cdr3.end'] - self.cloneAnnot['cdr3.start'] + 1) / 3
-        cdrLength = cdrLength.tolist()
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_cdr3_len_dist_nooutliers.png', dna=False,
-                 seqName='CDR3', normed=True, maxbins=20,
-                 removeOutliers=True)
-        histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-                 '_cdr3_len_dist.png', dna=False,
-                 seqName='CDR3', normed=True, maxbins=20,
-                 removeOutliers=False)
-        gc.collect()
-#         print(histcals)
-        # quantify CDR sequence diversity      
-        
-        if (not exists(self.outputDir + self.name + 
-                 '_Vdomain_diversity.png')):            
-    #         i = 0
-            VH = []
-            for (id, f1, c1, f2, c2, f3, c3, f4) in zip(self.cloneSeqs.index.tolist(),
-                                                        self.cloneSeqs['fr1'].tolist(),
-                                                          self.cloneSeqs['cdr1'].tolist(),
-                                                          self.cloneSeqs['fr2'].tolist(),
-                                                          self.cloneSeqs['cdr2'].tolist(),
-                                                          self.cloneSeqs['fr3'].tolist(),
-                                                          self.cloneSeqs['cdr3'].tolist(),
-                                                          self.cloneSeqs['fr4'].tolist()):           
-                try:
-                    VH += [''.join([f1, c1, f2, c2, f3, c3, f4])]
-                except:
-                    if (f4 is None or isnan(f4)):  # or c3 is None or isnan(c3):
-                        VH += [''.join([f1, c1, f2, c2, f3, c3])]
-                    else:
-                        print(id, f1, c1, f2, c2, f3, c3, f4)
-#                 i += 1
-#         print(i)
-#         sys.exit()
-            plotSeqDuplication([self.cloneSeqs['cdr1'].tolist(),
-                              self.cloneSeqs['cdr2'].tolist(),
-                              self.cloneSeqs['cdr3'].tolist(),
-                              VH],
-                             self.outputDir + self.name + 
-                     '_Vdomain__Vdomain_ication.png',
-                             ['CDR1', 'CDR2', 'CDR3', 'V Domain'],
-                             'Duplication of V Domain Sequences')
-            plotSeqDiversity([self.cloneSeqs['cdr1'].tolist(),
-                          self.cloneSeqs['cdr2'].tolist(),
-                          self.cloneSeqs['cdr3'].tolist(),
-                          VH],
-                         self.outputDir + self.name + 
-                 '_Vdomain_diversity.png',
-                         ['CDR1', 'CDR2', 'CDR3', 'V Domain'],
-                         'Diversity of V Domain Sequences')
-        gc.collect()
-        
-        plotSeqDuplication([self.cloneSeqs['cdr1'].tolist(),
-                          self.cloneSeqs['cdr2'].tolist(),
-                          self.cloneSeqs['cdr3'].tolist()
-                          ],
-                         self.outputDir + self.name + 
-                 '_cdr_duplication.png',
-                         ['CDR1', 'CDR2', 'CDR3'],
-                         'Duplication of CDR Sequences')        
-        
-        plotSeqDiversity([self.cloneSeqs['cdr1'].tolist(),
-                          self.cloneSeqs['cdr2'].tolist(),
-                          self.cloneSeqs['cdr3'].tolist()
-                        ],
-                         self.outputDir + self.name + 
-                 '_cdr_diversity.png',
-                         ['CDR1', 'CDR2', 'CDR3'],
-                         'Diversity of CDR Sequences')
-        gc.collect()
-
-
     def analyze5UTR(self):
         print("The diversity of the upstream of IGV genes is being analyzed ... ")
 #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  

@@ -1,134 +1,26 @@
-import sys
 from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
 from pandas.core.frame import DataFrame
-from config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
-from IgRepertoire.igRepUtils import extractProteinFrag,\
-    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA
-from numpy import isnan, random
-import traceback
- 
-
-def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut, chain, flags):
-    try:        
-        seqs = [record.id, qsRec['vgene']]        
-        if (qsRec['strand'] == "reversed"):            
-            record = SeqRecord(record.seq.reverse_complement(), id = record.id, 
-                               name="", description="")
-        # grab the beginning of the VH clone
-#         print("started")  
-        if actualQstart > -1:
-            offset = actualQstart # zero-based
-        else:                                  
-            offset = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
-        if  offset < 0:
-            offset = 0                   
-        vh = record.seq[offset:]                       
-        # check whether the VH sequence can be translated successfully
-        if len(vh) % 3 != 0:
-            vh = vh[:-1 * (len(vh) % 3)]#                   
-        protein = str(vh.translate())        
-        # check whether the start of the V gene is the same as the start of FR1
-        if qsRec['vqstart'] != qsRec['fr1.start']:
-            flags['fr1NotAtBegin'] += [record.id]    
-        qsRec['fr1.start'] = offset+1    
-        # Identification of FR4 so that CDR3 can be defined 
-        if isnan(qsRec['fr4.end']):            
-            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1,
-                     - 1, offset, trimAtStop=False)
-            if (searchRegion is None):
-                raise Exception("ERROR: undefined search region to find FR3 consensus.")
-            qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
-            fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
-                                                         FR4_CONSENSUS[chain])# , show=True
-#             print ("Protein", searchRegion, fr4start, fr4end)                 
-            if (not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start):
-                qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
-                # CDR3                
-                qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-                ## Check whether to cut the Ig sequence after FR4 or not
-                if not fr4cut: 
-                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']     
-                else:
-                    qsRec['fr4.end'] = fr4end * 3 + qsRec['fr3.end'] 
-            else:                
-                # try to use the DNA consensus
-                searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
-                fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
-                                                     FR4_CONSENSUS_DNA[chain], 
-                                                     True) # , show=True
-#                 print ("DNA", searchRegion, fr4start, fr4end)  
-                if (fr4start != -1 and fr4end != -1 and fr4end > fr4start):
-                    qsRec['fr4.start']  = qsRec['fr3.end'] + fr4start
-                    # CDR3                
-                    qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-                    if not fr4cut: 
-                        qsRec['fr4.end'] = len(record.seq) 
-                    else:
-                        qsRec['fr4.end']  = qsRec['fr3.end'] + fr4end
-                    flags['CDR3dna'] += [record.id]
-                else:
-                    #TODO: check this case                
-                    qsRec['cdr3.end'] = qsRec['jqend']
-#                     qsRec['fr4.end'] = len(record.seq) 
-#                     qsRec['fr4.start'] =  len(record.seq)
-        # Extract the CDR and FR protein sequences
-        (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset)
-        seqs += tmp
-        if (seqs[-1][:len(FR4_CONSENSUS[chain])] != FR4_CONSENSUS[chain]):
-            flags['fr4NotAsExpected'] += [record.id]
-        if (seqs[-1] == ''):
-            flags['noFR4'] += [record.id]
-        # Extract the CDR and FR nucleotide sequences
-        tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)        
-        #TODO: consider adding the DNA sequences 
-#         seqs += tmp
-#         if (record.id == 'HWI-M00123R:106:000000000-ACUM9:1:2109:19850:13859'):
-#             sys.exit()
-#         print("pass")
-        if ('*' in protein):
-            flags['endsWithStopCodon'] += [record.id]                     
-            ### update the StopCodon value if it was set to No
-            if qsRec['stopcodon'] == 'No':
-                flags['updatedStopCodon'] += [record.id]
-                qsRec['stopcodon'] = 'Yes' 
-        
-        #TODO: update the annotation fields with the new calculated values                        
-        gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - offset                
-        mismatches = qsRec['vstart'] - 1
-        if (qsRec['vstart'] > qsRec['vqstart'] and gaps > 0):
-            mismatches -= gaps
-        # Only update gaps if the actual query start position is known 
-        if gaps > 0:     
-            qsRec['fr1.gaps'] += gaps                    
-            qsRec['vgaps'] += gaps
-        # if igblast ignores mismatches at the begining ==> update
-        if (mismatches > 0):
-            qsRec['fr1.mismatches'] += mismatches
-            qsRec['vmismatches']  += mismatches
-            qsRec['vstart']  -= mismatches
-            qsRec['vqstart']  -= mismatches                  
-    except Exception as e:                
-        print("ERROR: exception in the Clone Annotation Refinement method")
-        print(record.id)
-        print(str(vh))
-        print(qsRec)
-        print(protein)        
-        traceback.print_exc(file=sys.stdout)
-        raise e
-    return seqs
+from numpy import  random
+from multiprocessing import Queue, Process, Manager, Value, Lock
+from IgRepAuxiliary.RefineWorker import RefineWorker
+import sys
+from math import ceil
+from config import MEM_GB
+from IgBlastWorker import ANNOTATION_FIELDS
+import gc
 
 def loadRefineFlagInfo():
     refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 
-             'fr4NotAsExpected', 'updatedStopCodon', 'noFR4',
+             'fr4NotAsExpected', 'updatedStopCodon', 'noFR4', 'CDR3dna',
+             'partitioning',
              'updatedInFrame' , 'updatedInFrameNA', 'updatedInFrameConc',
              'updatedInFrameNo3or4', 'updatedInFrame3x' ,
-             'updatedInFrameIndel', 'CDR3dna']
+             'updatedInFrameIndel']
     refineFlagMsgs = {}
     refineFlagMsgs['fr1NotAtBegin'] = "{:,} clones have FR1 start not equal to query start (Excluded)" 
     refineFlagMsgs['endsWithStopCodon'] = "{:,} clones contain a stop codon "
     refineFlagMsgs['updatedStopCodon'] = "The stopcodon flag was updated for {:,} clones "
-    refineFlagMsgs['fr4NotAsExpected'] = "{:,} clones do not have an expected FR4 clones "
+    refineFlagMsgs['fr4NotAsExpected'] = "The FR4 of {:,} clones do not start as expected"
     refineFlagMsgs['noFR4'] = "{:,} clones do not have FR4 "
     refineFlagMsgs['updatedInFrame'] = "The v-j frame rearrangement status has been corrected for {:,} clones "
     refineFlagMsgs['updatedInFrameNA'] = "{:,} clones have undefined in-frame status"
@@ -137,115 +29,170 @@ def loadRefineFlagInfo():
     refineFlagMsgs['updatedInFrame3x'] = "{:,} clones are not multiple of 3 "
     refineFlagMsgs['updatedInFrameIndel'] = "{:,} clones have indels in one of the FRs or CDRs"
     refineFlagMsgs['CDR3dna'] = "The CDR3 of {:,} clones was determined using DNA consensus"
+    refineFlagMsgs['partitioning'] = "{:,} clones were partitioned incorrectly."
     return (refineFlagNames, refineFlagMsgs)
 
-def refineClonesAnnotation(cloneAnnotOriginal, readFile, format, 
-                            actualQstart, chain, fr4cut, seqsPerFile):
-        print("Clone annotation and in-frame prediction are being refined ...")
+def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, format, 
+                            actualQstart, chain, fr4cut, 
+                            trim5End, trim3End,
+                            seqsPerFile, threads):
+        print("Clone annotation and in-frame prediction are being refined ...")        
+        seqsPerFile = 100
         cloneAnnot = cloneAnnotOriginal.copy()        
-        queryIds = cloneAnnot.index #[1450000:]
-        transSeqs = []
+        queryIds = cloneAnnot.index#[4200000:]
         (refineFlagNames, refineFlagMsgs) = loadRefineFlagInfo()
-        flags = {}
-        for f in refineFlagNames:
-            flags[f] = [] 
-        procSeqs = 0
-        # process clones from the FASTA/FASTQ file
-        records = SeqIO.index(readFile, format)    
-        print("\tIndex created and refinement started")    
-        for id in queryIds:            
-            # retrieve the clone record from the CloneAnnot dataframe
-            record = records[id] 
-            qsRec = cloneAnnot.loc[record.id].to_dict()
-            seqs = refineCloneAnnotation(qsRec, record, 
-                                          actualQstart, fr4cut, chain, flags)   
-            # out-of-frame clones are excluded
-            if qsRec['v-jframe'] != 'Out-of-frame':
-                refineInFramePrediction(qsRec, record, actualQstart, flags)
-            # update relevant annotation fields
-            cloneAnnot.set_value(id, 'fr1.gaps', qsRec['fr1.gaps'] )                    
-            cloneAnnot.set_value(id, 'vgaps', qsRec['vgaps'])                
-            cloneAnnot.set_value(id, 'fr1.mismatches', qsRec['fr1.mismatches'])
-            cloneAnnot.set_value(id, 'vmismatches', qsRec['vmismatches'])
-            cloneAnnot.set_value(id, 'vstart', qsRec['vstart'] )
-            cloneAnnot.set_value(id, 'vqstart', qsRec['vqstart'] )
-            cloneAnnot.set_value(id, 'cdr3.start', qsRec['cdr3.start'])
-            cloneAnnot.set_value(id, 'cdr3.end', qsRec['cdr3.end'])
-            cloneAnnot.set_value(id, 'fr4.start', qsRec['fr4.start'])
-            cloneAnnot.set_value(id, 'fr4.end' , qsRec['fr4.end'])  
-            cloneAnnot.set_value(id, 'stopcodon', qsRec['stopcodon'])
-            cloneAnnot.set_value(id, 'fr1.start', qsRec['fr1.start'])   
-            cloneAnnot.set_value(id, 'v-jframe', qsRec['v-jframe'])
-            # append the FR and CDR protein clones
-            transSeqs.append(seqs)
-            procSeqs += 1
-            if procSeqs % seqsPerFile == 0:
-                print('\t %d/%d clones have been processed ... ' % (procSeqs, len(queryIds)))
-                sys.stdout.flush()
-        print('%d/%d clones have been processed ... ' % (procSeqs, len(queryIds)))
-        # print refine flags 
-        printRefineFlags(flags, chain, refineFlagNames, refineFlagMsgs)
-        flags = None
-        # Create data frame of FR and CDR clones
-        cloneSeqs = DataFrame(transSeqs, columns=['queryid', 'germline', 
-                                'fr1', 'cdr1', 'fr2', 'cdr2', 'fr3', 'cdr3', 'fr4'])
+#         manager = Manager()        
+        try:    
+            # process clones from the FASTA/FASTQ file
+            records = SeqIO.index(readFile, format)    
+            print("\tIndex created and refinement started")    
+            ### Parallel implementation of the refinement
+            noSeqs = len(queryIds)
+            totalTasks = int(ceil(noSeqs / (seqsPerFile))) 
+            tasks = Queue()      
+            exitQueue = Queue()
+            resultsQueue = Queue()        
+            procCounter = ProcCounter(noSeqs)    
+            if (threads > totalTasks):
+                threads = totalTasks     
+            if MEM_GB < 16:
+                threads = 2  
+            # Initialize workers 
+            workers = []        
+            for i in range(threads):
+                w = RefineWorker(procCounter, chain, actualQstart, 
+                                 fr4cut, trim5End, trim3End, refineFlagNames)
+                w.tasksQueue = tasks
+                w.exitQueue = exitQueue  
+                w.resultsQueue = resultsQueue    
+                workers.append(w)
+                w.start()       
+                sys.stdout.flush()          
+            # adding jobs to the tasks queue with subsets of query IDs
+            if (totalTasks > 1): 
+                for i in range(totalTasks):
+                    ids = queryIds[i*seqsPerFile:(i+1)*seqsPerFile]
+                    recs = map(lambda x: records[x], ids)
+                    qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), ids)
+                    tasks.put((recs, qsRecs))
+            else:                
+                recs = map(lambda x: records[x], queryIds)
+                qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), queryIds)
+                tasks.put((recs, qsRecs))
+            # Add a poison pill for each worker
+            for i in range(threads + 10):
+                tasks.put(None)       
+            # Wait all process workers to terminate                
+            i = 0 
+            while i < threads:    
+                m = exitQueue.get()
+                if m == "exit":
+                    i += 1
+            print("All workers have completed their tasks successfully.")
+            # Collect results
+            print("Results are being collated from all workers ...")  
+            # invoking the result collection method   
+            cloneAnnotList, transSeqs, flags = collectRefineResults(resultsQueue, totalTasks, 
+                       noSeqs, refineFlagNames)
+            ### End of parallel implementation                  
+            sys.stdout.flush()           
+
+            print("\tResults were collated successfully.")
+            # print refine flags 
+            printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs)
+            writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, 
+                             outDir, sampleName)
+#             sys.exit()
+        except Exception as e:
+            print("Something went wrong during the refinement process!")
+            raise e
+        finally:
+            for w in workers:
+                w.terminate()     
+            records.close()
+        # Create new data frame of clone annotation
+        cloneAnnot = DataFrame(cloneAnnotList, columns=ANNOTATION_FIELDS)
+        cloneAnnot.index = cloneAnnot.queryid
+        del cloneAnnot['queryid']
+        gc.collect()        
+        # Create data frame of FR and CDR sequences
+        cols = ['queryid', 'germline', 'fr1', 'cdr1', 'fr2', 'cdr2', 'fr3', 'cdr3', 'fr4']
+        cloneSeqs = DataFrame(transSeqs, columns=cols)
+        for col in cols:
+            cloneSeqs.loc[:, col] = cloneSeqs[col].map(str)
         cloneSeqs.index = cloneSeqs.queryid
-        del cloneSeqs['queryid']
-        records.close()
+        del cloneSeqs['queryid']        
         return (cloneAnnot, cloneSeqs)
         
-def printRefineFlags(flags, chain, refineFlagNames, refineFlagMsgs):
+def collectRefineResults(resultsQueue, totalTasks, 
+                       noSeqs, refineFlagNames):    
+    total = 0
+    cloneAnnot = []
+    transSeqs = []
+    flags = {}
+    for f in refineFlagNames:
+        flags[f] = []
+    while totalTasks:                
+        result = resultsQueue.get()
+        totalTasks -= 1                           
+        if (result is None):
+            continue        
+#         print(total, resultsQueue.qsize())      
+        qsRecsOrdered, seqs, flagsi = result        
+        # update relevant annotation fields
+        cloneAnnot += qsRecsOrdered
+        transSeqs +=  seqs  
+        # update flags 
+        for f in refineFlagNames:
+            flags[f] += flagsi[f]
+        total += len(qsRecsOrdered)
+        if (total % 50000 == 0):
+            print('\t%d/%d records have been collected ... ' % (total, noSeqs))
+            sys.stdout.flush()
+    print('\t%d/%d records have been collected ... ' % (total, noSeqs))
+    return cloneAnnot, transSeqs, flags        
+          
+def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs):
     ## print statistics and a few of the flagged clones 
     for f in refineFlagNames:
         if (len(flags[f]) > 0):
             print(refineFlagMsgs[f].format(len(flags[f])))
-            examples = random.choice(range(len(flags[f])), 10)
+            examples = random.choice(range(len(flags[f])), min(3, len(flags[f])))
             for i in examples:
-                print(flags[f][i])      
+                print(">" + flags[f][i])
+                print(str(records[flags[f][i]].seq))
+            print      
              
-def refineInFramePrediction(qsRec, record, actualQstart, flags):
-        inframe = True    
-        # check the the v-jframe value is not NA       
-        if (qsRec['v-jframe'] == 'N/A' or
-            (type(qsRec['v-jframe']) != type('str') and isnan(qsRec['v-jframe']))):
-            flags['updatedInFrameNA'] += [record.id]
-            inframe = False
-        # the query clone is not in concordance with the start of the germline gene
-        offset = qsRec['vqstart'] - qsRec['vstart'] + 1 # 1-based 
-        if (inframe and (offset < 1 or 
-            (actualQstart != -1 and (offset - 1 - actualQstart) % 3 != 0))):            
-            inframe = False     
-            flags['updatedInFrameConc'] += [record.id]           
-        # if no CDR3 or FR4 ==> Out-of-frame
-        if (inframe and (isnan(qsRec['fr4.start']) or 
-            isnan(qsRec['fr4.end'])  or isnan(qsRec['cdr3.start']) or 
-           qsRec['cdr3.start'] >= qsRec['cdr3.end'])):
-            inframe = False
-            flags['updatedInFrameNo3or4'] += [record.id]
-        # doesn't start/end properly .. not multiple of 3
-        if (inframe and ((qsRec['fr4.end'] - qsRec['fr1.start'] + 1) % 3 != 0 or 
-            (actualQstart != -1 and 
-             ((qsRec['fr4.end'] - actualQstart) % 3 != 0)))):
-            inframe = False
-            flags['updatedInFrame3x'] += [record.id]
-        # indels (gaps) in FRs or CDRs cause frame-shift ==> out-of-frame
-        if (inframe and ( 
-            qsRec['fr1.gaps'] % 3 != 0 or 
-            qsRec['fr2.gaps'] % 3 != 0 or
-            qsRec['fr3.gaps'] % 3 != 0 or 
-            qsRec['cdr1.gaps'] % 3 != 0 or 
-            qsRec['cdr2.gaps'] % 3 != 0 or
-            qsRec['cdr3.gaps'] % 3 != 0)):
-            inframe = False            
-            flags['updatedInFrameIndel'] += [record.id]
-        # FR1 start is not aligned with query start 
-#             if (not inframe or qsRec['vqstart'] != qsRec['fr1.start']):
-#                 inframe = False
-        if not inframe:
-            qsRec['v-jframe'] =  'Out-of-frame'
-            flags['updatedInFrame'] += [record.id]
+def writeRefineFlags(flags, records, refineFlagNames, 
+                     refineFlagMsgs, outDir, sampleName):
+    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out:
+        for f in refineFlagNames:
+            if (len(flags[f]) > 0):
+                out.write("# " + refineFlagMsgs[f].format(len(flags[f])) + "\n")                
+                for i in range(len(flags[f])):
+                    out.write(">" + flags[f][i] + "\n")
+                    out.write(str(records[flags[f][i]].seq) + "\n")
+                out.write("\n")  
+     
+     
+class ProcCounter(object):
+    def __init__(self, noSeqs, initval=0):
+        self.val = Value('i', initval)
+        self.noSeqs = noSeqs
+        self.lock = Lock()
+
+    def increment(self, val=1):
+        with self.lock:
+            self.val.value += val
+            if (self.val.value % 50000 == 0 or self.noSeqs - self.val.value <= 5):
+                print('\t%d/%d records have been processed ... ' % (self.val.value, self.noSeqs))
+
+    def value(self):
+        with self.lock:
+            return self.val.value
         
         
+           
 # def refineCloneAnnotation(cloneAnnotOriginal, ):
 #         print("CDR3 annotation is being refined ...")
 #         cloneAnnot = cloneAnnotOriginal.copy()

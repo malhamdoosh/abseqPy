@@ -1,4 +1,6 @@
 import matplotlib as mpl
+from collections import Counter
+import math
 mpl.use('Agg') # Agg
 
 import matplotlib.pyplot as plt
@@ -43,6 +45,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     fig.savefig(outputFile, dpi=300)
     for k in classes:
         print(k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k]))
+    plt.close()
     
     
 def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta', 
@@ -55,11 +58,15 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
     print("The sequence length distribution is being calculated ...")
     if (type("") == type(seqFile)):
         sizes = [len(rec) for rec in SeqIO.parse(seqFile, fileFormat) if len(rec) <= maxLen]
-    else:
-        assert type(seqFile) == type([])
+        weights = [1] * len(sizes)
+    elif type(seqFile) == type([]):        
         sizes = map(lambda x: int(x) if not isnan(x) else 0, seqFile)
+        weights = [1] * len(sizes)
+    elif type(seqFile) == type(Counter()):
+        sizes = seqFile.keys()
+        weights = map(lambda x: seqFile[x], sizes)
     if removeOutliers:
-        sizes = excludeOutliers(sizes)
+        sizes, weights = excludeOutliers(sizes, weights)
     bins = max(sizes) - min(sizes) 
     if bins > maxbins:
         bins = bins / 2
@@ -69,7 +76,8 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
         bins = 1
 #     print seqFile[:10], bins
     fig, ax = plt.subplots(figsize=(8,5))
-    histcals, edges = np.histogram(sizes, bins = bins, range=autoscale, density=normed)
+    histcals, edges = np.histogram(sizes, bins = bins, range=autoscale,
+                                   weights = weights, density=normed)
     binWidth = edges[1] - edges[0] 
     ax.bar(edges[:-1], histcals * binWidth, binWidth)
 #     histcals = ax.hist(sizes, bins=bins, histtype=histtype, range=autoscale,
@@ -90,6 +98,7 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
         ax.set_ylabel("Proportion")
 #         ax.set_ylim(top=1)
     fig.savefig(outputFile, dpi=300)
+    plt.close()
     return histcals
 
 def plotSeqDuplication(seqs, filename, labels, title='', grouped=False):
@@ -140,6 +149,7 @@ def plotSeqDuplication(seqs, filename, labels, title='', grouped=False):
     ax.set_xticklabels(xlabels)
     ax.legend()
     fig.savefig(filename, dpi=300)
+    plt.close()
         
         
         
@@ -170,6 +180,7 @@ def plotSeqDiversity(seqs, filename, labels, title=''):
         ax.plot([ d[0] for d in pt ], [ mean(d[1])*1.0 for d in pt ], label = l)
     ax.legend()
     fig.savefig(filename, dpi=300)
+    plt.close()
     
 '''
     Plot Venn diagrams using the matplotlib_venn package
@@ -188,6 +199,7 @@ def plotVenn(sets, filename):
     else:
         raise
     fig.savefig(filename, dpi=300)
+    plt.close()
     
     
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True, 
@@ -271,10 +283,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     title += '\nTotal is {:,}'.format(int(total)) 
     ax.set_title(title)  
     plt.tight_layout()
-    
-   
-    
     fig.savefig(filename, dpi=300)
+    plt.close()
 
 
 def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):    
@@ -323,6 +333,7 @@ def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):
 
     forceAspect(ax,aspect=1)
     fig.savefig(filename, dpi=300)
+    plt.close()
     
 def cmap_discretize(cmap, N):
     """Return a discrete colormap from the continuous colormap cmap.
@@ -356,7 +367,28 @@ def forceAspect(ax,aspect=1):
     
 
 
-def excludeOutliers(list, m =4.0):
-    data = np.array(list)
-    return data[abs(data - np.mean(data)) <= m * np.std(data)].tolist()
+def excludeOutliers(values, weights, m =4.0):
+    values = np.array(values)
+    weights = np.array(weights)
+    avg, std = weightedAvgAndStd(values, weights)
+    sel =  abs(values - avg) <= m * std
+    return values[sel].tolist(), weights[sel].tolist()
+
+
+
+
+
+def weightedAvgAndStd(values, weights):
+    """
+    Return the weighted average and standard deviation.
+
+    values, weights -- Numpy ndarrays with the same shape.
+    """
+    average = np.average(values, weights=weights)
+    variance = np.average((values-average)**2, weights=weights)  # Fast and numerically precise
+    return (average, math.sqrt(variance))
+
+
+
+
     

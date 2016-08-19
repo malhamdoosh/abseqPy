@@ -11,7 +11,14 @@ from os.path import abspath
 import traceback
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses
 from argsParser import parseArgs
-  
+import warnings
+
+def fxn():
+    warnings.warn("deprecated", DeprecationWarning)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
 
 def printFormattedTitle(title):
     print "-" * 100

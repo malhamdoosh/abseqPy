@@ -194,9 +194,10 @@ def extractCDRsandFRsProtein(protein, qsRec, offset):
         newProtein = ''.join(seqs)
         assert newProtein in protein
     except Exception as e:            
-        print("ERROR at partitioning the protein sequence: ")
-        print (protein, newProtein, seqs, offset)  
-        raise e
+#         print("ERROR at partitioning the protein sequence: ")
+#         print (protein, newProtein, seqs, offset)  
+#         raise e
+        raise Exception("ERROR at partitioning the protein sequence: ")
     return (newProtein, seqs)
 
 def extractCDRsandFRsDNA(dna, qsRec):
@@ -220,9 +221,10 @@ def extractCDRsandFRsDNA(dna, qsRec):
         newDna = ''.join(seqs)
         assert newDna in dna
     except Exception as e:            
-        print("ERROR at partitioning the nucleotide sequence: ")
-        print (dna, newDna, seqs)  
-        raise e
+#         print("ERROR at partitioning the nucleotide sequence: ")
+#         print (dna, newDna, seqs)  
+#         raise e
+        raise Exception("ERROR at partitioning the nucleotide sequence: ")
     return seqs
         
     

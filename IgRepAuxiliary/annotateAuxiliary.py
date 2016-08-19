@@ -108,7 +108,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
                     
                     
             except Exception:
-                print("Something went wrong during the analysis process!")
+                print("Something went wrong during the annotation process!")
                 raise
             finally:
                 for w in workers:
@@ -120,3 +120,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
                 os.path.exists(filesDir + "/" + prefix + "part1" + ext)): 
                 os.system("rm " + filesDir + "/*" + ext)        
         return (cloneAnnot, fileteredIDs)
+    
+    
+    
+    

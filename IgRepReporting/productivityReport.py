@@ -159,11 +159,11 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
              '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3',
              proportion=False, rotateLabels=False)
     del cdrGaps, frGaps
-    # Indels in FR4
-    frGaps = Counter(outOfFrame['fr3.gaps'].tolist())
-    plotDist(frGaps, name, outputDir + name + 
-             '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3',
-             proportion=False, rotateLabels=False)   
+#     # Indels in FR4
+#     frGaps = Counter(outOfFrame['fr3.gaps'].tolist())
+#     plotDist(frGaps, name, outputDir + name + 
+#              '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3',
+#              proportion=False, rotateLabels=False)   
     del outOfFrame    
     # choose only In-frame RNA clones
     inFrame = cloneAnnot[cloneAnnot['v-jframe'] == 'In-frame']
