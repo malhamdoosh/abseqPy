@@ -18,9 +18,7 @@ import sys
 import pickle
 from TAMO.Clustering.UPGMA import create_tree_phylip
 import random
-import numpy
-from matplotlib.pyplot import *
-from collections import Counter
+
 
 
 
@@ -182,67 +180,8 @@ def generateMotifLogo(m, filename, dna=True):
     os.system('rm temp_seq_logos.fasta')     
         
       
-AA = ["GAST", "CVILPFYMW", "NQH", "DE", "KR"]
-AA_colours = numpy.concatenate((
-    cm.Oranges( (1+numpy.arange(len(AA[0]), dtype=float)) / (len(AA[0])+1)),
-    cm.Greens(  (1+numpy.arange(len(AA[1]), dtype=float)) / (len(AA[1])+1)),
-    cm.Purples( (1+numpy.arange(len(AA[2]), dtype=float)) / (len(AA[2])+1)),
-    cm.Reds(    (1+numpy.arange(len(AA[3]), dtype=float)) / (len(AA[3])+1)),
-    cm.Blues(   (1+numpy.arange(len(AA[4]), dtype=float)) / (len(AA[4])+1))
-))
 
-AA = ''.join(AA)  
-        
-def barLogo(counts, _title, filename):
-    if (exists(filename)):
-        print("File found ... " + filename.split('/')[-1])
-        return
-    fig, ax = subplots(figsize=(8,5))
-    bar_fractions = [ [ ct.get(aa, 0) / float(sum(ct.values())) for aa in AA ] for ct in counts ]
-    by_aa      = [ [] for aa in AA ]
-    by_aa_base = [ [] for aa in AA ]
-    for bf in bar_fractions:
-        s = 0.0
-        for i,aa in enumerate(AA):
-            by_aa[i].append(bf[i])
-            by_aa_base[i].append(s)
-            s += bf[i]
 
-    ax.set_title(_title, fontsize=20)
-    for i,aa in enumerate(AA):
-        ax.bar(numpy.arange(len(bar_fractions)) + .05, by_aa[i], 
-               width=0.9, bottom=by_aa_base[i], color=AA_colours[i], 
-               label=AA[i], lw=0)   
-    ax.set_ylim(0,1)
-    ax.set_xticks(numpy.arange(len(counts))+.5 )
-    ax.set_xticklabels([ ct.most_common(1)[0][0] for ct in counts ])
-    ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.legend(loc = 'upper right', bbox_to_anchor = (1.1, 1),fontsize='x-small')
-    fig.savefig(filename, dpi=300)
     
 def maxlen(x):
     return max(map(len, x))
-
-def generateProteinLogos(proteinSeqs, outputPrefix):
-    logosFolder = outputPrefix + '_logos/'    
-    groups = proteinSeqs.keys()
-    groups.sort()        
-    if (exists(logosFolder + groups[-1] + '.png')):
-        print("Logos were already generated.")
-        return
-    print("\tProtein sequence logos are being generated .... ")   
-    os.system('mkdir ' + logosFolder) 
-    for group in groups: 
-        print("\t\t" + group)
-        seqs = proteinSeqs[group]
-        m = maxlen(seqs)
-        if m > 32:
-            m = 32
-        aa_counts = [ Counter(c[x] for c in seqs if len(c) > x) for x in range(m)]
-#         print(aa_counts)
-        barLogo(aa_counts, "{} ({:,})".format(group.upper(), len(seqs)), logosFolder + group + '.png')
-    
-    
-    
-    
-    

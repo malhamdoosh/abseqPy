@@ -21,21 +21,27 @@ def extractRanges(strRanges, expNoRanges=2):
         numRanges = numRanges * expNoRanges
     return numRanges
 
-def parseArgs(args):
-    validArgs = ['-task', '-chain', '-name',
-                 '-f1', '-f2', '-o', '-merge', '-fmt', '-seqtype',
-                  '-bitscore', '-primer', '-alignlen', '-sstart',
-                  '-db', '-threads', '-merger', '-upstream',
-                  '-sites', '-5end', '-3end', '-actualqstart',
-                  '-5endoffset', '-fr4cut', '-trim3', '-trim5']
+PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
+                 '-f1', '-f2', '-fmt', '-o', '-merge', '-merger',  
+                 '-seqtype', '-threads', '-db',  
+                  '-bitscore', '-alignlen', '-sstart', '-actualqstart',     
+                  '-trim5' ,'-trim3',  '-fr4cut',            
+                   '-sites',
+                  '-primer', 
+                  '-5end', '-3end', 
+                  '-5endoffset',
+                 '-upstream'
+                  ]
+
+def parseArgs(args):    
     argVals = {}
     for i in range(1, len(args), 2):
-#         print(args[i].lower(), validArgs)
-        if (args[i].lower() in validArgs):
+#         print(args[i].lower(), PROGRAM_VALID_ARGS)
+        if (args[i].lower() in PROGRAM_VALID_ARGS):
 #             print(args[i], args[i+1])
             argVals[args[i].replace('-', '').lower()] = args[i+1]
         else:
-            print(args[i], validArgs)
+            print(args[i], PROGRAM_VALID_ARGS)
             raise Exception(args[i] + ' is invalid argument.')
     
     if (argVals.get('chain', None) is None):

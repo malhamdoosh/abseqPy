@@ -4,72 +4,80 @@ Created on 15/08/2016
 @author: monther
 '''
 import sys
+from IgRepertoire.igRepUtils import writeClonoTypesToFile
+from IgRepReporting.igRepPlots import plotSeqLenDist, barLogo
+from os.path import exists, os
+from collections import Counter
+from IgRepAuxiliary.SeqUtils import maxlen
 
-
-def generateDiversityReport(cloneAnnot, cloneSeqs):
-    generateSpectraTypes()
+def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes):    
+    generateSpectraTypePlots(spectraTypes,  name, outDir)
     
+    writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes)
+    
+    generateDiversityPlots(clonoTypes, name, outDir)
 #     generateCDRandFRLogos()
     sys.stdout.flush()
 
+def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
+    print("Clonotype files are being written out ... ")
+    for k in clonoTypes.keys():
+        writeClonoTypesToFile(clonoTypes[k], 
+          outDir + name + ("_%s_clonotypes_%d.csv" % (k, topClonotypes)), 
+          topClonotypes)
 
-#
-#  spectratype, that is, histogram of read counts by CDR3 nucleotide length. 
-#  The spectratype is useful to detect pathological and highly clonal repertoires, 
-#  as the spectratype of non-expanded T- and B-cells has a symmetric gaussian-like distribution.
 
-def generateSpectraTypes(cloneAnnot, cloneSeqs):
-    # CDR1
-    cdrLength = (self.cloneAnnot['cdr1.end'] - self.cloneAnnot['cdr1.start'] + 1) / 3
-    cdrLength = cdrLength.tolist()
-    histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-             '_cdr1_len_dist.png', dna=False,
-              seqName='CDR1', normed=True, maxbins=20)
-    # CDR2 stats
-    cdrLength = (self.cloneAnnot['cdr2.end'] - self.cloneAnnot['cdr2.start'] + 1) / 3
-    cdrLength = cdrLength.tolist()
-    histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-             '_cdr2_len_dist.png', dna=False,
-             seqName='CDR2', normed=True, maxbins=20)
-    # CDR3 stats
-    cdrLength = (self.cloneAnnot['cdr3.end'] - self.cloneAnnot['cdr3.start'] + 1) / 3
-    cdrLength = cdrLength.tolist()
-    histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-             '_cdr3_len_dist_nooutliers.png', dna=False,
-             seqName='CDR3', normed=True, maxbins=20,
-             removeOutliers=True)
-    histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name + 
-             '_cdr3_len_dist.png', dna=False,
-             seqName='CDR3', normed=True, maxbins=20,
-             removeOutliers=False)
-    gc.collect()
-    sys.stdout.flush()
-    # FR1 statistics 
-    frLength = (self.cloneAnnot['fr1.end'] - self.cloneAnnot['fr1.start'] + 1) / 3
-    frLength = frLength.tolist()
-    histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-             '_fr1_len_dist.png', dna=False,
-              seqName='FR1', normed=True, maxbins=20)
-    # FR2 statistics 
-    frLength = (self.cloneAnnot['fr2.end'] - self.cloneAnnot['fr2.start'] + 1) / 3
-    frLength = frLength.tolist()
-    histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-             '_fr2_len_dist.png', dna=False,
-              seqName='FR2', normed=True, maxbins=20)
-    # FR3 statistics 
-    frLength = (self.cloneAnnot['fr3.end'] - self.cloneAnnot['fr3.start'] + 1) / 3
-    frLength = frLength.tolist()
-    histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-             '_fr3_len_dist.png', dna=False,
-              seqName='FR3', normed=True, maxbins=20)
-    # FR4
-    frLength = (self.cloneAnnot['fr4.end'] - self.cloneAnnot['fr4.start'] + 1) / 3
-    frLength = frLength.tolist()
-    histcals = plotSeqLenDist(frLength, self.name, self.outputDir + self.name + 
-             '_fr4_len_dist.png', dna=False,
-              seqName='FR4', normed=True, maxbins=20)
-    sys.stdout.flush()
+
+
+def generateSpectraTypePlots(spectraTypes,  name, outDir):
+    for k in spectraTypes.keys():
+        filename = outDir + name + ('_%s_spectratype.png' % (k))
+        plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
+              seqName=k.upper(), normed=True, maxbins=20)
+        if k == 'cdr3':
+            filename = outDir + name + ('_%s_spectratype_no_outliers.png' % (k))
+            plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
+              seqName=k.upper(), normed=True, maxbins=20, 
+              removeOutliers= True)
+
+def generateDiversityPlots(clonoTypes, name, outDir):
+    generateSequenceLogos(clonoTypes, name, outDir, "protein")
+
+  
+def generateSequenceLogos(clonoTypes, name, outDir, seqType = "protein"):
+    logosFolder = outDir + 'logos/'    
+    if (not os.path.isdir(logosFolder)):
+        os.system('mkdir ' + logosFolder) 
+    regions = clonoTypes.keys()
+    regions.sort()        
+    print(seqType + " sequence logos are being generated .... ")  
+    for region in regions: 
+        # Generate cumulative sequence logos
+        filename = logosFolder + region + ("_%s_logo_cumulative.png" % (region))
+        if exists(filename):
+            print("\t" + region +" Logo was found ")
+        else:                
+            clonoType = clonoTypes[region]
+            seqs = clonoType.keys()
+        # Generate sequence motif logos
     
+     
+    
+    for group in groups: 
+        print("\t\t" + group)
+        seqs = proteinSeqs[group]
+        m = maxlen(seqs)
+        if m > 32:
+            m = 32
+        aa_counts = [ Counter(c[x] for c in seqs if len(c) > x) for x in range(m)]
+#         print(aa_counts)
+        barLogo(aa_counts, "{} ({:,})".format(group.upper(), len(seqs)), logosFolder + group + '.png')
+    
+    
+    
+    
+    
+#     
 # def generateCDRandFRLogos(self):
 # #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
 # #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
@@ -113,10 +121,10 @@ def generateSpectraTypes(cloneAnnot, cloneSeqs):
 #                 self.outputDir + self.name + '_cdr_fr_aligned',
 #                 protein=True)
 #        
-    
-
+      
+  
 # quantify CDR sequence diversity      
-        
+          
 #         if (not exists(self.outputDir + self.name + 
 #                  '_Vdomain_diversity.png')):            
 #     #         i = 0
@@ -175,8 +183,8 @@ def generateSpectraTypes(cloneAnnot, cloneSeqs):
 #                          ['CDR1', 'CDR2', 'CDR3'],
 #                          'Diversity of CDR Sequences')
 #         gc.collect()
-
-
+  
+  
 # Quantify FR sequence diversity
 #         plotSeqDuplication([self.cloneSeqs['fr1'].tolist(),
 #                           self.cloneSeqs['fr2'].tolist(),

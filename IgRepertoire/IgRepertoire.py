@@ -24,9 +24,13 @@ from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from IgRepReporting.abundanceReport import writeAbundanceToFiles
 from IgRepReporting.productivityReport import generateProductivityReport
 from IgRepReporting.diversityReport import generateDiversityReport
+from IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes,\
+    annotateClonotypes
+from igRepUtils import writeParams
 
 class IgRepertoire:    
     def __init__(self, args):        
+        self.args = args
         self.outputDir = args['o']
         self.threads = args['threads']
         self.primer = args['primer']
@@ -68,6 +72,7 @@ class IgRepertoire:
         print("Fastqc is running ... ")
         os.system(command % (FASTQC, outDir, self.threads, 
                              self.readFile1 +" " + self.readFile2))
+        writeParams(self.args, outDir)
         print("Fastqc has completed.")
         
     def annotateClones(self, outDirFilter= None):    
@@ -119,7 +124,8 @@ class IgRepertoire:
             # export the CDR/FR annotation to a file
             print("Clones annotation file is being written to " + self.cloneAnnotFile)         
 #             self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)         
-            self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')            
+            self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')  
+            writeParams(self.args, outDir)          
         if outDirFilter:    
             ## Filter clones based on bitscore, alignLen and sStart
             print("Clones are being filtered based on the following criteria: ")
@@ -139,7 +145,7 @@ class IgRepertoire:
             #filteredIDs = filteredIDs.index.tolist() 
             #writeListToFile(filteredIDs, outDirFilter + self.name + "_filtered_out_clones.txt")            
             self.cloneAnnot = self.cloneAnnot[selectedRows]        
-            print('Number of retained clones is {:,}'.format(int(self.cloneAnnot.shape[0])))
+            print('Number of retained clones is {:,}'.format(int(self.cloneAnnot.shape[0])))        
 
     def analyzeAbundance(self):    
         # Estimate the IGV family abundance for each library        
@@ -152,6 +158,7 @@ class IgRepertoire:
              
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
         gc.collect()
+        writeParams(self.args, outDir)
         
     def analyzeProductivity(self, generateReport=True):
         outDir = self.outputDir + "productivity/"
@@ -191,9 +198,10 @@ class IgRepertoire:
                       self.refinedCloneAnnotFile.split("/")[-1])
                 self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
                                       complib='blosc')                      
-                sys.stdout.flush()              
+                sys.stdout.flush()      
+            writeParams(self.args, outDir)        
         else:
-            print("\The refined clone annotation file was found! ... " + 
+            print("The refined clone annotation file was found! ... " + 
                   self.cloneSeqFile.split('/')[-1])
             self.cloneAnnot = read_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot")            
             self.cloneSeqs = read_hdf(self.cloneSeqFile, "cloneSequences")  
@@ -203,6 +211,7 @@ class IgRepertoire:
             #TODO: analyze productive clones only 
 #             self.analyzeIgProtein()
 #             sys.stdout.flush()
+        
         
     '''
     
@@ -214,21 +223,20 @@ class IgRepertoire:
         else:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
         self.analyzeProductivity(False)
-        
+        # Diversity analysis can be applied on productive clones only         
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
         self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        gc.collect() 
-         
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneSeqs.index]
-        
-        spectraTypes = identifySpectratypes(self.cloneAnnot)
-        clonoTypes = identifyClonotypes()
-        
-        generateDiversityReport(spectraTypes, clonoTypes)
+        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]     
+        gc.collect()
+        # Identify spectratypes 
+        spectraTypes = annotateSpectratypes(self.cloneAnnot)        
+        # Identify clonotypes 
+        clonoTypes = annotateClonotypes(self.cloneSeqs)              
         #### HERE       
-       
+        generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
+                                100)
         
-      
+        writeParams(self.args, outDir)
        
     def analyzePrimerSpecificity(self):
         pass

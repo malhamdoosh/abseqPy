@@ -28,12 +28,13 @@ def printFormattedTitle(title):
     print "-" * 100
     sys.stdout.flush()
 
+
 def main():
     
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     try:
-        argsVals = parseArgs(sys.argv)
+        argsVals = parseArgs(sys.argv)        
         #print(argsVals)        
         if (argsVals['task'] == 'fastqc'): 
             printFormattedTitle("Sequencing QC Analysis")
@@ -52,7 +53,7 @@ def main():
             igRepertoire = IgRepertoire(argsVals)        
             igRepertoire.analyzeProductivity()  
         elif (argsVals['task'] == 'diversity'):
-            printFormattedTitle("CDR Sequence Analysis")
+            printFormattedTitle("Diversity Analysis")
             igRepertoire = IgRepertoire(argsVals)    
             igRepertoire.analyzeDiversity()       
         elif (argsVals['task'] == 'secretion'):
@@ -89,6 +90,7 @@ def main():
             os.system("mkdir " + argsVals['o'])
             outputFile =  argsVals['o'] + argsVals['name'] + '_length_dist_classes.png'
             plotSeqLenDistClasses(argsVals['f1'], argsVals['name'], outputFile, argsVals['fmt'])
+        
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
     

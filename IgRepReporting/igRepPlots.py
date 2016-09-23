@@ -1,6 +1,8 @@
 import matplotlib as mpl
 from collections import Counter
 import math
+import numpy
+from matplotlib import cm
 mpl.use('Agg') # Agg
 
 import matplotlib.pyplot as plt
@@ -55,7 +57,7 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
     if (exists(outputFile)):
         print("File found ... " + outputFile.split('/')[-1])
         return
-    print("The sequence length distribution is being calculated ...")
+    print("\tThe sequence length distribution is being plotted for " + seqName)
     if (type("") == type(seqFile)):
         sizes = [len(rec) for rec in SeqIO.parse(seqFile, fileFormat) if len(rec) <= maxLen]
         weights = [1] * len(sizes)
@@ -83,7 +85,7 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
 #     histcals = ax.hist(sizes, bins=bins, histtype=histtype, range=autoscale,
 #                        normed=normed)
     title = "{:,} Sequences {} in {} \nLengths {:d} to {:d}"
-    ax.set_title(title.format(len(sizes), 'of ' + seqName if seqName!='' else '',
+    ax.set_title(title.format(sum(weights), 'of ' + seqName if seqName!='' else '',
                                sampleName, min(sizes), max(sizes)))
     if dna:
         ax.set_xlabel("Sequence Length (bp)")
@@ -391,4 +393,44 @@ def weightedAvgAndStd(values, weights):
 
 
 
+AA = ["GAST", "CVILPFYMW", "NQH", "DE", "KR"]
+AA_colours = numpy.concatenate((
+    cm.Oranges( (1+numpy.arange(len(AA[0]), dtype=float)) / (len(AA[0])+1)),
+    cm.Greens(  (1+numpy.arange(len(AA[1]), dtype=float)) / (len(AA[1])+1)),
+    cm.Purples( (1+numpy.arange(len(AA[2]), dtype=float)) / (len(AA[2])+1)),
+    cm.Reds(    (1+numpy.arange(len(AA[3]), dtype=float)) / (len(AA[3])+1)),
+    cm.Blues(   (1+numpy.arange(len(AA[4]), dtype=float)) / (len(AA[4])+1))
+))
+
+AA = ''.join(AA)  
+        
+def barLogo(counts, _title, filename):
+    if (exists(filename)):
+        print("File found ... " + filename.split('/')[-1])
+        return
+    fig, ax = plt.subplots(figsize=(8,5))
+    bar_fractions = [ [ ct.get(aa, 0) / float(sum(ct.values())) for aa in AA ] for ct in counts ]
+    by_aa      = [ [] for aa in AA ]
+    by_aa_base = [ [] for aa in AA ]
+    for bf in bar_fractions:
+        s = 0.0
+        for i,aa in enumerate(AA):
+            by_aa[i].append(bf[i])
+            by_aa_base[i].append(s)
+            s += bf[i]
+
+    ax.set_title(_title, fontsize=20)
+    for i,aa in enumerate(AA):
+        ax.bar(numpy.arange(len(bar_fractions)) + .05, by_aa[i], 
+               width=0.9, bottom=by_aa_base[i], color=AA_colours[i], 
+               label=AA[i], lw=0)   
+    ax.set_ylim(0,1)
+    ax.set_xticks(numpy.arange(len(counts))+.5 )
+    ax.set_xticklabels([ ct.most_common(1)[0][0] for ct in counts ])
+    ax.tick_params(axis='both', which='major', labelsize=14)
+    ax.legend(loc = 'upper right', bbox_to_anchor = (1.1, 1),fontsize='x-small')
+    fig.savefig(filename, dpi=300)
     
+
+
+

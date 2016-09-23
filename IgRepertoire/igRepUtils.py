@@ -15,6 +15,7 @@ from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 import re
 from IgRepReporting.igRepPlots import plotDist
+from argsParser import PROGRAM_VALID_ARGS
 
 def fastq2fasta(fastqFile, outputDir):
     # FASTQ to FASTA
@@ -101,11 +102,26 @@ def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
+def writeClonoTypesToFile(clonoTypes, filename, top = 100):
+    if exists(filename):
+        print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
+        return
+    with open(filename, 'w') as out:
+        out.write('Clonotype,Count,Percentage (%)\n')
+        total = sum(clonoTypes.values()) * 1.0
+        t = 1
+        for k in sorted(clonoTypes, key = clonoTypes.get, reverse = True):
+            out.write(str(k) + ',' + `clonoTypes[k]` + ',' + ('%.2f' % (clonoTypes[k] / total * 100)) + '\n' )
+            t += 1
+            if (t > top):
+                break
+        #out.write('TOTAL,' + `total` + ",100")
+    print("\tA clonotype file has been written to " + filename.split("/")[-1])
 
 def writeCountsToFile(dist, filename):
     # This function prints the distribution counts into a text file
     with open(filename, 'w') as out:
-        out.write('IGHV Class, Count, Proportion \n')
+        out.write('Germline group,Count,Percentage (%)\n')
         total = sum(dist.values()) * 1.0
         for k in sorted(dist, key=dist.get, reverse=True):
             out.write(str(k) + ',' + `dist[k]` + ',' + ("%.2f" % (dist[k] / total * 100)) + '\n')
@@ -609,3 +625,16 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             SeqIO.write(records, out, 'fasta')  
 
     
+def writeParams(args, outDir):
+    filename = outDir + "analysis.params"
+    with open(filename, 'w') as out:
+        for arg in PROGRAM_VALID_ARGS:
+            a = arg.replace('-', '')
+            if args.get(a, None) is not None:
+                out.write(arg + " " + str(args[a]) + "\n")
+    print("The analysis parameters have been written to " + filename.split("/")[-1])
+                
+                
+                
+                
+            
