@@ -12,7 +12,6 @@ from igRepUtils import  writeCountsCategoriesToFile
 import gc
 from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
 from igRepUtils import findHitsRegion, replaceIUPACLetters,  findHits
-from IgRepAuxiliary.SeqUtils import generateProteinLogos
 from Bio.SeqRecord import SeqRecord
 from igRepUtils import compressCountsGeneLevel
 from config import  FASTQC

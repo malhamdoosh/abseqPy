@@ -3,6 +3,7 @@ from collections import Counter
 import math
 import numpy
 from matplotlib import cm
+from IgRepAuxiliary.SeqUtils import maxlen
 mpl.use('Agg') # Agg
 
 import matplotlib.pyplot as plt
@@ -376,10 +377,6 @@ def excludeOutliers(values, weights, m =4.0):
     sel =  abs(values - avg) <= m * std
     return values[sel].tolist(), weights[sel].tolist()
 
-
-
-
-
 def weightedAvgAndStd(values, weights):
     """
     Return the weighted average and standard deviation.
@@ -403,27 +400,43 @@ AA_colours = numpy.concatenate((
 ))
 
 AA = ''.join(AA)  
+
+'''
+Amino acids are colored based on their physiochemical properties
+'''
         
-def barLogo(counts, _title, filename):
+def barLogo(counts, title, filename, removeOutliers=False, scaled = False):
     if (exists(filename)):
         print("File found ... " + filename.split('/')[-1])
         return
+    totals = np.array([sum(ct.values()) for ct in counts]) 
+    if removeOutliers:        
+        sel =  totals > 0.01*max(totals)        
+        counts = [ counts[i] for i in range(len(counts)) if sel[i]]
+#         print(0.01*max(totals), totals[sel], len(counts))
     fig, ax = plt.subplots(figsize=(8,5))
-    bar_fractions = [ [ ct.get(aa, 0) / float(sum(ct.values())) for aa in AA ] for ct in counts ]
-    by_aa      = [ [] for aa in AA ]
-    by_aa_base = [ [] for aa in AA ]
-    for bf in bar_fractions:
+    # calculate AA proportions for each position 
+    if scaled:
+        barFractions = [ [ ct.get(aa, 0) / float(max(totals)) for aa in AA ] 
+                        for ct in counts ]
+    else:        
+        barFractions = [ [ ct.get(aa, 0) / float(sum(ct.values())) for aa in AA ] 
+                        for ct in counts ]
+    # Create positional proportions for each AA 
+    byAA      = [ [] for aa in AA ]
+    byAABase = [ [] for aa in AA ]
+    for bf in barFractions:
         s = 0.0
         for i,aa in enumerate(AA):
-            by_aa[i].append(bf[i])
-            by_aa_base[i].append(s)
+            byAA[i].append(bf[i])
+            byAABase[i].append(s)
             s += bf[i]
-
-    ax.set_title(_title, fontsize=20)
+    # Generate the bar plot: one bar plot per AA
     for i,aa in enumerate(AA):
-        ax.bar(numpy.arange(len(bar_fractions)) + .05, by_aa[i], 
-               width=0.9, bottom=by_aa_base[i], color=AA_colours[i], 
-               label=AA[i], lw=0)   
+        ax.bar(numpy.arange(len(barFractions)) + .05, byAA[i], 
+               width=0.9, bottom=byAABase[i], color=AA_colours[i], 
+               label=AA[i], lw=0)
+    ax.set_title(title, fontsize=20)   
     ax.set_ylim(0,1)
     ax.set_xticks(numpy.arange(len(counts))+.5 )
     ax.set_xticklabels([ ct.most_common(1)[0][0] for ct in counts ])
@@ -431,6 +444,30 @@ def barLogo(counts, _title, filename):
     ax.legend(loc = 'upper right', bbox_to_anchor = (1.1, 1),fontsize='x-small')
     fig.savefig(filename, dpi=300)
     
-
+def generateCumulativeLogo(seqs, weights, region, filename):
+    if exists(filename):
+        print("\t" + region +" Cumulative Logo was found ")
+    else:        
+        m = maxlen(seqs)
+        if m > 30:
+            m = 30
+        # Calculate AA counts per position 
+        aaCounts = []
+        for x in range(m):
+            cnt = []
+            for i in range(len(seqs)):
+                seq = seqs[i].upper()
+                if (x < len(seq)):                    
+                    cnt += [seq[x]] * weights[i]
+#                 print(len(cnt))
+            aaCounts.append(Counter(cnt))                
+        # Generate a cumulative bar plot
+        barLogo(aaCounts, 
+                "{} ({:,})".format(region.upper(), sum(weights)), 
+                filename, removeOutliers= (region != "cdr3"))
+        barLogo(aaCounts, 
+                "{} ({:,})".format(region.upper(), sum(weights)), 
+                filename.replace(".png", "_scaled.png"),
+                scaled = True)
 
 

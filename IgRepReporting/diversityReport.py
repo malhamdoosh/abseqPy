@@ -5,17 +5,17 @@ Created on 15/08/2016
 '''
 import sys
 from IgRepertoire.igRepUtils import writeClonoTypesToFile
-from IgRepReporting.igRepPlots import plotSeqLenDist, barLogo
-from os.path import exists, os
-from collections import Counter
-from IgRepAuxiliary.SeqUtils import maxlen
+from IgRepReporting.igRepPlots import plotSeqLenDist, \
+    generateCumulativeLogo
+import os
+from IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes):    
     generateSpectraTypePlots(spectraTypes,  name, outDir)
     
     writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes)
     
-    generateDiversityPlots(clonoTypes, name, outDir)
+    generateClonoTypePlots(clonoTypes, name, outDir)
 #     generateCDRandFRLogos()
     sys.stdout.flush()
 
@@ -25,9 +25,6 @@ def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
         writeClonoTypesToFile(clonoTypes[k], 
           outDir + name + ("_%s_clonotypes_%d.csv" % (k, topClonotypes)), 
           topClonotypes)
-
-
-
 
 def generateSpectraTypePlots(spectraTypes,  name, outDir):
     for k in spectraTypes.keys():
@@ -40,41 +37,44 @@ def generateSpectraTypePlots(spectraTypes,  name, outDir):
               seqName=k.upper(), normed=True, maxbins=20, 
               removeOutliers= True)
 
-def generateDiversityPlots(clonoTypes, name, outDir):
-    generateSequenceLogos(clonoTypes, name, outDir, "protein")
+def generateClonoTypePlots(clonoTypes, name, outDir):
+    generateSeqLogosMotifs(clonoTypes, name, outDir, "protein")
+    generateDiversityPlots(clonoTypes, name, outDir, "protein")
 
+def generateDiversityPlots(clonoTypes, name, outDir, seqType = "protein"):
+    pass
   
-def generateSequenceLogos(clonoTypes, name, outDir, seqType = "protein"):
+def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
     logosFolder = outDir + 'logos/'    
     if (not os.path.isdir(logosFolder)):
-        os.system('mkdir ' + logosFolder) 
+        os.system('mkdir ' + logosFolder)
+    motifsFolder =  outDir + 'motifs/'   
+    if (not os.path.isdir(motifsFolder)):
+        os.system('mkdir ' + motifsFolder)
     regions = clonoTypes.keys()
     regions.sort()        
     print(seqType + " sequence logos are being generated .... ")  
     for region in regions: 
-        # Generate cumulative sequence logos
-        filename = logosFolder + region + ("_%s_logo_cumulative.png" % (region))
-        if exists(filename):
-            print("\t" + region +" Logo was found ")
-        else:                
-            clonoType = clonoTypes[region]
-            seqs = clonoType.keys()
-        # Generate sequence motif logos
-    
-     
-    
-    for group in groups: 
-        print("\t\t" + group)
-        seqs = proteinSeqs[group]
-        m = maxlen(seqs)
-        if m > 32:
-            m = 32
-        aa_counts = [ Counter(c[x] for c in seqs if len(c) > x) for x in range(m)]
-#         print(aa_counts)
-        barLogo(aa_counts, "{} ({:,})".format(group.upper(), len(seqs)), logosFolder + group + '.png')
-    
-    
-    
+        print("\t" + region.upper())
+        clonoType = clonoTypes[region]
+        seqs = clonoType.keys()        
+        weights = map(lambda x: clonoType[x], seqs)
+        # Generate cumulative sequence logos using Toby's approach
+        filename = logosFolder + name + ("_%s_cumulative_logo.png" % (region))        
+        generateCumulativeLogo(seqs, weights, region, filename)
+        # Generate sequence motif logos using weblogo                
+        #generate logos without alignment
+        ### SEQUENCES ARE WEIGHTED ??? HOW TO USE WEIGHTS
+        ### SIMPLY REPEAT SEQUENCES OR FIND A WAY
+        filename = motifsFolder + name + ("_%s_motif_logo.png" % (region))
+        alphabet = createAlphabet(align=False, protein=True)
+        m = generateMotif(seqs, region, alphabet, filename,  align = False,
+                          protein = True, weights= weights)
+        # generate  logos after alignment
+        filename = motifsFolder + name + ("_%s_motif_aligned_logo.png" % (region))
+        alphabet = createAlphabet(align=True, protein=True)
+        m = generateMotif(seqs, region, alphabet, filename,  align = True,
+                          protein = True, weights= weights)
     
     
 #     

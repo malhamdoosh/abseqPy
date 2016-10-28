@@ -6,7 +6,7 @@ Created on 19/08/2016
 from collections import Counter
 
 #
-#  spectratype, that is, histogram of read counts by CDR3 nucleotide length. 
+#  spectratype, that is, histogram of clone counts by CDR/FR nucleotide length. 
 #  The spectratype is useful to detect pathological and highly clonal repertoires, 
 #  as the spectratype of non-expanded T- and B-cells has a symmetric gaussian-like distribution.
 
@@ -45,6 +45,7 @@ def annotateSpectratypes(cloneAnnot):
         
     return spectraTypes
 
+# clonotype is the histogram of clone counts by CDR/FR amino acid sequence 
 def annotateClonotypes(cloneSeqs):
     #TODO: add annotation to clonotypes, e.g., germline genes
     #TODO: add nucleotide level calculations
