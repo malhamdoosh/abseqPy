@@ -6,46 +6,162 @@ Created on 15/08/2016
 import sys
 from IgRepertoire.igRepUtils import writeClonoTypesToFile
 from IgRepReporting.igRepPlots import plotSeqLenDist, \
-    generateCumulativeLogo
+    generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction,\
+    plotSeqRecapture, plotSeqRecaptureNew
 import os
 from IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
+from collections import Counter
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes):    
     generateSpectraTypePlots(spectraTypes,  name, outDir)
     
     writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes)
     
-    generateClonoTypePlots(clonoTypes, name, outDir)
+    estimateDiversity(clonoTypes, name, outDir)
 #     generateCDRandFRLogos()
     sys.stdout.flush()
 
 def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
     print("Clonotype files are being written out ... ")
+    cloneFolder = outDir + "clonotypes/"
+    if (not os.path.exists(cloneFolder)):
+        os.system("mkdir " + cloneFolder)
     for k in clonoTypes.keys():
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.csv" % (k, topClonotypes)) 
         writeClonoTypesToFile(clonoTypes[k], 
-          outDir + name + ("_%s_clonotypes_%d.csv" % (k, topClonotypes)), 
-          topClonotypes)
+          filename, 
+          topClonotypes,
+          overRepresented = True)
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.csv" % (k, topClonotypes)) 
+        writeClonoTypesToFile(clonoTypes[k], 
+          filename, 
+          topClonotypes,
+          overRepresented = False)
 
 def generateSpectraTypePlots(spectraTypes,  name, outDir):
+    specFolder = outDir + "spectratypes/"
+    if (not os.path.exists(specFolder)):
+        os.system("mkdir " + specFolder)
     for k in spectraTypes.keys():
-        filename = outDir + name + ('_%s_spectratype.png' % (k))
+        filename = specFolder + name + ('_%s_spectratype.png' % (k))
         plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
               seqName=k.upper(), normed=True, maxbins=20)
         if k == 'cdr3':
-            filename = outDir + name + ('_%s_spectratype_no_outliers.png' % (k))
+            filename = specFolder + name + ('_%s_spectratype_no_outliers.png' % (k))
             plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
               seqName=k.upper(), normed=True, maxbins=20, 
               removeOutliers= True)
 
-def generateClonoTypePlots(clonoTypes, name, outDir):
-    generateSeqLogosMotifs(clonoTypes, name, outDir, "protein")
-    generateDiversityPlots(clonoTypes, name, outDir, "protein")
 
-def generateDiversityPlots(clonoTypes, name, outDir, seqType = "protein"):
-    pass
+def estimateDiversity(clonoTypes, name, outDir):
+    generateSeqLogosMotifs(clonoTypes, name, outDir, "protein")
+    generateRarefactionPlots(clonoTypes, name, outDir)
+    calcDiversity(clonoTypes, name, outDir)
+
+def calcDiversity(clonoTypes, name, outDir):
+    print("The diversity of the library is being estimated ... ")
+    regions = clonoTypes.keys()
+    regions.sort()
+    rarenessCounts = {}    
+    for region in regions:
+        rarenessCounts[region] = Counter(clonoTypes[region].values()) 
+    
+
+
+def generateRarefactionPlots(clonoTypes, name, outDir):
+    regions = clonoTypes.keys()
+    regions.sort() 
+    print("Rarefaction plots are being generated .... ")
+    # select CDR regions only  
+    cdrWeights = []  
+    cdrSeqs = []
+    cdrRegions = []
+    for region in regions:
+        if not region.startswith("cdr"):
+            continue
+        cdrRegions.append(region.upper())
+        cdrSeqs.append(clonoTypes[region].keys())
+        cdrWeights.append(map(lambda x: clonoTypes[region][x], cdrSeqs[-1]))        
+    filename = outDir + name + "_cdr_duplication.png"   
+    print("\tThe duplication levels plot is being generated for CDRs .... ") 
+    plotSeqDuplication(cdrWeights,                     
+                     cdrRegions,
+                     filename,                    
+                     'Duplication of CDR Sequences')  
+    print("\tThe rarefaction plot is being generated for CDRs .... ")       
+    filename = outDir + name + "_cdr_rarefaction.png" 
+    plotSeqRarefaction(cdrSeqs,
+                     cdrRegions,
+                     filename,    
+                     cdrWeights,                 
+                     'Rarefaction of CDR Sequences')
+    print("\tThe percent recapture plot is being generated for CDRs .... ")       
+    filename = outDir + name + "_cdr_recapture.png" 
+    plotSeqRecaptureNew(cdrSeqs,
+                     cdrRegions,
+                     filename,       
+                     'Percent Recapture of CDR Sequences')
+    # select FR regions only
+    frWeights = []  
+    frSeqs = []
+    frRegions = []
+    for region in regions:
+        if not region.startswith("fr"):
+            continue
+        frRegions.append(region.upper())
+        frSeqs.append(clonoTypes[region].keys())
+        frWeights.append(map(lambda x: clonoTypes[region][x], frSeqs[-1]))        
+    filename = outDir + name + "_fr_duplication.png"   
+    print("\tThe duplication levels plot is being generated for FRs .... ") 
+    plotSeqDuplication(frWeights,                     
+                     frRegions,
+                     filename,                    
+                     'Duplication of FR Sequences')  
+    print("\tThe rarefaction plot is being generated for FRs .... ")       
+    filename = outDir + name + "_fr_rarefaction.png" 
+    plotSeqRarefaction(frSeqs,
+                     frRegions,
+                     filename,    
+                     frWeights,                 
+                     'Rarefaction of FR Sequences')
+    print("\tThe percent recapture plot is being generated for FRs .... ")       
+    filename = outDir + name + "_fr_recapture.png" 
+    plotSeqRecaptureNew(frSeqs,
+                     frRegions,
+                     filename,        
+                     'Percent Recapture of FR Sequences')
+    # select CDR and V domain 
+    cdrWeights = []  
+    cdrSeqs = []
+    cdrRegions = []
+    for region in regions:
+        if region.startswith("fr"):
+            continue
+        cdrRegions.append(region.upper())
+        cdrSeqs.append(clonoTypes[region].keys())
+        cdrWeights.append(map(lambda x: clonoTypes[region][x], cdrSeqs[-1]))        
+    filename = outDir + name + "_cdr_v_duplication.png"   
+    print("\tThe duplication levels plot is being generated for CDRs and V domains .... ") 
+    plotSeqDuplication(cdrWeights,                     
+                     cdrRegions,
+                     filename,                    
+                     'Duplication of CDRs and V Domains')  
+    print("\tThe rarefaction plot is being generated for CDRs and V domains .... ")       
+    filename = outDir + name + "_cdr_v_rarefaction.png" 
+    plotSeqRarefaction(cdrSeqs,
+                     cdrRegions,
+                     filename,    
+                     cdrWeights,                 
+                     'Rarefaction of CDRs and V Domains')
+    print("\tThe percent recapture plot is being generated for CDRs and V domains .... ")       
+    filename = outDir + name + "_cdr_v_recapture.png" 
+    plotSeqRecaptureNew(cdrSeqs,
+                     cdrRegions,
+                     filename,        
+                     'Percent Recapture of CDRs and V Domains')
   
 def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
-    logosFolder = outDir + 'logos/'    
+    logosFolder = outDir + 'composition_logos/'    
     if (not os.path.isdir(logosFolder)):
         os.system('mkdir ' + logosFolder)
     motifsFolder =  outDir + 'motifs/'   
@@ -55,73 +171,30 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
     regions.sort()        
     print(seqType + " sequence logos are being generated .... ")  
     for region in regions: 
+        if (region == 'v'):
+            continue
         print("\t" + region.upper())
         clonoType = clonoTypes[region]
         seqs = clonoType.keys()        
         weights = map(lambda x: clonoType[x], seqs)
         # Generate cumulative sequence logos using Toby's approach
+        #TODO: generate composition logos by IGV family
         filename = logosFolder + name + ("_%s_cumulative_logo.png" % (region))        
         generateCumulativeLogo(seqs, weights, region, filename)
         # Generate sequence motif logos using weblogo                
-        #generate logos without alignment
-        ### SEQUENCES ARE WEIGHTED ??? HOW TO USE WEIGHTS
-        ### SIMPLY REPEAT SEQUENCES OR FIND A WAY
+        # generate logos without alignment
         filename = motifsFolder + name + ("_%s_motif_logo.png" % (region))
-        alphabet = createAlphabet(align=False, protein=True)
+        alphabet = createAlphabet(align=False, protein=True, extendAlphabet = True)
         m = generateMotif(seqs, region, alphabet, filename,  align = False,
                           protein = True, weights= weights)
         # generate  logos after alignment
         filename = motifsFolder + name + ("_%s_motif_aligned_logo.png" % (region))
-        alphabet = createAlphabet(align=True, protein=True)
+        alphabet = createAlphabet(align=True, protein=True, extendAlphabet = True)
         m = generateMotif(seqs, region, alphabet, filename,  align = True,
                           protein = True, weights= weights)
     
     
-#     
-# def generateCDRandFRLogos(self):
-# #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'  
-# #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-#     seqs = {}
-#     for k in self.cloneSeqs.columns:
-#         if k.startswith('cdr') :
-#             seqs[k] = self.cloneSeqs[k].tolist()
-#         if k.startswith('fr'):
-#             seqs[k] = self.cloneSeqs[k].tolist()
-#     # generate Toby's logos ?!?!
-#     generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_fr_Toby')
-#     
-#     # generate CDR/FR logos without alignment
-#     generateMotifs(seqs, False, self.outputDir + self.name + '_cdr_fr',
-#                    protein=True) 
-#     # generate CDR/FR logos after alignment
-#     generateMotifs(seqs, True,
-#                 self.outputDir + self.name + '_cdr_fr_aligned',
-#                 protein=True)
-#     # generate CDR3 logos per  germline 
-#     seqs = {}
-#     vgenes = self.cloneSeqs["germline"].tolist()
-#     vgenes = map(lambda x: x.split('*')[0], vgenes)
-#     for vgene in set(vgenes):
-#         seqs["cdr3_"+vgene.replace("/", "-")] = self.cloneSeqs.loc[map(lambda x: x == vgene, vgenes), "cdr3"].tolist()            
-#     # generate Toby's logos ?!?!
-#     generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_Toby_gene')
-#     # generate CDR/FR logos after alignment
-#     generateMotifs(seqs, True,
-#                 self.outputDir + self.name + '_cdr_gene_aligned',
-#                 protein=True)
-#     # generate CDR3 logos per family        
-#     seqs = {}
-#     vfams = map(lambda x: x.split('-')[0].split('/')[0], vgenes)
-#     for vfam in set(vfams):
-#         seqs["cdr3_"+vfam] = self.cloneSeqs.loc[map(lambda x: x == vgene, vgenes), "cdr3"].tolist()
-#     # generate Toby's logos ?!?!
-#     generateProteinLogos(seqs, self.outputDir + self.name + '_cdr_fr_Toby')
-#     # generate CDR/FR logos after alignment
-#     generateMotifs(seqs, True,
-#                 self.outputDir + self.name + '_cdr_fr_aligned',
-#                 protein=True)
-#        
-      
+
   
 # quantify CDR sequence diversity      
           
@@ -155,7 +228,7 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
 #                      '_Vdomain__Vdomain_ication.png',
 #                              ['CDR1', 'CDR2', 'CDR3', 'V Domain'],
 #                              'Duplication of V Domain Sequences')
-#             plotSeqDiversity([self.cloneSeqs['cdr1'].tolist(),
+#             plotSeqRarefaction([self.cloneSeqs['cdr1'].tolist(),
 #                           self.cloneSeqs['cdr2'].tolist(),
 #                           self.cloneSeqs['cdr3'].tolist(),
 #                           VH],
@@ -174,7 +247,7 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
 #                          ['CDR1', 'CDR2', 'CDR3'],
 #                          'Duplication of CDR Sequences')        
 #         
-#         plotSeqDiversity([self.cloneSeqs['cdr1'].tolist(),
+#         plotSeqRarefaction([self.cloneSeqs['cdr1'].tolist(),
 #                           self.cloneSeqs['cdr2'].tolist(),
 #                           self.cloneSeqs['cdr3'].tolist()
 #                         ],
@@ -183,8 +256,8 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
 #                          ['CDR1', 'CDR2', 'CDR3'],
 #                          'Diversity of CDR Sequences')
 #         gc.collect()
-  
-  
+   
+   
 # Quantify FR sequence diversity
 #         plotSeqDuplication([self.cloneSeqs['fr1'].tolist(),
 #                           self.cloneSeqs['fr2'].tolist(),
@@ -195,7 +268,7 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
 #                          ['FR1', 'FR2', 'FR3', 'FR4'],
 #                          'Duplication of FR Sequences')
 #         gc.collect()
-#         plotSeqDiversity([self.cloneSeqs['fr1'].tolist(),
+#         plotSeqRarefaction([self.cloneSeqs['fr1'].tolist(),
 #                           self.cloneSeqs['fr2'].tolist(),
 #                           self.cloneSeqs['fr3'].tolist(),
 #                           self.cloneSeqs['fr4'].tolist()],

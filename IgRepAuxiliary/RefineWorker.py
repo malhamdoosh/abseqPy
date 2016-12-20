@@ -58,7 +58,7 @@ class RefineWorker(Process):
                     
                     # append the FR and CDR protein clones
                     qsRec['queryid'] = record.id
-                    qsRecs.append(convertCloneRecordToOrderedList(qsRec))
+                    qsRecs.append(convertCloneRecordToOrderedList(qsRec, self.chain))
                     seqsAll.append(seqs)        
                 self.procCounter.increment(len(qsRecs))                         
                 self.resultsQueue.put((qsRecs, seqsAll, flags))
@@ -115,7 +115,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
                 if not fr4cut: 
                     qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']     
                 else:
-                    qsRec['fr4.end'] = fr4end * 3 + qsRec['fr3.end'] 
+                    qsRec['fr4.end'] = qsRec['fr3.end']  + fr4end * 3
             else:                
                 # try to use the DNA consensus
                 searchRegion = str(record.seq)[int(qsRec['fr3.end']):]

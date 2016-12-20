@@ -35,8 +35,21 @@ def fastq2fasta(fastqFile, outputDir):
     os.system(command)
     return filename 
 
-def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB'):
-    # Run igblast on a fasta file  
+#TODO: allow user to choose either imgt or kabat
+'''
+The V domain can be delineated using either IMGT system (Lefranc et al 2003) or 
+Kabat system (Kabat et al, 1991, Sequences of Proteins of Immunological Interest, 
+National Institutes of Health Publication No. 91-3242, 5th ed., United States Department 
+of Health and Human Services, Bethesda, MD). 
+Domain annotation of the query sequence is based on pre-annotated domain information 
+for the best matched germline hit.
+
+IMGT classification system is used to delineate the V domain 
+'''
+def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA"):
+    # Run igblast on a fasta file
+    #TODO: update $IGDATA for auxiliary_data to correct path  
+    #TODO: change organism to be fed through parameters 
       
     blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
     if (exists(blastOutput)):
@@ -46,19 +59,19 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     if (chain == 'hv'):
         command = ("igblastn -germline_db_V " + db+"/imgt_human_ighv -germline_db_J " 
                    "" + db+"/imgt_human_ighj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
-                   "-query %s -organism human -auxiliary_data optional_file/human_gl.aux "  
+                   "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
                    )
     elif (chain == 'kv'):
         command = ("igblastn -germline_db_V " + db+"/imgt_human_igkv -germline_db_J " 
                    "" + db+"/imgt_human_igkj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
-                   "-query %s -organism human -auxiliary_data optional_file/human_gl.aux "  
+                   "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
                    )
     elif (chain == 'lv'):
         command = ("igblastn -germline_db_V " + db+"/imgt_human_iglv -germline_db_J " 
                    "" + db+"/imgt_human_iglj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
-                   "-query %s -organism human -auxiliary_data optional_file/human_gl.aux "  
+                   "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
                    )
     else:
@@ -68,6 +81,9 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
+'''
+IMGT classification system is used to delineate the V domain 
+'''
 def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     # Run igblast on a fasta file        
     blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
@@ -101,7 +117,7 @@ def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
-def writeClonoTypesToFile(clonoTypes, filename, top = 100):
+def writeClonoTypesToFile(clonoTypes, filename, top = 100, overRepresented=True):
     if exists(filename):
         print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
         return
@@ -109,8 +125,9 @@ def writeClonoTypesToFile(clonoTypes, filename, top = 100):
         out.write('Clonotype,Count,Percentage (%)\n')
         total = sum(clonoTypes.values()) * 1.0
         t = 1
-        for k in sorted(clonoTypes, key = clonoTypes.get, reverse = True):
-            out.write(str(k) + ',' + `clonoTypes[k]` + ',' + ('%.2f' % (clonoTypes[k] / total * 100)) + '\n' )
+        for k in sorted(clonoTypes, key = clonoTypes.get, reverse = overRepresented):
+            out.write(str(k) + ',' + `clonoTypes[k]` + ',' + 
+                      ('%.2f' % (clonoTypes[k] / total * 100)) + '\n' )
             t += 1
             if (t > top):
                 break
@@ -259,7 +276,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
             #os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
-            print(".../" + mergedFastq.split("/")[-1] + ' was found!')
+            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'leehom'):        
         mergedFastq = outputPrefix + '.fq'
         if (not exists(mergedFastq)):
@@ -271,7 +288,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             #os.system("mv %s.* %s" % (outputPrefix, seqOut))
             #os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
-            print(".../" + mergedFastq.split("/")[-1] + ' was found!')
+            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'flash'):        
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = outputPrefix.split("/")[-1]
@@ -283,7 +300,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
             os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
-            print(".../" + mergedFastq.split("/")[-1] + ' was found!')
+            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
 #     elif (merger == 'seqprep'):
 #         ### MERGE using SeqPrep 
 #         mergedFastq = readFile1.replace(readFile1.split('_')[-1], 'merged.fastq.gz')
@@ -631,6 +648,8 @@ def writeParams(args, outDir):
             a = arg.replace('-', '')
             if args.get(a, None) is not None:
                 out.write(arg + " " + str(args[a]) + "\n")
+        out.write("\nExecuted command line:\n")
+        out.write(args['cmd'] + "\n")
     print("The analysis parameters have been written to " + filename.split("/")[-1])
                 
                 

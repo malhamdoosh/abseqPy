@@ -12,7 +12,7 @@ Email: monther.alhamdoosh@csl.com.au / m.hamdoosh@gmail.com
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
               'identity', 'alignlen', 'bitscore',
-                    'dgene', 'dqstart', 'dstart', 'dmismatches', 'dgaps', 
+                    'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps', 
                     'jgene', 'jqstart', 'jqend', 'jstart', 'jmismatches', 'jgaps',  
                     'strand', 'stopcodon', 'v-jframe',
                     'fr1.start', 'fr1.end', 'fr1.mismatches', 'fr1.gaps',
@@ -24,16 +24,25 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
                     'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
                     ]
 
-def createCloneRecord():
+def getAnnotationFields(chain):
+    if (chain == 'hv'):
+        return ANNOTATION_FIELDS
+    elif (chain in ['kv', 'lv']):
+        return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
+    else:
+        print('ERROR: unsupported chain type.')     
+        sys.exit() 
+
+def createCloneRecord(chain):
     cdrRecord = {}    
-    for field in ANNOTATION_FIELDS:
+    for field in getAnnotationFields(chain):
         cdrRecord[field] =  np.nan
     return cdrRecord
 
 
-def convertCloneRecordToOrderedList(cdrRecord):    
+def convertCloneRecordToOrderedList(cdrRecord, chain):    
     orderedList = []
-    for field in ANNOTATION_FIELDS:
+    for field in getAnnotationFields(chain):
         orderedList.append(cdrRecord[field])
     
     return orderedList
@@ -44,7 +53,7 @@ def to_int(x):
     except:
         return None
 
-def extractCDRInfo(blastOutput,):
+def extractCDRInfo(blastOutput, chain):
     # Extract the top hits  
     print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
     # process igblast output and extract top hit 
@@ -61,7 +70,7 @@ def extractCDRInfo(blastOutput,):
                     if (not line):
                         break 
                     continue            
-                cloneRecord = createCloneRecord()
+                cloneRecord = createCloneRecord(chain)
                 cloneRecord['queryid'] = line.split()[2].strip()
                 # parse  V-(D)-J rearrangement   
                 line = blast.readline()
@@ -79,11 +88,17 @@ def extractCDRInfo(blastOutput,):
                 cloneRecord['strand'] = 'forward' if line[-1] == '+' else 'reversed'
 #                 print line, cloneRecord['strand']
 #                 sys.exit()
-                cloneRecord['stopcodon'] = line[4]
-                cloneRecord['v-jframe'] = line[5]
-                cloneRecord['vgene'] = line[0].split(',')[0]
-                cloneRecord['dgene'] = line[1].split(',')[0]
-                cloneRecord['jgene'] = line[2].split(',')[0]
+                if (chain == 'hv'):
+                    cloneRecord['stopcodon'] = line[4]
+                    cloneRecord['v-jframe'] = line[5]
+                    cloneRecord['vgene'] = line[0].split(',')[0]
+                    cloneRecord['dgene'] = line[1].split(',')[0]
+                    cloneRecord['jgene'] = line[2].split(',')[0]
+                else:
+                    cloneRecord['stopcodon'] = line[3]
+                    cloneRecord['v-jframe'] = line[4]
+                    cloneRecord['vgene'] = line[0].split(',')[0]                    
+                    cloneRecord['jgene'] = line[1].split(',')[0]
                 # parse Alignment Summary between query and top germline V gene
                 line = ' '.join(line)
                 while (line and 
@@ -153,14 +168,15 @@ def extractCDRInfo(blastOutput,):
                        not line.startswith("J")):
                     line = blast.readline()
                 if (not line):
-                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     break
                 if (line.startswith('# Query')):
-                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     continue         
                 if (line.startswith("D")):
                     hit = line.split()
                     cloneRecord['dqstart'] = to_int(hit[8])
+                    cloneRecord['dqend'] = to_int(hit[9])
                     cloneRecord['dstart'] = to_int(hit[10])
                     cloneRecord['dmismatches'] = to_int(hit[5])
                     cloneRecord['dgaps'] = to_int(hit[7])
@@ -170,10 +186,10 @@ def extractCDRInfo(blastOutput,):
                    not line.startswith("J")):
                     line = blast.readline()
                 if (not line):
-                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     break
                 if (line.startswith('# Query')):
-                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord))
+                    cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     continue 
                 if (line.startswith("J")):
                     hit = line.split()
@@ -182,16 +198,17 @@ def extractCDRInfo(blastOutput,):
                     cloneRecord['jstart'] = to_int(hit[10])
                     cloneRecord['jmismatches'] = to_int(hit[5])
                     cloneRecord['jgaps'] = to_int(hit[7])           
-                cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord)) 
-            except:
-#                 print(line, cdrRecord)
+                cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain)) 
+            except Exception as e:                
+#                 print(line, cloneRecord)
+#                 raise e
                 warning = True
                 continue            
     if (len(cloneAnnot) > 0):
         # productive = no stop and in-frame
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
-        cloneAnnot = DataFrame(cloneAnnot, columns =  ANNOTATION_FIELDS) 
+        cloneAnnot = DataFrame(cloneAnnot, columns =  getAnnotationFields(chain)) 
         cloneAnnot.index = cloneAnnot.queryid
         del cloneAnnot['queryid']
     else:
@@ -208,7 +225,7 @@ def analyzeSmallFile(fastaFile, chain, igBlastDB,
         blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB)   
     else:
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB)
-    return extractCDRInfo(blastOutput)
+    return extractCDRInfo(blastOutput, chain)
     
 
 class IgBlastWorker(Process):

@@ -13,35 +13,40 @@ from collections import Counter
 def annotateSpectratypes(cloneAnnot):
     #TODO: add annotation to clonotypes, e.g., germline genes
     #TODO: add nucleotide level calculations 
+    print("Spectratypes are being calculated ... ")
     spectraTypes = {}
     # CDR1
-    cdrLength = ((cloneAnnot['cdr1.end'] - cloneAnnot['cdr1.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['cdr1'] = cdrLength
+    spectraType = ((cloneAnnot['cdr1.end'] - cloneAnnot['cdr1.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['cdr1'] = spectraType
     # CDR2
-    cdrLength = ((cloneAnnot['cdr2.end'] - cloneAnnot['cdr2.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['cdr2'] = cdrLength
-    #CDR3
-    cdrLength = ((cloneAnnot['cdr3.end'] - cloneAnnot['cdr3.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['cdr3'] = cdrLength
-    #FR1
-    cdrLength = ((cloneAnnot['fr1.end'] - cloneAnnot['fr1.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['fr1'] = cdrLength
-    #FR2
-    cdrLength = ((cloneAnnot['fr2.end'] - cloneAnnot['fr2.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['fr2'] = cdrLength
-    #FR3
-    cdrLength = ((cloneAnnot['fr3.end'] - cloneAnnot['fr3.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['fr3'] = cdrLength
-    #FR4
-    cdrLength = ((cloneAnnot['fr4.end'] - cloneAnnot['fr4.start'] + 1) / 3).astype(int)
-    cdrLength = Counter(cdrLength.tolist())
-    spectraTypes['fr4'] = cdrLength
+    spectraType = ((cloneAnnot['cdr2.end'] - cloneAnnot['cdr2.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['cdr2'] = spectraType
+    # CDR3
+    spectraType = ((cloneAnnot['cdr3.end'] - cloneAnnot['cdr3.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['cdr3'] = spectraType
+    # FR1
+    spectraType = ((cloneAnnot['fr1.end'] - cloneAnnot['fr1.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['fr1'] = spectraType
+    # FR2
+    spectraType = ((cloneAnnot['fr2.end'] - cloneAnnot['fr2.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['fr2'] = spectraType
+    # FR3
+    spectraType = ((cloneAnnot['fr3.end'] - cloneAnnot['fr3.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['fr3'] = spectraType
+    # FR4
+    spectraType = ((cloneAnnot['fr4.end'] - cloneAnnot['fr4.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['fr4'] = spectraType
+    # V domain
+    spectraType = ((cloneAnnot['fr4.end'] - cloneAnnot['fr1.start'] + 1) / 3).astype(int)
+    spectraType = Counter(spectraType.tolist())
+    spectraTypes['v'] = spectraType
         
     return spectraTypes
 
@@ -49,6 +54,7 @@ def annotateSpectratypes(cloneAnnot):
 def annotateClonotypes(cloneSeqs):
     #TODO: add annotation to clonotypes, e.g., germline genes
     #TODO: add nucleotide level calculations
+    print("Clonotypes are being generated ... ")
     clonoTypes = {}
     # CDR1
     seqs = cloneSeqs['cdr1'].tolist()
@@ -71,8 +77,17 @@ def annotateClonotypes(cloneSeqs):
     # FR4
     seqs = cloneSeqs['fr4'].tolist()
     clonoTypes['fr4'] = Counter(seqs)
-    
-    
+    # V domain
+    seqs = map(lambda x:''.join(x), zip(cloneSeqs['fr1'].tolist(),
+                                        cloneSeqs['cdr1'].tolist(),
+                                        cloneSeqs['fr2'].tolist(),
+                                        cloneSeqs['cdr2'].tolist(),
+                                        cloneSeqs['fr3'].tolist(),
+                                        cloneSeqs['cdr3'].tolist(),
+                                        cloneSeqs['fr4'].tolist()                                        
+                                        )
+               )
+    clonoTypes['v'] = Counter(seqs)
     return clonoTypes
 
 

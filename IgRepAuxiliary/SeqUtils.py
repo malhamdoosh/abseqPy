@@ -20,6 +20,7 @@ from TAMO.Clustering.UPGMA import create_tree_phylip
 import random
 from collections import Sequence
 import bisect
+from numpy import dtype
 #from IgRepertoire.igRepUtils import alignListOfSeqs
 
 def generateMotif(sequences, name, alphabet, filename, 
@@ -38,6 +39,7 @@ def generateMotif(sequences, name, alphabet, filename,
     # sample sequences if they are too many  
     if (len(seqs) > 1*10**5 or weights is not None):
         random.seed(1986)
+#         print(sum(weights))
         seqs = weightedSample(seqs, weights, int(1*10**5)) 
         if align:
             seqs = random.sample(seqs, 10000) 
@@ -197,12 +199,26 @@ def generateMotifLogo(m, filename, dna=True):
 def maxlen(x):
     return max(map(len, x))
 
+#TODO: Look for faster and ACCURATE weighted sampling approach 
+def weightedSampleFast(population, weights, k):
+    if (weights is not None):
+        from fast_sampler import FastSampler
+        from numpy import array
+        weights = array(weights, dtype='d')        
+        h = FastSampler(len(population), max(weights), min(weights))
+        for i in range(len(population)):
+            h.add(i, weights[i])
+        s = map(lambda x : population[h.sample()], range(k))        
+        return s
+    else:
+        return random.sample(population, k)
+    
 def weightedSample(population, weights, k):
     if (weights is not None):
         return random.sample(WeightedPopulation(population, weights), k)
     else:
         return random.sample(population, k)
-
+# from http://stackoverflow.com/questions/13047806/weighted-random-sample-in-python
 class WeightedPopulation(Sequence):
     def __init__(self, population, weights):
         assert len(population) == len(weights) > 0

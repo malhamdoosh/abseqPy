@@ -33,9 +33,16 @@ def main():
     
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
-    try:
-        argsVals = parseArgs(sys.argv)        
-        #print(argsVals)        
+    try:        
+        argsVals = parseArgs(sys.argv)  
+        if (argsVals['task'] == 'all'):
+            printFormattedTitle("Running the complete QC pipeline")
+            igRepertoire = IgRepertoire(argsVals)        
+            igRepertoire.runFastqc(all=True)
+            igRepertoire.annotateClones(all=True)
+            igRepertoire.analyzeAbundance(all=True)
+            igRepertoire.analyzeProductivity(all=True)
+            igRepertoire.analyzeDiversity(all=True)
         if (argsVals['task'] == 'fastqc'): 
             printFormattedTitle("Sequencing QC Analysis")
             igRepertoire = IgRepertoire(argsVals)        
@@ -90,15 +97,15 @@ def main():
             os.system("mkdir " + argsVals['o'])
             outputFile =  argsVals['o'] + argsVals['name'] + '_length_dist_classes.png'
             plotSeqLenDistClasses(argsVals['f1'], argsVals['name'], outputFile, argsVals['fmt'])
-        
-        print ("The analysis started at " + startTimeStr)
-        print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
     
     except Exception as e:
         print("Unexpected error: " + str(e))
         print '-'*60
         traceback.print_exc(file=sys.stdout)
         print '-'*60
+    finally:
+        print ("The analysis started at " + startTimeStr)
+        print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
         
     
 #TODO: generate HTML report for each analysis and give name to the report

@@ -3,7 +3,9 @@ from collections import Counter
 import math
 import numpy
 from matplotlib import cm
-from IgRepAuxiliary.SeqUtils import maxlen
+from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast,\
+    WeightedPopulation
+import sys
 mpl.use('Agg') # Agg
 
 import matplotlib.pyplot as plt
@@ -17,9 +19,9 @@ import random
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf):
     if (exists(outputFile)):
-        print("File found ... " + outputFile.split('/')[-1])
+        print("\tFile found ... " + outputFile.split('/')[-1])
         return
-    print("The sequence length distribution of each gene family is being calculated ...")
+    print("\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
     for rec in SeqIO.parse(seqFile, fileFormat):
@@ -56,9 +58,9 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
                    autoscale=None, maxbins=20, seqName='', normed=False,
                    removeOutliers=False):
     if (exists(outputFile)):
-        print("File found ... " + outputFile.split('/')[-1])
+        print("\tSequence length distribution plot found ... " + outputFile.split('/')[-1])
         return
-    print("\tThe sequence length distribution is being plotted for " + seqName)
+    print("\tThe sequence length distribution is being plotted for " + sampleName)
     if (type("") == type(seqFile)):
         sizes = [len(rec) for rec in SeqIO.parse(seqFile, fileFormat) if len(rec) <= maxLen]
         weights = [1] * len(sizes)
@@ -104,84 +106,215 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
     plt.close()
     return histcals
 
-def plotSeqDuplication(seqs, filename, labels, title='', grouped=False):
+def plotSeqDuplication(frequencies, labels, filename, title='',  grouped=False):
     if (exists(filename)):
-        print('File found ... ' + filename.split('/')[-1])
-        return
-    print("The duplication of VH sequences is being estimated .... ")
-    fig, ax = plt.subplots(figsize=(8,5))
+        print('\tFile found ... ' + filename.split('/')[-1])
+        return    
+    fig, ax = plt.subplots(figsize=(8,5))   
     ax.grid()
     ax.set_xlabel('Duplication Level')
     ax.set_ylabel('Proportion of Duplicated Sequences')
     if (not grouped):
-        ax.set_title(title + '\nTotal is {:,}'.format(int(len(seqs[0]))))
+        ax.set_title(title + '\nTotal is {:,}'.format(int(sum(frequencies[0]))))
     else:
-        ax.set_title(title + '\nTotal is {:,}'.format(sum(map(lambda x: len(x), seqs))))
-    for setSeqs, l in zip(seqs, labels):
-        dup = {}
-        for s in setSeqs:
-            dup[s] = dup.get(s, 0) + 1
-#             print(dup[s])
-#         print("here1")
-        freqs = dup.values()
+        ax.set_title(title + '\nTotal is {:,}'.format(sum(map(lambda x: sum(x), frequencies))))
+    for freqs, l in zip(frequencies, labels):
+        # sort frequencies in ascending order
+        total = sum(freqs)      
         freqs.sort()
-#         print("here2", len(freqs), freqs[0], freqs[-1])
-        ticks = np.linspace(10, 10000, 100).tolist()
-#         ticks.append(freqs[-1])
-        y = []
         freqs = np.array(freqs)
+        # create the x-axis ticks [10, 10000]
+        ticks = np.linspace(10, 10000, 100).tolist()
+        # calculate the proportion of sequences that are 
+        # duplicated >= x for x in [10, 10000]
+        y = []        
         for x in ticks:
-            y.append(sum(1.0 * freqs[freqs >= x]) / len(setSeqs))
-        # scale ticks to [10, 20]
+            y.append(sum(1.0 * freqs[freqs >= x]) / total)
+        # scale [10, 10000]  into [10, 20]
         ticks = map(lambda x : (x - 10) * (20 - 10) / (10000 - 10) + 10 , ticks)
+        # calculate the proportion of sequences that appear
+        # exactly x times for x in [1, 9]
         less10Ticks = []
         less10Y = []
         for i in range(1, 10):
             less10Ticks.append(i)
-            less10Y.append(sum(freqs == i) * 1.0 / len(setSeqs))        
+            less10Y.append(sum(freqs == i) * 1.0 / total)       
+        # merge ticks and proportions to construct the final plot data 
         y = less10Y + y
         ticks = less10Ticks + ticks 
-#         print("here3", len(y), ticks[:20], y[:20])
+        # plot the curve 
         ax.plot(ticks,y , label = l)
-#         break
-    xticks = range(1, 21, 2)
+    # set the ticks and labels on the x-axis 
+    xticks = range(1, 10, 2) + [10] + range(11, 21, 2)
     ax.set_xticks(xticks)
-    xlabels = range(1, 10, 2) 
-    xlabels += map(lambda x: '>' + (`int(x) - int(x)%100` if x > 100 else `int(x)`), 
+    xlabels = range(1, 10, 2) + ['>=10']
+    xlabels += map(lambda x: '>' + `int(x) - int(x)%100` if x > 100 else '>=' +`int(x)`, 
                    np.linspace(10, 10000, (len(xticks) - len(xlabels)) * 2 ).tolist()[1::2])
-    ax.set_xticklabels(xlabels)
+    ax.set_xticklabels(xlabels, rotation=45)
     ax.legend()
+    ax.legend(loc = "upper left")
+    #plt.tight_layout()
+    plt.subplots_adjust(bottom=0.2)
     fig.savefig(filename, dpi=300)
     plt.close()
         
         
+'''
+In ecology, rarefaction is a technique to assess species richness from the results
+ of sampling. Rarefaction allows the calculation of species richness for a given 
+ number of individual samples, based on the construction of so-called rarefaction curves.
+  This curve is a plot of the number of species as a function of the number of samples.
+  Source: https://en.wikipedia.org/wiki/Rarefaction_(ecology )
+'''   
         
-def plotSeqDiversity(seqs, filename, labels, title=''):
+def plotSeqRarefaction(seqs, labels, filename, weights = None, title=''):
     if (exists(filename)):
-        print('File found ... ' + filename.split('/')[-1])
-        return
-    print("The diversity of VH sequences is being estimated .... ")
+        print('\tFile found ... ' + filename.split('/')[-1])
+        return    
     fig, ax = plt.subplots(figsize=(8,5))
     ax.grid()
-    ax.set_xlabel('No of Sequences')
+    ax.set_xlabel('Sample size')
     ax.set_ylabel('Number of Deduplicated Sequences')
-    ax.set_title(title)
-
-    for setSeqs, l in zip(seqs, labels):
+    ax.set_title(title)    
+    for setSeqs, l, w in zip(seqs, labels, weights):
+        if w is not None:
+            total = sum(w)
+        else:
+            total = len(setSeqs)
+#         if (max(w) > 1):
+#             w = map(lambda x : x * 1.0 / sum(w), w)
+        # create x-axis ticks [10, #sequences]
         ticks = []
         S = 10
-        while S < len(setSeqs):
+        while S < total:
             ticks.append(S)
             S = int(S * 1.5)
-        ticks.append(len(setSeqs))
-#         print ticks
+        #ticks = np.linspace(10, total, )
+        ticks.append(total)
+        #print(len(ticks))
+        # capture-recapture analysis 
+        # sample sequences and estimate diversity
         pt = []
+        population = WeightedPopulation(setSeqs, w)     
         for j in ticks:
-            hs = [ len(set(random.sample(setSeqs, j))) for k in range(5) ]
+            # repeat 5 times for each sample size
+            hs = [ len(set(random.sample(population, j))) for k in range(5) ]
+            # Begin: Very slow
+#             hs = [ len(set(np.random.choice(setSeqs, j, replace = True, p  = w))) 
+#                   for k in range(5) ]
+            # End: very slow
             pt.append((j, hs))
-        pt.append((len(setSeqs), len(set(setSeqs))))
+        #pt.append((len(setSeqs), len(set(setSeqs))))
+        # calculate the mean across 5 samples 
         ax.plot([ d[0] for d in pt ], [ mean(d[1])*1.0 for d in pt ], label = l)
-    ax.legend()
+    ax.legend(loc = "upper left")
+    xticks = np.linspace(0, total, 15).astype(int)
+    xticks = map(lambda x: x - x%1000 if x > 1000 else x, xticks[:-1])
+    xticks.append(total)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticks, rotation=90)
+    plt.subplots_adjust(bottom=0.21)
+    fig.savefig(filename, dpi=300)
+    plt.close()
+    #sys.exit()
+    
+'''
+    Perform non-redundant capture-recapture analysis and plot the percent recapture
+    Assumption 1: the population is assumed to be "closed".
+    Assumption 2:  The chance for each individual in the population to be caught 
+    are equal and constant for both the initial marking period and the recapture period.
+    Assumption 3:  Sufficient time must be allowed between the initial marking period
+     and the recapture period
+    Assumption 4: Animals do not lose their marks. 
+'''
+def plotSeqRecapture(seqs, labels, filename, weights = None, title=''):
+    if (exists(filename)):
+        print('\tFile found ... ' + filename.split('/')[-1])
+        return    
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.grid()
+    ax.set_xlabel('Sample size')
+    ax.set_ylabel('Percent Recapture')
+    ax.set_title(title)    
+    for setSeqs, l, w in zip(seqs, labels, weights):
+        if w is not None:
+            total = sum(w)
+        else:
+            total = len(setSeqs)
+        # create x-axis ticks [10, #sequences]
+        ticks = []
+        S = 10
+        while S < total:
+            ticks.append(S)
+            S = int(S * 1.5)
+        #ticks = np.linspace(10, total, )
+        ticks.append(total)
+        #print(len(ticks))
+        # capture-recapture analysis 
+        # sample sequences and estimate diversity
+        pt = []
+        population = WeightedPopulation(setSeqs, w)        
+        for j in ticks:
+            # repeat 5 times for each sample size
+            hs  = []
+            for k in range(5):                
+                s1 = set(random.sample(population, j))                
+                s2 = set(random.sample(population, j))
+                inter = s2.intersection(s1)
+                hs.append(len(inter) * 100.0 / len(s2))            
+            pt.append((j, mean(hs)))
+        #pt.append((len(setSeqs), len(set(setSeqs))))
+        # calculate the mean across 5 samples 
+        ax.plot([ d[0] for d in pt ], [ d[1] for d in pt ], label = l)
+    ax.legend(loc = "upper left")
+    xticks = np.linspace(0, total, 15).astype(int)
+    xticks = map(lambda x: x - x%1000 if x > 1000 else x, xticks[:-1])
+    xticks.append(total)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticks, rotation=90)
+    plt.subplots_adjust(bottom=0.21)
+    fig.savefig(filename, dpi=300)
+    plt.close()
+
+'''
+Uses sampling without replacement and gives equal properties to all clones 
+'''    
+    
+def plotSeqRecaptureNew(seqs, labels, filename, title=''):
+    if (exists(filename)):
+        print('\tFile found ... ' + filename.split('/')[-1])
+        return    
+    fig, ax = plt.subplots(figsize=(8,5))
+    ax.grid()
+    ax.set_xlabel('Sample size')
+    ax.set_ylabel('Percent Recapture')
+    ax.set_title(title)
+    for setSeqs, l in zip(seqs, labels):
+        total = 35000        
+        ticks = np.linspace(100, total, 50).astype(int)
+        # capture-recapture analysis 
+        # sample sequences and estimate diversity
+        pt = []               
+        for j in ticks:
+            # repeat 5 times for each sample size
+            hs  = []
+            for k in range(5):
+#                 print(len(setSeqs), total, j)
+                s1 = set(np.random.choice(setSeqs, j))                
+                s2 = set(np.random.choice(setSeqs, j))
+                inter = s2.intersection(s1)
+                hs.append(len(inter) * 100.0 / len(s2))            
+            pt.append((j, mean(hs)))
+        #pt.append((len(setSeqs), len(set(setSeqs))))
+        # calculate the mean across 5 samples 
+        ax.plot([ d[0] for d in pt ], [ d[1] for d in pt ], label = l)
+    ax.legend(loc = "upper left")
+    xticks = np.linspace(0, total, 15).astype(int)
+    xticks = map(lambda x: x - x%1000 if x > 1000 else x, xticks)
+#     xticks.append(total)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticks, rotation=90)
+    plt.subplots_adjust(bottom=0.21)
     fig.savefig(filename, dpi=300)
     plt.close()
     

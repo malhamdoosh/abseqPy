@@ -6,8 +6,8 @@ from IgRepAuxiliary.RefineWorker import RefineWorker
 import sys
 from math import ceil
 from config import MEM_GB
-from IgBlastWorker import ANNOTATION_FIELDS
 import gc
+from IgRepAuxiliary.IgBlastWorker import getAnnotationFields
 
 def loadRefineFlagInfo():
     refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 
@@ -45,10 +45,10 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         try:    
             # process clones from the FASTA/FASTQ file
             records = SeqIO.index(readFile, format)    
-            print("\tIndex created and refinement started")    
+            print("\t " +  format + " index created and refinement started ...")    
             ### Parallel implementation of the refinement
             noSeqs = len(queryIds)
-            totalTasks = int(ceil(noSeqs / (seqsPerFile))) 
+            totalTasks = int(ceil(noSeqs * 1.0 / seqsPerFile)) 
             tasks = Queue()      
             exitQueue = Queue()
             resultsQueue = Queue()        
@@ -72,9 +72,11 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             if (totalTasks > 1): 
                 for i in range(totalTasks):
                     ids = queryIds[i*seqsPerFile:(i+1)*seqsPerFile]
+#                     print(ids)
+#                     print(records[0])
                     recs = map(lambda x: records[x], ids)
                     qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), ids)
-                    tasks.put((recs, qsRecs))
+                    tasks.put((recs, qsRecs))                
             else:                
                 recs = map(lambda x: records[x], queryIds)
                 qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), queryIds)
@@ -111,7 +113,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
                 w.terminate()     
             records.close()
         # Create new data frame of clone annotation
-        cloneAnnot = DataFrame(cloneAnnotList, columns=ANNOTATION_FIELDS)
+        cloneAnnot = DataFrame(cloneAnnotList, columns=getAnnotationFields(chain))
         cloneAnnot.index = cloneAnnot.queryid
         del cloneAnnot['queryid']
         gc.collect()        
@@ -146,6 +148,8 @@ def collectRefineResults(resultsQueue, totalTasks,
         for f in refineFlagNames:
             flags[f] += flagsi[f]
         total += len(qsRecsOrdered)
+#         if (len(qsRecsOrdered) < 100):
+#             print(len(qsRecsOrdered))
         if (total % 50000 == 0):
             print('\t%d/%d records have been collected ... ' % (total, noSeqs))
             sys.stdout.flush()
@@ -184,7 +188,7 @@ class ProcCounter(object):
     def increment(self, val=1):
         with self.lock:
             self.val.value += val
-            if (self.val.value % 50000 == 0 or self.noSeqs - self.val.value <= 5):
+            if (self.val.value % 50000 == 0 or self.noSeqs == self.val.value):
                 print('\t%d/%d records have been processed ... ' % (self.val.value, self.noSeqs))
 
     def value(self):

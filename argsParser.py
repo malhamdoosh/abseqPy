@@ -30,16 +30,18 @@ PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
                   '-primer', 
                   '-5end', '-3end', 
                   '-5endoffset',
-                 '-upstream'
+                 '-upstream',
+                 '-report-interim'
                   ]
 
 def parseArgs(args):    
     argVals = {}
+    argVals["cmd"] = ' '.join(args)
     for i in range(1, len(args), 2):
 #         print(args[i].lower(), PROGRAM_VALID_ARGS)
         if (args[i].lower() in PROGRAM_VALID_ARGS):
 #             print(args[i], args[i+1])
-            argVals[args[i].replace('-', '').lower()] = args[i+1]
+            argVals[args[i][1:].lower()] = args[i+1]
         else:
             print(args[i], PROGRAM_VALID_ARGS)
             raise Exception(args[i] + ' is invalid argument.')
@@ -115,7 +117,8 @@ def parseArgs(args):
         if (argVals.get('sites', None) is None):
             raise Exception("Restriction sites should be provided.")            
         argVals['sites'] = abspath(argVals['sites'])
-    if (argVals['task'] in ['diversity', 'productivity']):        
+    if (argVals['task'] in ['diversity', 'productivity', 'all']):  
+        # actualqstart is a 1-based index      
         if argVals.get('actualqstart', None) is not None:
             argVals['actualqstart'] = int(argVals['actualqstart']) - 1
         else:
@@ -169,4 +172,15 @@ def parseArgs(args):
     else:
         argVals['threads'] = int(argVals['threads'])
         
+    if (argVals.get('report-interim', None) is None):
+        argVals['report-interim'] = False
+    else:
+        argVals['report-interim'] = (argVals['report-interim'].upper() == 'YES')    
+        
+        
     return argVals
+
+
+
+
+

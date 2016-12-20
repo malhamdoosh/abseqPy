@@ -10,7 +10,8 @@ from numpy import isnan
 import gc
 
 
-def generateProductivityReport(cloneAnnot, name, outputDir):
+def generateProductivityReport(cloneAnnot, name, chain, outputDir):
+    print("Productivity report is being generated ... ")
     productive = extractProductiveClones(cloneAnnot, name, outputDir)
     productiveFamilyDist = compressCountsFamilyLevel(Counter(productive['vgene'].tolist()))
     plotDist(productiveFamilyDist, name, outputDir + name + 
@@ -20,9 +21,9 @@ def generateProductivityReport(cloneAnnot, name, outputDir):
     del productiveFamilyDist
     writeCDRStats(productive, name, outputDir, suffix = 'productive')
     writeFRStats(productive, name, outputDir, suffix = 'productive')
-    writeGeneStats(productive, name, outputDir, suffix = 'productive')
+    writeGeneStats(productive, name, chain, outputDir, suffix = 'productive')
     
-def writeGeneStats(cloneAnnot, name, outputDir, suffix):
+def writeGeneStats(cloneAnnot, name, chain, outputDir, suffix):
     # V gene stats
     gaps = Counter(cloneAnnot['vgaps'].tolist())
     plotDist(gaps, name, outputDir + name + 
@@ -33,20 +34,26 @@ def writeGeneStats(cloneAnnot, name, outputDir, suffix):
              '_igv_mismatches_dist.png', title='Mismatches in V Gene',
              proportion=True, rotateLabels=False, top=20) 
     # D gene stats
-    gaps = Counter(cloneAnnot['dgaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_igd_gaps_dist.png', title='Gaps in D Gene',
-             proportion=False, rotateLabels=False) 
-    mismatches = Counter(cloneAnnot['dmismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_igd_mismatches_dist.png', title='Mismatches in D Gene',
-             proportion=False, rotateLabels=False)
+    if chain == 'hv':
+        gaps = Counter(map(lambda x : x if not isnan(x) else str(x), 
+                                 cloneAnnot['dgaps'].tolist()))
+        plotDist(gaps, name, outputDir + name + 
+                 '_igd_gaps_dist.png', title='Gaps in D Gene',
+                 proportion=False, rotateLabels=False) 
+        mismatches = Counter(map(lambda x : x if not isnan(x) else str(x), 
+                                 cloneAnnot['dmismatches'].tolist()))
+#         print(mismatches)
+        plotDist(mismatches, name, outputDir + name + 
+                 '_igd_mismatches_dist.png', title='Mismatches in D Gene',
+                 proportion=False, rotateLabels=False)
     # J gene stats
-    gaps = Counter(cloneAnnot['jgaps'].tolist())
+    gaps = Counter(map(lambda x : x if not isnan(x) else str(x), 
+                                 cloneAnnot['jgaps'].tolist()))
     plotDist(gaps, name, outputDir + name + 
              '_igj_gaps_dist.png', title='Gaps in J Gene',
              proportion=False, rotateLabels=False) 
-    mismatches = Counter(cloneAnnot['jmismatches'].tolist())
+    mismatches = Counter(map(lambda x : x if not isnan(x) else str(x), 
+                                 cloneAnnot['jmismatches'].tolist()))
     plotDist(mismatches, name, outputDir + name + 
              '_igj_mismatches_dist.png', title='Mismatches in J Gene',
              proportion=False, rotateLabels=False)
@@ -71,12 +78,13 @@ def writeCDRStats(cloneAnnot, name, outputDir, suffix = ''):
              '_cdr2_mismatches_dist.png', title='Mismatches in CDR2',
              proportion=False, rotateLabels=False)
     # CDR3 stats
-    cdrGaps = Counter([x if not isnan(x) else 'NA' for x in cloneAnnot['cdr3.gaps'] ])
+    cdrGaps = Counter([x if not isnan(x) else str(x) for x in cloneAnnot['cdr3.gaps'] ])
 #         print(len(cdrGaps))
     plotDist(cdrGaps, name, outputDir + name + 
              '_cdr3_gaps_dist.png', title='Gaps in CDR3 (Germline)',
              proportion=False, rotateLabels=False)
-    cdrMismatches = Counter(cloneAnnot['cdr3.mismatches'].tolist())
+    cdrMismatches = Counter(map(lambda x : x if not isnan(x) else str(x), 
+                                 cloneAnnot['cdr3.mismatches'].tolist()))
     plotDist(cdrMismatches, name, outputDir + name + 
              '_cdr3_mismatches_dist.png', title='Mismatches in CDR3 (Germline)',
              proportion=False, rotateLabels=False)
@@ -149,7 +157,7 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
              proportion=False, rotateLabels=False)
     del cdrGaps, frGaps
     # Indels in CDR3 and FR3
-    cdrGaps = Counter([x if not isnan(x) else 'NA' for x in outOfFrame['cdr3.gaps'] ])
+    cdrGaps = Counter([x if not isnan(x) else str(x) for x in outOfFrame['cdr3.gaps'] ])
 #         print(len(cdrGaps))
     plotDist(cdrGaps, name, outputDir + name + 
              '_cdr3_gaps_dist_out_of_frame.png', title='Gaps in CDR3 (Germline)',

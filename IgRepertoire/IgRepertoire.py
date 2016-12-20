@@ -17,7 +17,7 @@ from igRepUtils import compressCountsGeneLevel
 from config import  FASTQC
 from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist,\
-    plotSeqDuplication, plotSeqDiversity
+    plotSeqDuplication, plotSeqRarefaction
 from pandas.io.pytables import read_hdf
 from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from IgRepReporting.abundanceReport import writeAbundanceToFiles
@@ -30,6 +30,7 @@ from igRepUtils import writeParams
 class IgRepertoire:    
     def __init__(self, args):        
         self.args = args
+        self.reportInterim = args['report-interim']
         self.outputDir = args['o']
         self.threads = args['threads']
         self.primer = args['primer']
@@ -45,7 +46,7 @@ class IgRepertoire:
             self.upstream = args['upstream']
         if (args['task'] in ['enzymes', 'enzymesimple']):
             self.sitesFile = args['sites']
-        if (args['task'] in ['productivity', 'diversity']):
+        if (args['task'] in ['productivity', 'diversity', 'all']):
             self.actualQstart = args['actualqstart'] 
             self.fr4cut = args['fr4cut']
         self.trim5End = args['trim5']
@@ -63,10 +64,16 @@ class IgRepertoire:
         self.seqsPerFile = 10.0 ** 5  / 2
         self.cloneAnnot = None
         
-    def runFastqc(self):
+    def runFastqc(self, all = False):
         outDir = self.outputDir + "fastqc/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
+        filename = outDir + self.readFile1.split("/")[-1].replace(".fastq", "_fastqc.html")
+#         print(filename)
+#         sys.exit()
+        if (os.path.exists(filename)):
+            print("fastqc was already performed on this library.")
+            return
         command = "%s -o %s -t %d %s"
         print("Fastqc is running ... ")
         os.system(command % (FASTQC, outDir, self.threads, 
@@ -74,14 +81,16 @@ class IgRepertoire:
         writeParams(self.args, outDir)
         print("Fastqc has completed.")
         
-    def annotateClones(self, outDirFilter= None):    
+    def annotateClones(self, outDirFilter= None, all = False):    
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
         self.cloneAnnotFile = outDir + self.name
         self.cloneAnnotFile += "_clones_annot.h5"  
 #         self.cloneAnnotFile += "_clones_annot.tab"  
+#         print("The IGV clones are being annotated ... ")
         # merge reads if needed
+#         print("\tPaired-end reads are being merged using " + self.merger)
         if self.merge != 'yes':            
             self.readFile = self.readFile1                                          
         else:            
@@ -93,8 +102,8 @@ class IgRepertoire:
         plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
                            maxbins=-1)
                     
-        if (exists(self.cloneAnnotFile) and self.cloneAnnot is None):       
-            print("Clones annotation file found and is being loaded ... " + 
+        if exists(self.cloneAnnotFile):       
+            print("\tClones annotation file found and being loaded ... " + 
                   self.cloneAnnotFile.split('/')[-1])
             sys.stdout.flush()
 #             self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
@@ -121,11 +130,14 @@ class IgRepertoire:
             gc.collect()
             writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
             # export the CDR/FR annotation to a file
-            print("Clones annotation file is being written to " + self.cloneAnnotFile)         
+            print("\tClones annotation file is being written to " + 
+                  self.cloneAnnotFile.split("/")[-1])         
 #             self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)         
             self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')  
             writeParams(self.args, outDir)          
-        if outDirFilter:    
+        if outDirFilter or all:    
+            if outDirFilter is None:
+                outDirFilter = outDir
             ## Filter clones based on bitscore, alignLen and sStart
             print("Clones are being filtered based on the following criteria: ")
             print("\tBit score: " + `self.bitScore` )
@@ -140,26 +152,29 @@ class IgRepertoire:
             filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
             filteredIDs = filteredIDs[['vgene', 'vstart', 'bitscore', 'alignlen']]
             filteredIDs.to_csv(outDirFilter + self.name + "_filtered_out_clones.txt",
-                               sep="\t", header=True, index=True)           
-            #filteredIDs = filteredIDs.index.tolist() 
-            #writeListToFile(filteredIDs, outDirFilter + self.name + "_filtered_out_clones.txt")            
+                               sep="\t", header=True, index=True)
+            retained = len(selectedRows) - len(filteredIDs)
+            print('Percentage of retained clones is {0:,.2f}% ({1:,}/{2:,})'.format(
+                             retained * 100.0 / self.cloneAnnot.shape[0],
+                             retained,
+                             int(self.cloneAnnot.shape[0])))
             self.cloneAnnot = self.cloneAnnot[selectedRows]        
-            print('Number of retained clones is {:,}'.format(int(self.cloneAnnot.shape[0])))        
 
-    def analyzeAbundance(self):    
+    def analyzeAbundance(self, all = False):    
         # Estimate the IGV family abundance for each library        
         outDir = self.outputDir + "abundance/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)        
         else:
             print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")      
-        self.annotateClones(outDir)                 
+        if not all:
+            self.annotateClones(outDir)                 
              
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
         gc.collect()
         writeParams(self.args, outDir)
         
-    def analyzeProductivity(self, generateReport=True):
+    def analyzeProductivity(self, generateReport=True, all = False):
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
@@ -172,7 +187,8 @@ class IgRepertoire:
         self.cloneSeqFile += "_clones_seq.h5"      
                  
         if (not exists(self.refinedCloneAnnotFile)):
-            self.annotateClones(outDir)
+            if not all:
+                self.annotateClones(outDir)
 #             if (self.trimmed):
 #                 self.trim3End = 0
 #                 self.trim5End = 0
@@ -186,27 +202,27 @@ class IgRepertoire:
                                                       self.trim5End, self.trim3End,
                                                       self.seqsPerFile, self.threads)                   
             gc.collect()  
-            if generateReport:
-                # export the CDR/FR annotation to a file                
-                print("The refined clone annotation file is being written to " + 
-                      self.refinedCloneAnnotFile.split("/")[-1])
-                self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', 
-                                       complib='blosc')
-                sys.stdout.flush()
-                print("The clone protein sequences are being written to " + 
-                      self.refinedCloneAnnotFile.split("/")[-1])
-                self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
-                                      complib='blosc')                      
-                sys.stdout.flush()      
+            #if generateReport:
+            # export the CDR/FR annotation to a file                
+            print("The refined clone annotation file is being written to " + 
+                  self.refinedCloneAnnotFile.split("/")[-1])
+            self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', 
+                                   complib='blosc')
+            sys.stdout.flush()
+            print("The clone protein sequences are being written to " + 
+                  self.refinedCloneAnnotFile.split("/")[-1])
+            self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
+                                  complib='blosc')                      
+            sys.stdout.flush()      
             writeParams(self.args, outDir)        
         else:
             print("The refined clone annotation file was found! ... " + 
-                  self.cloneSeqFile.split('/')[-1])
+                  self.refinedCloneAnnotFile.split('/')[-1])
             self.cloneAnnot = read_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot")            
             self.cloneSeqs = read_hdf(self.cloneSeqFile, "cloneSequences")  
         if generateReport:
             # display statistics 
-            generateProductivityReport(self.cloneAnnot, self.name, outDir)
+            generateProductivityReport(self.cloneAnnot, self.name, self.chain, outDir)
             #TODO: analyze productive clones only 
 #             self.analyzeIgProtein()
 #             sys.stdout.flush()
@@ -215,17 +231,24 @@ class IgRepertoire:
     '''
     
     '''
-    def analyzeDiversity(self):
+    def analyzeDiversity(self, all = False):
         outDir = self.outputDir + "diversity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
         else:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
-        self.analyzeProductivity(False)
-        # Diversity analysis can be applied on productive clones only         
+        if not all:
+            self.analyzeProductivity(self.reportInterim)
+        # Diversity analysis can be applied on productive clones only     
+        before = int(self.cloneAnnot.shape[0])    
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
         self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]     
+        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        print("Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
+                          self.cloneAnnot.shape[0] * 100.0 / before,
+                          int(self.cloneAnnot.shape[0]),
+                           int(before)
+                          ))
         gc.collect()
         # Identify spectratypes 
         spectraTypes = annotateSpectratypes(self.cloneAnnot)        
