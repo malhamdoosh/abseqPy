@@ -11,14 +11,18 @@ from os.path import abspath
 import traceback
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses
 from argsParser import parseArgs
+from config import VERSION
 import warnings
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.simplefilter(action = "ignore", category = DeprecationWarning)
 
-def fxn():
-    warnings.warn("deprecated", DeprecationWarning)
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    fxn()
+# def fxn():
+#     warnings.warn("deprecated", DeprecationWarning)
+# 
+# with warnings.catch_warnings():
+#     warnings.simplefilter("ignore")
+#     fxn()
 
 def printFormattedTitle(title):
     print "-" * 100
@@ -29,12 +33,15 @@ def printFormattedTitle(title):
     sys.stdout.flush()
 
 
-def main():
-    
+def main():     
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     try:        
         argsVals = parseArgs(sys.argv)  
+        print("Abseq output has been logged into " + argsVals['log'])
+        logFile = open(argsVals['log'], 'a')
+        origStdout = sys.stdout
+        sys.stdout = logFile
         if (argsVals['task'] == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
             igRepertoire = IgRepertoire(argsVals)        
@@ -70,11 +77,11 @@ def main():
         elif (argsVals['task'] == '5utr'):
             igRepertoire = IgRepertoire(argsVals)        
             igRepertoire.analyze5UTR()        
-        elif (argsVals['task'] == 'enzymesimple'):
+        elif (argsVals['task'] == 'rsasimple'):
             printFormattedTitle("Simple Restriction Sites Analysis")
             igRepertoire = IgRepertoire(argsVals)    
             igRepertoire.analyzeRestrictionSitesSimple()
-        elif (argsVals['task'] == 'enzymes'):
+        elif (argsVals['task'] == 'rsa'):
             printFormattedTitle("Comprehensive Restriction Sites Analysis")
             igRepertoire = IgRepertoire(argsVals)    
             igRepertoire.analyzeRestrictionSites()
@@ -103,9 +110,11 @@ def main():
         print '-'*60
         traceback.print_exc(file=sys.stdout)
         print '-'*60
-    finally:
+    finally:        
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
+        print("Abseq Version " + VERSION)
+        logFile.close()
         
     
 #TODO: generate HTML report for each analysis and give name to the report

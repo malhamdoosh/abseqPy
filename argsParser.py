@@ -58,45 +58,57 @@ def parseArgs(args):
     if (argVals.get('seqtype', None) is None):
         argVals['seqtype'] = 'dna'
         
+    # input sequencing files
     if (argVals.get('f1', None) is None):
-        raise Exception("One sequence file at least must be provided.")    
-    argVals['f1'] = abspath(argVals['f1'])
-                
-    if (argVals.get('o', None) is None):
-        argVals['o'] = './'
+        raise Exception("One sequence file at least must be provided.")
+    elif not os.path.exists(argVals['f1']):        
+        raise Exception("-f1 file not found!")    
+    else:
+        argVals['f1'] = abspath(argVals['f1'])    
         
+    if (argVals.get('f2', None) is None):
+        argVals['f2'] = None
+    elif not os.path.exists(argVals['f2']):
+        raise Exception("-f2 file not found!")
+    else:
+        argVals['f2'] = abspath(argVals['f2'])
+        
+    # merging options  
     if (argVals.get('merge', None) is None):
         argVals['merge'] = 'no'
     else:
-        argVals['merge'] = argVals['merge'].lower()
-        
+        argVals['merge'] = argVals['merge'].lower()        
     if (argVals['merge'] == 'yes' and (argVals['f2'] is None)):
         raise Exception("The merger requires two sequence files (use both -f1 and -f2).")
-    if (argVals.get('f2', None) is None):
-        argVals['f2'] = ''
     else:
-        argVals['f2'] = abspath(argVals['f2'])
-    
-    ## output directory
-    f1name = argVals['f1'].split('/')[-1]
-    if (f1name.find("_R") != -1 and 
-        (argVals['merge'] == 'yes' or argVals['task'] == "fastqc")):
-        ext = '_' + f1name.split('_')[-1]
+        if (argVals.get('merger', None) is None):
+            argVals['merger'] = 'flash'
+        else:
+            argVals['merger'] = argVals['merger'].lower()
+  
+    ## output directory and parse sample name 
+    if (argVals.get('o', None) is None):
+        argVals['o'] = './'     
+    if (argVals.get('name', None) is not None):  
+        argVals['o'] += "/" + argVals['name']
     else:
-        ext = f1name[f1name.find('.'):]    
-    argVals['o'] += "/"+f1name.replace(ext, '')
-    argVals['o'] = (abspath(argVals['o']) + '/').replace('//', '/')
-    os.system("mkdir -p " + argVals['o'])
-    
-    if (argVals.get('merger', None) is None):
-        argVals['merger'] = 'flash'
-    else:
-        argVals['merger'] = argVals['merger'].lower()
-    # (argVals['merge'] == 'no' and noFiles == 2) or 
-    if (argVals.get('name', None) is None):
+        f1name = argVals['f1'].split('/')[-1]
+        if (f1name.find("_R") != -1 and 
+            (argVals['merge'] == 'yes' or argVals['task'] == "fastqc")):
+            ext = '_' + f1name.split('_')[-1]
+        else:
+            ext = f1name[f1name.find('.'):]    
+        argVals['o'] += "/"+f1name.replace(ext, '')
         sampleName = f1name.split("_")[0] + '_'  
         sampleName += f1name.split("_")[-1].split('.')[0]
         argVals['name'] = sampleName
+    argVals['o'] = (abspath(argVals['o']) + '/').replace('//', '/')
+    os.system("mkdir -p " + argVals['o'])
+    
+        
+    
+    # (argVals['merge'] == 'no' and noFiles == 2) or 
+    
         
     if (argVals.get('fmt', None) is None):
         argVals['fmt'] = 'fastq'
@@ -113,7 +125,7 @@ def parseArgs(args):
             argVals['upstream'] = [1, Inf] 
         else:
             argVals['upstream'] = extractRanges(argVals['upstream'], 1)[0]
-    if (argVals['task'] in ['enzymes', 'enzymesimple']):
+    if (argVals['task'] in ['rsa', 'rsasimple']):
         if (argVals.get('sites', None) is None):
             raise Exception("Restriction sites should be provided.")            
         argVals['sites'] = abspath(argVals['sites'])
@@ -176,7 +188,7 @@ def parseArgs(args):
         argVals['report-interim'] = False
     else:
         argVals['report-interim'] = (argVals['report-interim'].upper() == 'YES')    
-        
+    argVals['log'] = argVals['o'] + argVals['name'] + ".log"    
         
     return argVals
 

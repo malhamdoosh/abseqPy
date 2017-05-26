@@ -1,4 +1,5 @@
 import matplotlib as mpl
+import matplotlib.mlab as mlab
 from collections import Counter
 import math
 import numpy
@@ -53,7 +54,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     plt.close()
     
     
-def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta', 
+def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta', 
                    maxLen=Inf, histtype='bar', dna=True, 
                    autoscale=None, maxbins=20, seqName='', normed=False,
                    removeOutliers=False):
@@ -61,32 +62,47 @@ def plotSeqLenDist(seqFile, sampleName, outputFile, fileFormat='fasta',
         print("\tSequence length distribution plot found ... " + outputFile.split('/')[-1])
         return
     print("\tThe sequence length distribution is being plotted for " + sampleName)
-    if (type("") == type(seqFile)):
-        sizes = [len(rec) for rec in SeqIO.parse(seqFile, fileFormat) if len(rec) <= maxLen]
+    if (type("") == type(counts)):
+        sizes = [len(rec) for rec in SeqIO.parse(counts, fileFormat) if len(rec) <= maxLen]
         weights = [1] * len(sizes)
-    elif type(seqFile) == type([]):        
-        sizes = map(lambda x: int(x) if not isnan(x) else 0, seqFile)
+    elif type(counts) == type([]):        
+        sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
-    elif type(seqFile) == type(Counter()):
-        sizes = seqFile.keys()
-        weights = map(lambda x: seqFile[x], sizes)
+    elif type(counts) == type(Counter()):
+        sizes = counts.keys()
+        weights = map(lambda x: counts[x], sizes)
     if removeOutliers:
         sizes, weights = excludeOutliers(sizes, weights)
     bins = max(sizes) - min(sizes) 
     if bins > maxbins:
         bins = bins / 2
     if maxbins == -1:
-        bins = 20
+        bins = 40
     if bins == 0:
         bins = 1
-#     print seqFile[:10], bins
+#     print counts[:10], bins
     fig, ax = plt.subplots(figsize=(8,5))
-    histcals, edges = np.histogram(sizes, bins = bins, range=autoscale,
-                                   weights = weights, density=normed)
-    binWidth = edges[1] - edges[0] 
-    ax.bar(edges[:-1], histcals * binWidth, binWidth)
-#     histcals = ax.hist(sizes, bins=bins, histtype=histtype, range=autoscale,
-#                        normed=normed)
+    if histtype in ["bar", "step", "stepfilled"]:
+#         histcals, edges = np.histogram(sizes, bins = bins, range=autoscale,
+#                                        weights = weights, density=normed)
+#         binWidth = edges[1] - edges[0] 
+#         ax.bar(edges[:-1], histcals * binWidth, binWidth)
+        histcals, bins, patches = ax.hist(sizes, bins=bins, range=autoscale, 
+                                normed=normed, weights = weights,
+                           histtype=histtype)
+        if normed:
+            mu, sigma = weightedAvgAndStd(sizes, weights)
+            y = mlab.normpdf(bins, mu, sigma)
+            ax.plot(bins, y, 'r--')
+    else:
+        if all([(x == 1) for x in weights]):
+            tmp = Counter(sizes)
+            sizes = tmp.keys()
+            weights = map(lambda x: tmp[x], sizes) 
+        if normed:
+            weights = [x / sum(weights) for x in weights]   
+        histcals = None    
+        ax.plot(sizes, weights)
     title = "{:,} Sequences {} in {} \nLengths {:d} to {:d}"
     ax.set_title(title.format(sum(weights), 'of ' + seqName if seqName!='' else '',
                                sampleName, min(sizes), max(sizes)))
@@ -321,7 +337,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
 '''
     Plot Venn diagrams using the matplotlib_venn package
 '''
-def plotVenn(sets, filename):
+def plotVenn(sets, filename, title=''):
     if (exists(filename)):
         print("File found ... " + filename.split('/')[-1])
         return
@@ -333,7 +349,9 @@ def plotVenn(sets, filename):
         from matplotlib_venn  import venn3
         venn3(sets.values(), sets.keys())
     else:
-        raise
+        print("Venn diagram cannot be generated for more than 3 restriction enzymes")
+        return
+    ax.set_title(title)  
     fig.savefig(filename, dpi=300)
     plt.close()
     
@@ -423,7 +441,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     plt.close()
 
 
-def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):    
+def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename):    
     if (exists(filename)):
         print("File found ... " + filename.split('/')[-1])
         return
@@ -440,27 +458,37 @@ def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):
 #                 dpi=300)
     
     # plot as heatmap
-    fig, ax = plt.subplots() 
+     
     heatmap, xedges, yedges = np.histogram2d(x,y, bins=BINS)   
 #     print xedges
 #     print yedges
     heatmap = heatmap / np.sum(heatmap) * 100
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 #     c = cmap_discretize('coolwarm', 5)
-    cax = ax.imshow(heatmap.transpose()[::-1], cmap='jet', interpolation='nearest', 
-                    extent=extent)
-    ax.set_xlabel(axlabels[0])   
-    ax.set_ylabel(axlabels[1])    
-    title = 'Alignment Quality of Sample '
+    title = 'Alignment Quality of Sample ' + sampleName
     title += '\nTotal is {:,}'.format(int(total)) 
-    ax.set_title(title + sampleName)
-    ax.set_xticks(np.array(xedges).astype(int))
-    ax.set_yticks(np.array(yedges).astype(int))
+    plotHeatmap(heatmap.transpose()[::-1], 
+                extent, xedges, yedges,
+                filename,                
+                axlabels, title)
+    
+def plotHeatmap(hm, extent, xticks, yticks,
+                filename, 
+                axlabels = None, title = None):
+    fig, ax = plt.subplots()
+    cax = ax.imshow(hm, cmap='jet', interpolation='nearest', 
+                    extent=extent)
+    if axlabels is not None:
+        ax.set_xlabel(axlabels[0])   
+        ax.set_ylabel(axlabels[1]) 
+    ax.set_title(title )
+    ax.set_xticks(np.array(xticks).astype(int))
+    ax.set_yticks(np.array(yticks).astype(int))
     ax.tick_params(axis='both', which='major', labelsize=8)
 #     ax.set_xticklabels(np.round(np.linspace(xedges[0], xedges[-1], BINS/2)))
     cbar = fig.colorbar(cax,    
-                        ticks = np.linspace(np.min(heatmap),
-                                            np.max(heatmap),
+                        ticks = np.linspace(np.min(hm),
+                                            np.max(hm),
                                             5),         
                 orientation='horizontal')
 #     print(np.percentile(heatmap, [0, 25, 50, 75, 100]))
@@ -468,6 +496,64 @@ def plotStatsHeatmap(data, sampleName, xyCol, axlabels, filename):
 #     cbar.set_ticklabels(labels)
 
     forceAspect(ax,aspect=1)
+    fig.savefig(filename, dpi=300)
+    plt.close()
+    
+def plotHeatmapFromDF(df, filename, title = None):    
+    #df = (df - df.min()) / (df.max() - df.min())
+    
+    fig, ax = plt.subplots()
+    cax = ax.pcolor(df, cmap=cm.Blues)
+    # format
+    fig = plt.gcf()
+    fig.set_size_inches(11, 13)
+    
+    # turn off the frame
+    ax.set_frame_on(False)
+   # ax.set_title(title )
+    
+    # put the major ticks at the middle of each cell
+    ax.set_yticks(np.arange(df.shape[0]) + 0.5, minor=False)
+    ax.set_xticks(np.arange(df.shape[1]) + 0.5, minor=False)
+    ax.set_yticks(np.arange(df.shape[0] + 1), minor=True)
+    ax.set_xticks(np.arange(df.shape[1] + 1), minor=True)
+    ax.set_xlim([0,df.shape[1]])
+    ax.set_ylim([0,df.shape[0]])
+    
+    # want a more natural, table-like display
+    ax.invert_yaxis()
+    ax.xaxis.tick_top()
+    
+    # Set the labels
+    if len(df) > 20:
+        ax.set_xticklabels(df.columns, minor=False, fontsize='small')
+        ax.set_yticklabels(df.index, minor=False, fontsize='small')
+    else:
+        ax.set_xticklabels(df.columns, minor=False)
+        ax.set_yticklabels(df.index, minor=False)
+    
+    # rotate the
+    plt.xticks(rotation=90)
+    
+    ax.grid(True, which = 'minor')
+    
+    # Turn off all the ticks
+    ax = plt.gca()
+    
+    for t in ax.xaxis.get_major_ticks():
+        t.tick1On = False
+        t.tick2On = False
+    for t in ax.yaxis.get_major_ticks():
+        t.tick1On = False
+        t.tick2On = False
+    #print df.min().min()
+    cbar = fig.colorbar(cax,    
+                        ticks = np.linspace(df.min().min(),
+                                            df.max().max(),
+                                            5),
+                        label =  "Jaccard index",         
+                orientation='horizontal')
+    
     fig.savefig(filename, dpi=300)
     plt.close()
     
@@ -503,7 +589,7 @@ def forceAspect(ax,aspect=1):
     
 
 
-def excludeOutliers(values, weights, m =4.0):
+def excludeOutliers(values, weights, m = 4.0):
     values = np.array(values)
     weights = np.array(weights)
     avg, std = weightedAvgAndStd(values, weights)

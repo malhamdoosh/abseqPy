@@ -45,11 +45,11 @@ def generateSpectraTypePlots(spectraTypes,  name, outDir):
     for k in spectraTypes.keys():
         filename = specFolder + name + ('_%s_spectratype.png' % (k))
         plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
-              seqName=k.upper(), normed=True, maxbins=20)
+              seqName=k.upper(), normed=True, maxbins=40)
         if k == 'cdr3':
             filename = specFolder + name + ('_%s_spectratype_no_outliers.png' % (k))
             plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
-              seqName=k.upper(), normed=True, maxbins=20, 
+              seqName=k.upper(), normed=True, maxbins=40, 
               removeOutliers= True)
 
 

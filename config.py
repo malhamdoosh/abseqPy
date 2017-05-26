@@ -3,6 +3,7 @@ import os
 #SAMTOOLS_PROGRAM= 'samtools'
 #BGZIP = 'bgzip'
 #TABIX = 'tabix'
+VERSION = '1.1.1'
 CLUSTALW = 'clustalw2'
 CLUSTALOMEGA = 'clustal-omega'
 WEBLOGO = 'weblogo'

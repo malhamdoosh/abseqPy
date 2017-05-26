@@ -23,6 +23,42 @@ import bisect
 from numpy import dtype
 #from IgRepertoire.igRepUtils import alignListOfSeqs
 
+
+def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
+    if (outDict is None):
+        outDict = {}
+    try:
+        if format == "fastq":
+            with open(seqFile) as h:
+                while True:
+                    line = h.readline()
+                    if not line:
+                        break
+                    id = line.strip("\n")[1:].split()[0]
+                    seq = h.readline().strip("\n") 
+                    outDict[id] = seq
+                    h.readline()
+                    h.readline()
+#                     print(id)
+        elif format == "fasta":
+            with open(seqFile) as h:
+                while True:            
+                    line = h.readline()
+                    if not line:
+                        break
+                    line = line.strip("\n")
+                    if line.startswith(">"):
+                        id = line[1:].split()[0]
+                        outDict[id] = ""
+                    else:
+                        outDict[id] += line                            
+        else:
+            raise Exception("Unknown sequence file format")
+    except Exception as e: 
+        print("Something went wrong while reading a sequence file")
+        raise e
+    return outDict
+
 def generateMotif(sequences, name, alphabet, filename, 
                   align = False, transSeq = False, protein =False, weights = None):
     if (exists(filename)):
@@ -37,7 +73,8 @@ def generateMotif(sequences, name, alphabet, filename,
     else:
         seqs = sequences
     # sample sequences if they are too many  
-    if (len(seqs) > 1*10**5 or weights is not None):
+    if (len(seqs) > 1*10**5 or 
+        ( weights is not None and sum(weights) > 1*10**5)):
         random.seed(1986)
 #         print(sum(weights))
         seqs = weightedSample(seqs, weights, int(1*10**5)) 
@@ -234,5 +271,6 @@ class WeightedPopulation(Sequence):
         if not 0 <= i < len(self):
             raise IndexError(i)
         return self.population[bisect.bisect(self.cumweights, i)]
+    
     
     

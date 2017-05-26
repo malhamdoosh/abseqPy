@@ -4,7 +4,7 @@ Created on 05/08/2016
 @author: monther
 '''
 from collections import Counter
-from IgRepReporting.igRepPlots import plotDist, plotStatsHeatmap
+from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap
 from IgRepertoire.igRepUtils import writeCountsToFile, compressCountsGeneLevel,\
     compressCountsFamilyLevel
 
@@ -42,25 +42,25 @@ def writeVAbundanceToFiles(stats, sampleName, outDir):
              '_igv_dist_family_level.png')
     
     # plot alignment length vs %identity
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
+    generateStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
                      ['Alignment Length', '%Identity'] , outDir + sampleName + 
               '_igv_align_quality_identity_hm.png')
     # plot alignment length vs bitScore
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'bitscore'],
+    generateStatsHeatmap(stats, sampleName, ['alignlen', 'bitscore'],
                      ['Alignment Length', 'bitScore'] , outDir + sampleName + 
               '_igv_align_quality_bitscore_hm.png')
     # plot query start vs. subject start
-    plotStatsHeatmap(stats, sampleName, ['vqstart', 'vstart'],
+    generateStatsHeatmap(stats, sampleName, ['vqstart', 'vstart'],
                      ['Query Start', 'Subject Start'] , outDir + sampleName + 
               '_igv_align_quality_start_hm.png')
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'vmismatches'],
+    generateStatsHeatmap(stats, sampleName, ['alignlen', 'vmismatches'],
                      ['Alignment Length', 'Mismatches'] , outDir + sampleName + 
               '_igv_align_quality_mismatches_hm.png')
     c = Counter(stats['vmismatches'].tolist())
     plotDist(c, sampleName, outDir + sampleName + 
              '_igv_mismatches_dist.png', title='Number of Mismatches in V gene',
              proportion=True, rotateLabels=False, top=20) 
-    plotStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
+    generateStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
                      ['Alignment Length', 'Gaps'] , outDir + sampleName + 
               '_igv_align_quality_gaps_hm.png')
     c = Counter(stats['vgaps'].tolist())

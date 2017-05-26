@@ -16,32 +16,38 @@ from IgRepertoire.igRepUtils import splitFastaFile
 
 
 
+        
 def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):        
         noWorkers = igRep.threads
-        
+        seqsPerFile = igRep.seqsPerFile
         if (fastaFile == None):
             return Counter()
         # Estimate the IGV diversity in a library from igblast output 
         print('The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
         with open(fastaFile) as f:
-            noSeqs = sum(1 for line in f if line.startswith(">"))    
-        totalFiles = int(ceil(noSeqs / (igRep.seqsPerFile)))   
-#         print(fastaFile, totalFiles, igRep.seqsPerFile)
+            noSeqs = sum(1 for line in f if line.startswith(">"))
+        totalFiles = int(ceil(noSeqs / seqsPerFile))  
+        if totalFiles <  noWorkers:
+            seqsPerFile = int(noSeqs * 1.0 / noWorkers) 
+            totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
+        print("\t{0:,} sequences were found to be distributed into {1:,} files".format(noSeqs,
+                                                                             totalFiles))  
+#         print(noSeqs, seqsPerFile, totalFiles)
 #         sys.exit()
-        if (totalFiles == 1):
-            if igRep.primer > 0:
-                recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
-                records = []
-                for id in recordsAll:
-                    rec = recordsAll[id]
-                    rec.description = ''
-                    rec.seq = rec.seq[:igRep.primer]
-                    records.append(rec)
-                filesDir = igRep.outputDir + "tmp"
-                SeqIO.write(records, filesDir + "/seqs.fasta", 'fasta')
-                newFastFile = filesDir + "/seqs.fasta"
-            else:
-                newFastFile = fastaFile
+        if igRep.primer > 0:
+            recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
+            records = []
+            for id in recordsAll:
+                rec = recordsAll[id]
+                rec.description = ''
+                rec.seq = rec.seq[:igRep.primer]
+                records.append(rec)
+            filesDir = igRep.outputDir + "tmp"
+            SeqIO.write(records, filesDir + "/seqs.fasta", 'fasta')
+            newFastFile = filesDir + "/seqs.fasta"
+        else:
+            newFastFile = fastaFile
+        if (noWorkers == 1):            
             (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,                                                 
                                                   seqType, noWorkers)
             sys.stdout.flush()
@@ -51,15 +57,13 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
             filesDir = igRep.outputDir + "tmp"
             prefix = fastaFile.split('/')[-1].split('.')[0]
             prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
-            splitFastaFile(fastaFile, totalFiles, igRep.seqsPerFile, 
-                           filesDir, igRep.primer, prefix, ext)               
+            splitFastaFile(fastaFile, totalFiles, seqsPerFile, 
+                           filesDir, prefix, ext)               
 
             # # Prepare the multiprocessing queues     
             tasks = Queue()    
             outcomes = Queue()   
-            exitQueue = Queue()
-            if (noWorkers > totalFiles):
-                noWorkers = totalFiles          
+            exitQueue = Queue()              
             cloneAnnot = DataFrame()
             fileteredIDs = []
             try:    

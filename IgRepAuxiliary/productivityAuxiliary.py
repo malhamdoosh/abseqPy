@@ -1,7 +1,7 @@
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
 from numpy import  random
-from multiprocessing import Queue, Process, Manager, Value, Lock
+from multiprocessing import Queue, Value, Lock
 from IgRepAuxiliary.RefineWorker import RefineWorker
 import sys
 from math import ceil
@@ -169,6 +169,7 @@ def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs):
              
 def writeRefineFlags(flags, records, refineFlagNames, 
                      refineFlagMsgs, outDir, sampleName):
+    print("Flagged sequences are being written to an output file ... ")
     with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out:
         for f in refineFlagNames:
             if (len(flags[f]) > 0):
@@ -180,8 +181,9 @@ def writeRefineFlags(flags, records, refineFlagNames,
      
      
 class ProcCounter(object):
-    def __init__(self, noSeqs, initval=0):
+    def __init__(self, noSeqs, initval=0, desc = "records"):
         self.val = Value('i', initval)
+        self.desc = desc
         self.noSeqs = noSeqs
         self.lock = Lock()
 
@@ -189,7 +191,9 @@ class ProcCounter(object):
         with self.lock:
             self.val.value += val
             if (self.val.value % 50000 == 0 or self.noSeqs == self.val.value):
-                print('\t%d/%d records have been processed ... ' % (self.val.value, self.noSeqs))
+                print('\t%d/%d %s have been processed ... ' % (self.val.value, self.noSeqs,
+                                                               self.desc))
+                sys.stdout.flush()
 
     def value(self):
         with self.lock:

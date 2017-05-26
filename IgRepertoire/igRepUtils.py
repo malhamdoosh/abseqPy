@@ -12,9 +12,9 @@ from Bio.Seq import Seq
 from collections import Counter
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
-import re
 from IgRepReporting.igRepPlots import plotDist
 from argsParser import PROGRAM_VALID_ARGS
+from config import VERSION
 
 def fastq2fasta(fastqFile, outputDir):
     # FASTQ to FASTA
@@ -176,7 +176,7 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     start and end are 1-based
 '''
 def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
-    if (np.isnan(start) or np.isnan(end)):
+    if (isnan(start) or isnan(end)):
         return ''
     if (start != -1 and end != -1 and end - start < 1):
         return ''
@@ -276,19 +276,19 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
             #os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
-            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'leehom'):        
         mergedFastq = outputPrefix + '.fq'
         if (not exists(mergedFastq)):
             print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                               , readFile2.split('/')[-1])) 
-            command = "leeHom -fq1 %s -fq2 %s -fqo %s --ancientdna --verbose"
-            os.system(command % (readFile1, readFile2, outputPrefix))
+            command = "leeHomMulti -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
+            os.system(command % (readFile1, readFile2, outputPrefix, threads))
             os.system('gunzip ' + mergedFastq + '.gz')
             #os.system("mv %s.* %s" % (outputPrefix, seqOut))
             #os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
-            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
     elif (merger == 'flash'):        
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = outputPrefix.split("/")[-1]
@@ -300,7 +300,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
             os.system("mv %s.* %s" % (outputPrefix, seqOut))            
         else:
-            print("\t Merged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
 #     elif (merger == 'seqprep'):
 #         ### MERGE using SeqPrep 
 #         mergedFastq = readFile1.replace(readFile1.split('_')[-1], 'merged.fastq.gz')
@@ -412,65 +412,7 @@ def alignListOfSeqs(signals):
     os.system("rm %s %s " % (tempSeq, tempAlign) )
     return alignedSeq
 
-iupac = {
-        'A':'A',
-        'C': 'C',
-        'G':'G',
-        'T':'T',
-        'R': '(AG)',
-        'Y': '(CT)',
-        'S': '(GC)',
-        'W': '(AT)',
-        'K': '(GT)',
-        'M': '(AC)',
-        'B': '(CGT)',
-        'D': '(AGT)',
-        'H': '(ACT)',
-        'V': '(ACG)',
-        'N':'N'         
-        }
-def replaceIUPACLetters(iupacSeq):
-    tcgaSeq = ''
-    iupacLetters = ''.join(iupac.keys())
-    for s in iupacSeq.upper():
-        if s not in iupacLetters:
-            tcgaSeq += s
-        else:
-            tcgaSeq += iupac[s]
-    return tcgaSeq
-    
-'''
-    Used for restriction sites search 
-'''
-def findHitsRegion(cdrRec, hitStarts):
-    vhStart = cdrRec['vqstart'] - cdrRec['vstart']
-    regions = {}
-    for s in hitStarts:
-        if (s >= cdrRec['fr1.start']-cdrRec['vstart']  - vhStart and s <= cdrRec['fr1.end'] - vhStart):
-            regions['fr1'] = 1
-        elif (s >= cdrRec['cdr1.start'] - vhStart and s <= cdrRec['cdr1.end'] - vhStart):
-            regions['cdr1'] = 1
-        elif (s >= cdrRec['fr2.start'] - vhStart and s <= cdrRec['fr2.end'] - vhStart):
-            regions['fr2'] = 1
-        elif (s >= cdrRec['cdr2.start'] - vhStart and s <= cdrRec['cdr2.end'] - vhStart):
-            regions['cdr2'] = 1
-        elif (s >= cdrRec['fr3.start'] - vhStart and s <= cdrRec['fr3.end'] - vhStart):
-            regions['fr3'] = 1
-        elif (s >= cdrRec['cdr3.start'] - vhStart and s <= cdrRec['cdr3.end'] - vhStart):
-            regions['cdr3'] = 1
-        elif (not isnan(cdrRec['fr4.end']) and s >= cdrRec['fr4.start'] - vhStart and s <= cdrRec['fr4.end'] - vhStart):
-            regions['fr4'] = 1    
-        else:
-            print(hitStarts, vhStart, cdrRec)
-            raise
-    return regions
-                
-def findHits(seq, site):
-    seq = seq.upper()
-    site = site.replace('/', '')  
-    return [match.start() for match in re.finditer('(?=(%s))' %(site), seq)]
-#     return len(re.findall(site, seq))
-  
+
 
 # source ftp://ftp.ncbi.nih.gov/blast/matrices/NUC.4.4        
 matStr1 = ("   A   T   G   C   S   W   R   Y   K   M   B   V   H   D   N,"
@@ -610,7 +552,7 @@ def findBestMatchedPattern(seq, patterns):
         return (best[0], "Mismatched", misPos+1) # 1-based
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir, 
-                   cutAt = -1, prefix="", ext=".fasta"):    
+                   prefix="", ext=".fasta"):    
     if (not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ext) and 
         not exists(filesDir + "/" + prefix + "part"  + `int(totalFiles)` + ".out")):        
         # Split the FASTA file into multiple chunks
@@ -624,26 +566,19 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
         else:
             recordsAll = SeqIO.index(fastaFile, 'fasta')
-        for id in recordsAll:
-            rec = recordsAll[id]
-            if (i %  seqsPerFile == 1):
-                if (out is not None):
-                    SeqIO.write(records, out, 'fasta')
-                    records = []   
-                out =filesDir + "/" + prefix + "part"  + `int(i / seqsPerFile) + 1` + ext
-            rec.description = ''
-            if cutAt > 0:
-                rec.seq = rec.seq[:cutAt]
-            records.append(rec)
-            i += 1      
-            sys.stdout.flush()
-        if (out is not None):
-            SeqIO.write(records, out, 'fasta')  
+        queryIds = recordsAll.keys()        
+        for i in range(totalFiles):      
+            #print(i, totalFiles, seqsPerFile)      
+            ids = queryIds[i * seqsPerFile : (i+1) * seqsPerFile]
+            records = map(lambda x: recordsAll[x], ids)    
+            out = filesDir + "/" + prefix + "part"  + `i + 1` + ext  
+            SeqIO.write(records, out, 'fasta')      
 
     
 def writeParams(args, outDir):
     filename = outDir + "analysis.params"
     with open(filename, 'w') as out:
+        out.write("Abseq VERSION: " + VERSION + "\n")
         for arg in PROGRAM_VALID_ARGS:
             a = arg.replace('-', '')
             if args.get(a, None) is not None:
