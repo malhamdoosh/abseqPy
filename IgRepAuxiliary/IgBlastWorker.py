@@ -1,14 +1,16 @@
+'''
+    Short description: Quality Control Analysis of Immunoglobulin Repertoire NGS (Paired-End MiSeq)    
+    Author: Monther Alhamdoosh    
+    Python Version: 2.7
+    Changes log: check git commits. 
+''' 
+
 from multiprocessing import Process
 from IgRepertoire.igRepUtils import runIgblastn, runIgblastp
 from pandas.core.frame import DataFrame
 import sys
 import numpy as np
 
-'''
-Author: Monther Alhamdoosh
-Email: monther.alhamdoosh@csl.com.au / m.hamdoosh@gmail.com 
-
-'''
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
               'identity', 'alignlen', 'bitscore',

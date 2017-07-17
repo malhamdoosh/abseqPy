@@ -1,3 +1,10 @@
+'''
+    Short description: Quality Control Analysis of Immunoglobulin Repertoire NGS (Paired-End MiSeq)    
+    Author: Monther Alhamdoosh    
+    Python Version: 2.7
+    Changes log: check git commits. 
+''' 
+
 import numpy as np
 from os.path import exists
 import os
