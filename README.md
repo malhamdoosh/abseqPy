@@ -3,7 +3,7 @@
 
 ### What is this repository for? ###
 
-* **AbSeq** is a qaulity control pipeline for construction of antibody libraries 
+* **AbSeq** is a quality control pipeline for the construction of antibody libraries 
 * Version 0.99.0
 
 ### How do I get set up? ###
