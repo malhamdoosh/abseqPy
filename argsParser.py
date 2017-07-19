@@ -269,7 +269,7 @@ def parseArgs():
 
     # silently ignore creation of out directory if already exists
     if not os.path.exists(args.outdir):
-        os.mkdir(args.outdir)
+        os.mkdirs(args.outdir)
 
     # setting default value of bitscores if not provided, else extract the string ranges provided
     args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
