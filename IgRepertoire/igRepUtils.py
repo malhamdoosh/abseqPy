@@ -583,18 +583,22 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
 
     
 def writeParams(args, outDir):
+    """
+    Writes the parameters used for analysis into analysis.params
+    :param args: argparse namespace object
+    :param outDir: output directory where analysis.params reside
+    :return: None
+    """
     filename = outDir + "analysis.params"
     with open(filename, 'w') as out:
-        out.write("Abseq VERSION: " + VERSION + "\n")
-        for arg in PROGRAM_VALID_ARGS:
-            a = arg.replace('-', '')
-            if args.get(a, None) is not None:
-                out.write(arg + " " + str(args[a]) + "\n")
-        out.write("\nExecuted command line:\n")
-        out.write(args['cmd'] + "\n")
+        out.write("AbSeq VERSION: " + VERSION + "\n")
+        out.write("Executed AbSeq with the following parameters:\n\t")
+        for key, val in vars(args).items():
+            out.write("Parameter: {:20}\tValue: {:20}\n".format(key, val))
+    #     for arg in PROGRAM_VALID_ARGS:
+    #         a = arg.replace('-', '')
+    #         if args.get(a, None) is not None:
+    #             out.write(arg + " " + str(args[a]) + "\n")
+    #     out.write("\nExecuted command line:\n")
+    #     out.write(args['cmd'] + "\n")
     print("The analysis parameters have been written to " + filename.split("/")[-1])
-                
-                
-                
-                
-            

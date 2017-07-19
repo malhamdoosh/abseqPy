@@ -224,8 +224,9 @@ def analyzeSmallFile(fastaFile, chain, igBlastDB,
                      seqType='dna', threads=8): # , bitScore = 0
     # Run igblast
     if seqType.lower() == 'dna':
-        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB)   
+        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB)
     else:
+        # argparse already checks that it's ether dna or protein, so nothing fishy can pass into else statement here
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB)
     return extractCDRInfo(blastOutput, chain)
     

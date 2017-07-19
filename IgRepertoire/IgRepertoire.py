@@ -35,41 +35,41 @@ from IgRepAuxiliary.restrictionAuxiliary import findHits,\
 from IgRepReporting.restrictionReport import generateOverlapFigures
 from fileinput import filename
 
-class IgRepertoire:    
+class IgRepertoire:
     def __init__(self, args):        
         self.args = args
-        self.task = args["task"]
-        self.reportInterim = args['report-interim']
-        self.outputDir = args['o']
-        self.threads = args['threads']
-        self.primer = args['primer']
-        self.db = args['db']
-        self.bitScore = args['bitscore']
-        self.alignLen = args['alignlen']
-        self.sStart = args['sstart']
-        self.seqType = args['seqtype']
-        self.format = args['fmt']
-        self.chain = args['chain']
-        self.name = args['name']
-        if (args['task'] in ['secretion', '5utr']):
-            self.upstream = args['upstream']
-        if (args['task'] in ['rsa', 'rsasimple']):
-            self.sitesFile = args['sites']
-        if (args['task'] in ['productivity', 'diversity', 'all']):
-            self.actualQstart = args['actualqstart'] 
-            self.fr4cut = args['fr4cut']
-        self.trim5End = args['trim5']
-        self.trim3End = args['trim3']    
-        if (args['task'] == 'primer'):
-            self.end5 = args['5end']
-            self.end3 = args['3end']                       
-            self.end5offset = args['5endoffset']
+        self.task = args.task
+        self.reportInterim = args.report_interim
+        self.outputDir = args.outdir
+        self.threads = args.threads
+        self.primer = args.primer
+        self.db = args.database
+        self.bitScore = args.bitscore
+        self.alignLen = args.alignlen
+        self.sStart = args.sstart
+        self.seqType = args.seqtype
+        self.format = args.fmt
+        self.chain = args.chain
+        self.name = args.name
+        if (args.task in ['secretion', '5utr']):
+            self.upstream = args.upstream
+        if (args.task in ['rsa', 'rsasimple']):
+            self.sitesFile = args.sites
+        if (args.task in ['productivity', 'diversity', 'all']):
+            self.actualQstart = args.actualqstart
+            self.fr4cut = args.fr4cut
+        self.trim5End = args.trim5
+        self.trim3End = args.trim3
+        if (args.task == 'primer'):
+            self.end5 = args.primer5end
+            self.end3 = args.primer3end
+            self.end5offset = args.primer5endoffset
             
-        self.readFile1 = args['f1']
-        self.readFile2 = args['f2']                                
-        self.merge = args.get('merge')
-        self.merger = args.get('merger')
-        
+        self.readFile1 = args.f1
+        self.readFile2 = args.f2
+        self.merger = args.merger
+        self.merge = 'no' if self.merger is None else 'yes'
+
         self.seqsPerFile = int(10.0 ** 5  / 2)
         self.cloneAnnot = None
         self.readFile = None
@@ -1017,4 +1017,3 @@ class IgRepertoire:
         
     
 
-    

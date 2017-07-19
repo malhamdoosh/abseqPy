@@ -83,17 +83,20 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
                                name="", description="")
         record = record[trim5End:(len(record)- trim3End)]
         # grab the beginning of the VH clone
-#         print("started")  
+#         print("started")
+
         if actualQstart > -1:
+            # if user specified an actualQstart, use it.
             offset = actualQstart # zero-based
-        else:                                  
+        else:
+            # else, we find the offset by subtracting V query start with IgBLAST's v germline start position (1-index)
             offset = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
-        if  offset < 0:
+        if offset < 0:
             offset = 0                   
         vh = record.seq[offset:]                       
         # check whether the VH sequence can be translated successfully
         if len(vh) % 3 != 0:
-            vh = vh[:-1 * (len(vh) % 3)]#                   
+            vh = vh[:-1 * (len(vh) % 3)]
         protein = str(vh.translate())        
         # check whether the start of the V gene is the same as the start of FR1
         if qsRec['vqstart'] != qsRec['fr1.start']:
