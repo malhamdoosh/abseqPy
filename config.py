@@ -3,7 +3,8 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
 
 import os
 
@@ -22,4 +23,4 @@ FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC",
                      'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'} 
 
 tmp = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')  # e.g. 4015976448
-MEM_GB = tmp/(1024.**3) 
+MEM_GB = tmp/(1024.**3)
