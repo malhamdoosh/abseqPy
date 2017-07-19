@@ -571,10 +571,12 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
         out = None
         if (MEM_GB > 20):
             recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
+            queryIds = recordsAll.keys()
         else:
             recordsAll = SeqIO.index(fastaFile, 'fasta')
-        queryIds = recordsAll.keys()        
-        for i in range(totalFiles):      
+            # recordsAll.keys() is of type <dictionary-keyiterator object>, need to cast to list
+            queryIds = list(recordsAll.keys())
+        for i in range(totalFiles):
             #print(i, totalFiles, seqsPerFile)      
             ids = queryIds[i * seqsPerFile : (i+1) * seqsPerFile]
             records = map(lambda x: recordsAll[x], ids)    
