@@ -89,7 +89,7 @@ class IgRepertoire:
         command = "%s -o %s -t %d %s"
         print("Fastqc is running ... ")
         os.system(command % (FASTQC, outDir, self.threads, 
-                             self.readFile1 +" " + self.readFile2))
+                             self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
         writeParams(self.args, outDir)
         print("Fastqc has completed.")
         
