@@ -54,7 +54,6 @@ PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
                   ]
 
 
-
 def printUsage(parser, additional_msg=None):
     parser.print_help()
     if additional_msg is not None:
