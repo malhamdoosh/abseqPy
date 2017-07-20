@@ -594,9 +594,9 @@ def writeParams(args, outDir):
     filename = outDir + "analysis.params"
     with open(filename, 'w') as out:
         out.write("AbSeq VERSION: " + VERSION + "\n")
-        out.write("Executed AbSeq with the following parameters:\n\t")
+        out.write("Executed AbSeq with the following parameters:\n")
         for key, val in vars(args).items():
-            out.write("Parameter: {:20}\tValue: {:20}\n".format(key, val))
+            out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     #     for arg in PROGRAM_VALID_ARGS:
     #         a = arg.replace('-', '')
     #         if args.get(a, None) is not None:
