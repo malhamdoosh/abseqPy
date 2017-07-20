@@ -88,6 +88,7 @@ class IgRepertoire:
             return
         command = "%s -o %s -t %d %s"
         print("Fastqc is running ... ")
+        # check for presence of file2 before concatenating str and None(None when self.readFile2 is empty/not provided)
         os.system(command % (FASTQC, outDir, self.threads, 
                              self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
         writeParams(self.args, outDir)
