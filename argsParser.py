@@ -75,6 +75,7 @@ def parseArgs():
     args.seqtype = args.seqtype.lower()
     args.chain = args.chain.lower()
     args.fmt = args.fmt.lower()
+    args.merger = args.merger.lower() if args.merger is not None else args.merger
 
     # check for f1, f2 file existence and expand path
     if not os.path.exists(args.f1):
@@ -92,7 +93,6 @@ def parseArgs():
     if args.merger is None and args.f2 is not None:
         # flash is default merger, as per help message
         args.merger = 'flash'
-    args.merger = args.merger.lower()
 
     # appending analysis name to output directory filenames
     if args.name is not None:
