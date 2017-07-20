@@ -123,8 +123,9 @@ def parseArgs():
     # confirm that file to sites is provided
     if args.task in ['rsa', 'rsasimple']:
         if args.sites is None:
-            printUsage(parser, "Restriction sites should be provided if --task rsa or --task rsasimple")
-            # exit from print_usage, never reaching here
+            print("Restriction sites should be provided if --task rsa or --task rsasimple was specified",
+                  file=sys.stderr)
+            sys.exit(0)
         args.sites = abspath(args.sites)
 
     # provided actualqstart is converted to 0-base from 1-based index, -1 is checked later on for default value
