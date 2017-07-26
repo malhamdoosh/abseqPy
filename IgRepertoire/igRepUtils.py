@@ -22,18 +22,49 @@ from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
 from argsParser import PROGRAM_VALID_ARGS
 from config import VERSION
+import gzip
+import shutil
+
+def gunzip(gzipFile):
+    """
+    Given a gzipped file, create a similar file that's uncompressed.
+    The naming scheme follows the original provided path to file, but with .gz suffix stripped
+    The original gzipped file stays as a zipped file
+    :param gzipFile: file(filename) to be unzipped
+    :return: new filename of uncompressed file
+    """
+    newFileName = gzipFile.replace(".gz", "")
+    with gzip.open(gzipFile, 'rb') as f_in, open(newFileName, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+    return newFileName
+
 
 def fastq2fasta(fastqFile, outputDir):
+    """
+    Converts a fastq file into fasta file. Fastq can be compressed if it was provided as such
+    :param fastqFile: (un)compressed fastq file. If compressed, will leave original compressed untouched
+    :param outputDir: Where to produce the new fasta file
+    :return: fasta filename
+    """
     # FASTQ to FASTA
 # awk 'NR % 4 == 1 {print ">" $0 } NR % 4 == 2 {print $0}' my.fastq > my.fasta
     filename = fastqFile.split('/')[-1]    
     seqOut = outputDir + "seq/"
+    isGZipped = filename.endswith(".gz")
     if (not os.path.isdir(seqOut)):
         os.system("mkdir " + seqOut)
-    filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
+
+    # rename all fastq files to fasta, including gzipped files
+    if isGZipped:
+        filename = seqOut + filename.replace(filename.split('.')[-2]+".gz", 'fasta')
+        fastqFile = gunzip(fastqFile)
+    else:
+        filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
+
     if exists(filename):
         print ("\tThe FASTA file was found!")
         return filename
+
     print("\t" + fastqFile.split('/')[-1]  + " is being converted into FASTA ...")
     command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
                "{print $0}' " + fastqFile + " > " + filename
