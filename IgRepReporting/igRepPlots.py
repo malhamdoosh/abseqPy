@@ -11,7 +11,7 @@ from collections import Counter
 import math
 import numpy
 from matplotlib import cm
-from IgRepertoire.igRepUtils import safeOpen
+import IgRepertoire.igRepUtils
 from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast,\
     WeightedPopulation
 import sys
@@ -33,7 +33,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     print("\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
-    with safeOpen(seqFile) as fp:
+    with IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
             if (len(rec) <= maxLen):
                 if (rec.id.split('|')>1):
@@ -72,7 +72,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     print("\tThe sequence length distribution is being plotted for " + sampleName)
     if (type("") == type(counts)):
-        with safeOpen(counts) as fp:
+        with IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         weights = [1] * len(sizes)
     elif type(counts) == type([]):        
