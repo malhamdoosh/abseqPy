@@ -19,6 +19,7 @@ import gc
 from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
 from Bio.SeqRecord import SeqRecord
 from igRepUtils import compressCountsGeneLevel
+from igRepUtils import gunzip
 from config import  FASTQC
 from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -361,7 +362,9 @@ class IgRepertoire:
 #                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
-        records = SeqIO.index(self.readFile1, self.format)
+
+        # NOTE: SeqIO.index can only index string filenames and it has to be unzipped
+        records = SeqIO.index(gunzip(self.readFile1), self.format)
         for id in queryIds:
             record = records[id]  
             
@@ -458,7 +461,8 @@ class IgRepertoire:
 #                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
 #         else:
-        records = SeqIO.index(self.upstreamFile, 'fasta')
+        # SeqIO.index can only parse string filename (that isn't opened) and unzipped
+        records = SeqIO.index(gunzip(self.upstreamFile), 'fasta')
         for id in records:
             rec = records[id]
             ighv = rec.id.split('|')[1]
@@ -681,7 +685,8 @@ class IgRepertoire:
 #                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
-        records = SeqIO.index(self.readFile1, self.format)
+        # SeqIO.index can only open string file names and they must be uncompressed
+        records = SeqIO.index(gunzip(self.readFile1), self.format)
         for id in queryIds:
             record = records[id]
             try:

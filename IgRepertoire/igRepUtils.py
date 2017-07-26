@@ -41,12 +41,16 @@ def safeOpen(filename, mode="rU"):
 
 def gunzip(gzipFile):
     """
-    Given a gzipped file, create a similar file that's uncompressed.
+    Given a gzipped file, create a similar file that's uncompressed. If the file is not gzipped, do nothing.
     The naming scheme follows the original provided path to file, but with .gz suffix stripped
     The original gzipped file stays as a zipped file
     :param gzipFile: file(filename) to be unzipped
-    :return: new filename of uncompressed file
+    :return: new filename of uncompressed file, or if file was originally not gzipped, return same name as argument
     """
+
+    if not gzipFile.endswith(".gz"):
+        return gzipFile
+
     newFileName = gzipFile.replace(".gz", "")
     with gzip.open(gzipFile, 'rb') as f_in, open(newFileName, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
@@ -619,7 +623,8 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
                 recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             queryIds = recordsAll.keys()
         else:
-            recordsAll = SeqIO.index(fastaFile, 'fasta')
+            # SeqIO.index can only open string filenames and they must be unzipped
+            recordsAll = SeqIO.index(ungzip(fastaFile), 'fasta')
             # recordsAll.keys() is of type <dictionary-keyiterator object>, need to cast to list
             queryIds = list(recordsAll.keys())
         for i in range(totalFiles):
