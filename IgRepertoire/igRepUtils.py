@@ -25,6 +25,20 @@ from config import VERSION
 import gzip
 import shutil
 
+
+# U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)
+def safeOpen(filename, mode="rU"):
+    """
+    given a filename, if it is ending with a gzipped extension, open it with gzip, else open normally
+    :param filename: file to be opened
+    :param mode: mode to open file in
+    :return: file handle
+    """
+    if filename.endswith(".gz"):
+        return gzip.open(filename, mode)
+    return open(filename, mode)
+
+
 def gunzip(gzipFile):
     """
     Given a gzipped file, create a similar file that's uncompressed.
@@ -369,12 +383,12 @@ def writeListToFile(items, filename):
 
 def loadIGVSeqsFromFasta(filename):
     ighvSeqs = {}
-    for rec in SeqIO.parse(filename, 'fasta'): 
-        ighv = rec.id.split('|')[1].strip()
-        if (ighvSeqs.get(ighv, None) is None):
-            ighvSeqs[ighv] = []
-        ighvSeqs[ighv].append(str(rec.seq))
-        
+    with safeOpen(filename) as fp:
+        for rec in SeqIO.parse(fp, 'fasta'):
+            ighv = rec.id.split('|')[1].strip()
+            if (ighvSeqs.get(ighv, None) is None):
+                ighvSeqs[ighv] = []
+            ighvSeqs[ighv].append(str(rec.seq))
     return ighvSeqs
                 
 def compressSeqGeneLevel(seqDict):    
@@ -601,7 +615,8 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
         records = []
         out = None
         if (MEM_GB > 20):
-            recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
+            with safeOpen(fastaFile) as fp:
+                recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             queryIds = recordsAll.keys()
         else:
             recordsAll = SeqIO.index(fastaFile, 'fasta')

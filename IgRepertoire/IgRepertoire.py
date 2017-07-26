@@ -139,7 +139,7 @@ class IgRepertoire:
             if self.format == 'fastq':        
                 readFasta = fastq2fasta(self.readFile, self.outputDir)                
             elif self.format == 'fasta':
-                readFasta = self.readFile                
+                readFasta = self.readFile
             else:
                 raise Exception('unknown file format! ' + self.format)
 #             if self.trim3End > 0 or self.trim5End > 0:
@@ -357,6 +357,8 @@ class IgRepertoire:
         fileHandle = open(self.upstreamFile, 'w')
         fileHandle.close()
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
         records = SeqIO.index(self.readFile1, self.format)
@@ -452,6 +454,8 @@ class IgRepertoire:
         faultyTrans = []
         faultyTransCounts = Counter()
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
 #         else:
         records = SeqIO.index(self.upstreamFile, 'fasta')
@@ -673,6 +677,8 @@ class IgRepertoire:
         germline = set(['fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'])
         procSeqs = 0
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
         records = SeqIO.index(self.readFile1, self.format)

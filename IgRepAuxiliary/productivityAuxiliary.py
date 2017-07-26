@@ -213,6 +213,7 @@ class ProcCounter(object):
 #         cloneAnnot = cloneAnnotOriginal.copy()
 #         # loading the 5` and 3` primers and calculate maximum alignment scores
 #         if igRep.end5:
+#             TODO: need to make sure igRep.end5 is unzipped (use safeOpen from igutils if not sure)
 #             end5Seqs = [(rec.id, str(rec.seq), len(rec.seq)) for rec in SeqIO.parse(igRep.end5, "fasta")]
 #             L5 = max(map(lambda x:x[2], end5Seqs))
 #             ids = map(lambda x: x[0], end5Seqs)
@@ -223,6 +224,7 @@ class ProcCounter(object):
 #             primer5End = {}
 #             indel5End = {}
 #         if igRep.end3:
+#             TODO: need to make sure igRep.end3 is unzipped (use safeOpen from igutils if not sure)
 #             end3Seqs = [(rec.id, str(rec.seq), len(rec.seq)) for rec in SeqIO.parse(igRep.end3, "fasta")]
 #             L3 = max(map(lambda x:x[2], end3Seqs))
 #             ids = map(lambda x: x[0], end3Seqs)
@@ -246,6 +248,7 @@ class ProcCounter(object):
 #         sys.stdout.flush()
 #         # process clones from the FASTA file
 #         if (MEM_GB > 20):
+#             TODO: need to make sure igRep.readFile1 is unzipped (use safeOpen from igutils if not sure)
 #             records = SeqIO.to_dict(SeqIO.parse(igRep.readFile1, igRep.format))
 #         else:
 #             records = SeqIO.index(igRep.readFile1, igRep.format)

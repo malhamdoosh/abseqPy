@@ -13,12 +13,13 @@ import sys
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
 import gc
-from IgRepertoire.igRepUtils import splitFastaFile
+from IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 
 
 
-        
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):        
+
+
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
         if (fastaFile == None):
@@ -36,7 +37,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
 #         print(noSeqs, seqsPerFile, totalFiles)
 #         sys.exit()
         if igRep.primer > 0:
-            recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
+            with safeOpen(fastaFile) as fp:
+                recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             records = []
             for id in recordsAll:
                 rec = recordsAll[id]
