@@ -19,6 +19,7 @@ import gc
 from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
 from Bio.SeqRecord import SeqRecord
 from igRepUtils import compressCountsGeneLevel
+from igRepUtils import gunzip
 from config import  FASTQC
 from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -35,41 +36,41 @@ from IgRepAuxiliary.restrictionAuxiliary import findHits,\
 from IgRepReporting.restrictionReport import generateOverlapFigures
 from fileinput import filename
 
-class IgRepertoire:    
+class IgRepertoire:
     def __init__(self, args):        
         self.args = args
-        self.task = args["task"]
-        self.reportInterim = args['report-interim']
-        self.outputDir = args['o']
-        self.threads = args['threads']
-        self.primer = args['primer']
-        self.db = args['db']
-        self.bitScore = args['bitscore']
-        self.alignLen = args['alignlen']
-        self.sStart = args['sstart']
-        self.seqType = args['seqtype']
-        self.format = args['fmt']
-        self.chain = args['chain']
-        self.name = args['name']
-        if (args['task'] in ['secretion', '5utr']):
-            self.upstream = args['upstream']
-        if (args['task'] in ['rsa', 'rsasimple']):
-            self.sitesFile = args['sites']
-        if (args['task'] in ['productivity', 'diversity', 'all']):
-            self.actualQstart = args['actualqstart'] 
-            self.fr4cut = args['fr4cut']
-        self.trim5End = args['trim5']
-        self.trim3End = args['trim3']    
-        if (args['task'] == 'primer'):
-            self.end5 = args['5end']
-            self.end3 = args['3end']                       
-            self.end5offset = args['5endoffset']
+        self.task = args.task
+        self.reportInterim = args.report_interim
+        self.outputDir = args.outdir
+        self.threads = args.threads
+        self.primer = args.primer
+        self.db = args.database
+        self.bitScore = args.bitscore
+        self.alignLen = args.alignlen
+        self.sStart = args.sstart
+        self.seqType = args.seqtype
+        self.format = args.fmt
+        self.chain = args.chain
+        self.name = args.name
+        if (args.task in ['secretion', '5utr']):
+            self.upstream = args.upstream
+        if (args.task in ['rsa', 'rsasimple']):
+            self.sitesFile = args.sites
+        if (args.task in ['productivity', 'diversity', 'all']):
+            self.actualQstart = args.actualqstart
+            self.fr4cut = args.fr4cut
+        self.trim5End = args.trim5
+        self.trim3End = args.trim3
+        if (args.task == 'primer'):
+            self.end5 = args.primer5end
+            self.end3 = args.primer3end
+            self.end5offset = args.primer5endoffset
             
-        self.readFile1 = args['f1']
-        self.readFile2 = args['f2']                                
-        self.merge = args.get('merge')
-        self.merger = args.get('merger')
-        
+        self.readFile1 = args.f1
+        self.readFile2 = args.f2
+        self.merger = args.merger
+        self.merge = 'no' if self.merger is None else 'yes'
+
         self.seqsPerFile = int(10.0 ** 5  / 2)
         self.cloneAnnot = None
         self.readFile = None
@@ -88,8 +89,9 @@ class IgRepertoire:
             return
         command = "%s -o %s -t %d %s"
         print("Fastqc is running ... ")
+        # check for presence of file2 before concatenating str and None(None when self.readFile2 is empty/not provided)
         os.system(command % (FASTQC, outDir, self.threads, 
-                             self.readFile1 +" " + self.readFile2))
+                             self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
         writeParams(self.args, outDir)
         print("Fastqc has completed.")
         
@@ -138,7 +140,7 @@ class IgRepertoire:
             if self.format == 'fastq':        
                 readFasta = fastq2fasta(self.readFile, self.outputDir)                
             elif self.format == 'fasta':
-                readFasta = self.readFile                
+                readFasta = self.readFile
             else:
                 raise Exception('unknown file format! ' + self.format)
 #             if self.trim3End > 0 or self.trim5End > 0:
@@ -356,9 +358,13 @@ class IgRepertoire:
         fileHandle = open(self.upstreamFile, 'w')
         fileHandle.close()
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
-        records = SeqIO.index(self.readFile1, self.format)
+
+        # NOTE: SeqIO.index can only index string filenames and it has to be unzipped
+        records = SeqIO.index(gunzip(self.readFile1), self.format)
         for id in queryIds:
             record = records[id]  
             
@@ -451,9 +457,12 @@ class IgRepertoire:
         faultyTrans = []
         faultyTransCounts = Counter()
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
 #         else:
-        records = SeqIO.index(self.upstreamFile, 'fasta')
+        # SeqIO.index can only parse string filename (that isn't opened) and unzipped
+        records = SeqIO.index(gunzip(self.upstreamFile), 'fasta')
         for id in records:
             rec = records[id]
             ighv = rec.id.split('|')[1]
@@ -672,9 +681,12 @@ class IgRepertoire:
         germline = set(['fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'])
         procSeqs = 0
 #         if (MEM_GB > 20):
+#             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+#                   (use safeOpen from IgRepertoire.utils) if not sure
 #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
 #         else:
-        records = SeqIO.index(self.readFile1, self.format)
+        # SeqIO.index can only open string file names and they must be uncompressed
+        records = SeqIO.index(gunzip(self.readFile1), self.format)
         for id in queryIds:
             record = records[id]
             try:
@@ -1017,4 +1029,3 @@ class IgRepertoire:
         
     
 
-    

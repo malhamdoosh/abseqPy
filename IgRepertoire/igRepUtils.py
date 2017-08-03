@@ -22,18 +22,67 @@ from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
 from argsParser import PROGRAM_VALID_ARGS
 from config import VERSION
+import gzip
+import shutil
+
+
+# U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)
+def safeOpen(filename, mode="rU"):
+    """
+    given a filename, if it is ending with a gzipped extension, open it with gzip, else open normally
+    :param filename: file to be opened
+    :param mode: mode to open file in
+    :return: file handle
+    """
+    if filename.endswith(".gz"):
+        return gzip.open(filename, mode)
+    return open(filename, mode)
+
+
+def gunzip(gzipFile):
+    """
+    Given a gzipped file, create a similar file that's uncompressed. If the file is not gzipped, do nothing.
+    The naming scheme follows the original provided path to file, but with .gz suffix stripped
+    The original gzipped file stays as a zipped file
+    :param gzipFile: file(filename) to be unzipped
+    :return: new filename of uncompressed file, or if file was originally not gzipped, return same name as argument
+    """
+
+    if not gzipFile.endswith(".gz"):
+        return gzipFile
+
+    newFileName = gzipFile.replace(".gz", "")
+    with gzip.open(gzipFile, 'rb') as f_in, open(newFileName, 'wb') as f_out:
+        shutil.copyfileobj(f_in, f_out)
+    return newFileName
+
 
 def fastq2fasta(fastqFile, outputDir):
+    """
+    Converts a fastq file into fasta file. Fastq can be compressed if it was provided as such
+    :param fastqFile: (un)compressed fastq file. If compressed, will leave original compressed untouched
+    :param outputDir: Where to produce the new fasta file
+    :return: fasta filename
+    """
     # FASTQ to FASTA
 # awk 'NR % 4 == 1 {print ">" $0 } NR % 4 == 2 {print $0}' my.fastq > my.fasta
     filename = fastqFile.split('/')[-1]    
     seqOut = outputDir + "seq/"
+    isGZipped = filename.endswith(".gz")
     if (not os.path.isdir(seqOut)):
         os.system("mkdir " + seqOut)
-    filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
+
+    # rename all fastq files to fasta, including gzipped files
+    if isGZipped:
+        filename = seqOut + filename.replace(filename.split('.')[-2]+".gz", 'fasta')
+        fastqFile = gunzip(fastqFile)
+    else:
+        filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
+
     if exists(filename):
         print ("\tThe FASTA file was found!")
         return filename
+
     print("\t" + fastqFile.split('/')[-1]  + " is being converted into FASTA ...")
     command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
                "{print $0}' " + fastqFile + " > " + filename
@@ -338,12 +387,12 @@ def writeListToFile(items, filename):
 
 def loadIGVSeqsFromFasta(filename):
     ighvSeqs = {}
-    for rec in SeqIO.parse(filename, 'fasta'): 
-        ighv = rec.id.split('|')[1].strip()
-        if (ighvSeqs.get(ighv, None) is None):
-            ighvSeqs[ighv] = []
-        ighvSeqs[ighv].append(str(rec.seq))
-        
+    with safeOpen(filename) as fp:
+        for rec in SeqIO.parse(fp, 'fasta'):
+            ighv = rec.id.split('|')[1].strip()
+            if (ighvSeqs.get(ighv, None) is None):
+                ighvSeqs[ighv] = []
+            ighvSeqs[ighv].append(str(rec.seq))
     return ighvSeqs
                 
 def compressSeqGeneLevel(seqDict):    
@@ -570,11 +619,15 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
         records = []
         out = None
         if (MEM_GB > 20):
-            recordsAll = SeqIO.to_dict(SeqIO.parse(fastaFile, 'fasta'))
+            with safeOpen(fastaFile) as fp:
+                recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
+            queryIds = recordsAll.keys()
         else:
-            recordsAll = SeqIO.index(fastaFile, 'fasta')
-        queryIds = recordsAll.keys()        
-        for i in range(totalFiles):      
+            # SeqIO.index can only open string filenames and they must be unzipped
+            recordsAll = SeqIO.index(ungzip(fastaFile), 'fasta')
+            # recordsAll.keys() is of type <dictionary-keyiterator object>, need to cast to list
+            queryIds = list(recordsAll.keys())
+        for i in range(totalFiles):
             #print(i, totalFiles, seqsPerFile)      
             ids = queryIds[i * seqsPerFile : (i+1) * seqsPerFile]
             records = map(lambda x: recordsAll[x], ids)    
@@ -583,18 +636,22 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
 
     
 def writeParams(args, outDir):
+    """
+    Writes the parameters used for analysis into analysis.params
+    :param args: argparse namespace object
+    :param outDir: output directory where analysis.params reside
+    :return: None
+    """
     filename = outDir + "analysis.params"
     with open(filename, 'w') as out:
-        out.write("Abseq VERSION: " + VERSION + "\n")
-        for arg in PROGRAM_VALID_ARGS:
-            a = arg.replace('-', '')
-            if args.get(a, None) is not None:
-                out.write(arg + " " + str(args[a]) + "\n")
-        out.write("\nExecuted command line:\n")
-        out.write(args['cmd'] + "\n")
+        out.write("AbSeq VERSION: " + VERSION + "\n")
+        out.write("Executed AbSeq with the following parameters:\n")
+        for key, val in vars(args).items():
+            out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
+    #     for arg in PROGRAM_VALID_ARGS:
+    #         a = arg.replace('-', '')
+    #         if args.get(a, None) is not None:
+    #             out.write(arg + " " + str(args[a]) + "\n")
+    #     out.write("\nExecuted command line:\n")
+    #     out.write(args['cmd'] + "\n")
     print("The analysis parameters have been written to " + filename.split("/")[-1])
-                
-                
-                
-                
-            

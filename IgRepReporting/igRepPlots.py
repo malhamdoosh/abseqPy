@@ -11,6 +11,7 @@ from collections import Counter
 import math
 import numpy
 from matplotlib import cm
+import IgRepertoire.igRepUtils
 from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast,\
     WeightedPopulation
 import sys
@@ -32,18 +33,19 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     print("\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
-    for rec in SeqIO.parse(seqFile, fileFormat):
-        if (len(rec) <= maxLen):
-            if (rec.id.split('|')>1):
-                ighvID = rec.id.split('|')[1]
-            else:
-                ighvID = rec.id
-            id = ighvID.split('-')[0].split('/')[0]
-            if ighvDist.get(id, None) is None:
-                ighvDist[id] = 0
-                ighvSizes[id] = []
-            ighvSizes[id].append(len(rec))
-            ighvDist[id] += 1
+    with IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
+        for rec in SeqIO.parse(fp, fileFormat):
+            if (len(rec) <= maxLen):
+                if (rec.id.split('|')>1):
+                    ighvID = rec.id.split('|')[1]
+                else:
+                    ighvID = rec.id
+                id = ighvID.split('-')[0].split('/')[0]
+                if ighvDist.get(id, None) is None:
+                    ighvDist[id] = 0
+                    ighvSizes[id] = []
+                ighvSizes[id].append(len(rec))
+                ighvDist[id] += 1
  
     plotDist(ighvDist, sampleName, outputFile)
     # box plot of sequence length in each class
@@ -70,7 +72,8 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     print("\tThe sequence length distribution is being plotted for " + sampleName)
     if (type("") == type(counts)):
-        sizes = [len(rec) for rec in SeqIO.parse(counts, fileFormat) if len(rec) <= maxLen]
+        with IgRepertoire.igRepUtils.safeOpen(counts) as fp:
+            sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         weights = [1] * len(sizes)
     elif type(counts) == type([]):        
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)

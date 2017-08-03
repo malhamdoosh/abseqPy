@@ -10,6 +10,7 @@ from pandas.core.frame import DataFrame
 from numpy import  random
 from multiprocessing import Queue, Value, Lock
 from IgRepAuxiliary.RefineWorker import RefineWorker
+from IgRepertoire.igRepUtils import gunzip
 import sys
 from math import ceil
 from config import MEM_GB
@@ -51,7 +52,11 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
 #         manager = Manager()        
         try:    
             # process clones from the FASTA/FASTQ file
-            records = SeqIO.index(readFile, format)    
+
+            # NOTE:
+            # if the readFile is gzipped, we need to unzip it in the same directory before passing into
+            # SeqIO.index because it doesn't accept gzipped nor opened files
+            records = SeqIO.index(gunzip(readFile), format)
             print("\t " +  format + " index created and refinement started ...")    
             ### Parallel implementation of the refinement
             noSeqs = len(queryIds)
@@ -213,6 +218,7 @@ class ProcCounter(object):
 #         cloneAnnot = cloneAnnotOriginal.copy()
 #         # loading the 5` and 3` primers and calculate maximum alignment scores
 #         if igRep.end5:
+#             TODO: need to make sure igRep.end5 is unzipped (use safeOpen from igutils if not sure)
 #             end5Seqs = [(rec.id, str(rec.seq), len(rec.seq)) for rec in SeqIO.parse(igRep.end5, "fasta")]
 #             L5 = max(map(lambda x:x[2], end5Seqs))
 #             ids = map(lambda x: x[0], end5Seqs)
@@ -223,6 +229,7 @@ class ProcCounter(object):
 #             primer5End = {}
 #             indel5End = {}
 #         if igRep.end3:
+#             TODO: need to make sure igRep.end3 is unzipped (use safeOpen from igutils if not sure)
 #             end3Seqs = [(rec.id, str(rec.seq), len(rec.seq)) for rec in SeqIO.parse(igRep.end3, "fasta")]
 #             L3 = max(map(lambda x:x[2], end3Seqs))
 #             ids = map(lambda x: x[0], end3Seqs)
@@ -246,8 +253,11 @@ class ProcCounter(object):
 #         sys.stdout.flush()
 #         # process clones from the FASTA file
 #         if (MEM_GB > 20):
+#             TODO: need to make sure igRep.readFile1 is unzipped (use safeOpen from igutils if not sure)
 #             records = SeqIO.to_dict(SeqIO.parse(igRep.readFile1, igRep.format))
 #         else:
+#             TODO: need to make sure igRep.readFile1 is unzipped and can't be opened
+#                   (i.e. it must be a string of filename), use igRep.readFile1 = gunzip(igRep.readFile1) to be sure
 #             records = SeqIO.index(igRep.readFile1, igRep.format)
 #         for id in queryIds:            
 #             record = records[id]
