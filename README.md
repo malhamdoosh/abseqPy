@@ -23,5 +23,5 @@
 
 ### Who do I talk to? ###
 
-* **Abseq** is developed by Monther Alhamdoosh
+* **AbSeq** is developed by Monther Alhamdoosh and JiaHong Fong
 * For comments and suggestions, email m.hamdoosh <at> gmail <dot> com
