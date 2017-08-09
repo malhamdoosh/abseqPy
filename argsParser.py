@@ -198,8 +198,9 @@ def parseCommandLineArguments():
                         default=None)
     parser.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes)[default=8]",
                         type=int, default=8)
-    parser.add_argument('-r', '--report-interim', help="Not implemented yet [default= no report]",
-                        default=False, type=bool)
+    parser.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
+                                                       " Not implemented yet [default= no report]",
+                        dest="report_interim", action='store_true')
     parser.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
                                                  " analysis [default=[1, inf)]", default=None)
     parser.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
@@ -207,8 +208,8 @@ def parseCommandLineArguments():
     parser.add_argument('-qs', '--qstart', dest="actualqstart", help="Specify starting position of query V gene during"
                                                                      " alignment (1-based indexing) [default=1]",
                         default=None, type=int)
-    parser.add_argument('-f4c', '--fr4cut', help="Cut framework 4 region [default = no cuts]",
-                        type=bool, default=False)
+    parser.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
+                                                 "region [default = no cuts]", dest='fr4cut', action='store_true')
     parser.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)
     parser.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file", default=None)
     parser.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset [default=0]",
