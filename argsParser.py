@@ -165,6 +165,9 @@ def parseCommandLineArguments():
     parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
                                      prog="AbSeq")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
+    parser.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1")
+    parser.add_argument('-f2', '--file2', dest="f2", help="Fully qualified path to sequence file 2,"
+                                                          " leave out if sequences are not paired end", default=None)
     parser.add_argument('-c', '--chain', default="hv", help="Chain type [default=hv]",
                         choices=['hv', 'lv', 'kv'])
     parser.add_argument('-t', '--task', default="abundance", help="Analysis task, supported tasks: \
@@ -177,9 +180,6 @@ def parseCommandLineArguments():
     parser.add_argument('-s', '--seqtype', default='dna', help="Sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
                                                         choices=["dna", "protein"])
-    parser.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1")
-    parser.add_argument('-f2', '--file2', dest="f2", help="Fully qualified path to sequence file 2,"
-                                                          " leave out if sequences are not paired end", default=None)
     # in parseArgs, we change None to flash by default if there's a -f2 option
     parser.add_argument('-m', '--merger', help="Choice between different mergers. Omit this if no -f2 option"
                                                 " is specified [default=flash]",
