@@ -192,16 +192,16 @@ def parseCommandLineArguments():
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     parser.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                  " Bitscore range (inclusive) to apply on V gene."
-                                                 " V genes that do not fall into this range will cause the whole"
-                                                 " sequence to be filtered out."
+                                                 " V genes with bitscores that do not fall within this range"
+                                                 " will cause the whole sequence to be filtered out."
                                                  " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     parser.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
                                                 " Sequences (after alignment to reference) with V"
-                                                " gene that do not start within this range (inclusive)"
+                                                " gene that do not fall within this start range (inclusive)"
                                                 " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
                         default=None)
     parser.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
-                                                  " Sequences that do not fall into this alignment length range"
+                                                  " Sequences that do not fall within this alignment length range"
                                                   " (inclusive) are filtered."
                                                   " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     parser.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
