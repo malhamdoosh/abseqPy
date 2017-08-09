@@ -163,72 +163,76 @@ def parseCommandLineArguments():
     :return: parser object, can be indexed for flag values
     """
     parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
-                                     prog="AbSeq")
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
-    parser.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1")
-    parser.add_argument('-f2', '--file2', dest="f2", help="Fully qualified path to sequence file 2,"
-                                                          " leave out if sequences are not paired end", default=None)
-    parser.add_argument('-c', '--chain', default="hv", help="Chain type [default=hv]",
-                        choices=['hv', 'lv', 'kv'])
-    parser.add_argument('-t', '--task', default="abundance", help="Analysis task, supported tasks: \
+                                       prog="AbSeq", add_help=False)
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+    required.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1")
+    optional.add_argument('-f2', '--file2', dest="f2", help="Fully qualified path to sequence file 2,"
+                                                            " omit this option if sequences are not paired end",
+                          default=None)
+    optional.add_argument('-c', '--chain', default="hv", help="Chain type [default=hv]",
+                          choices=['hv', 'lv', 'kv'])
+    optional.add_argument('-t', '--task', default="abundance", help="Analysis task, supported tasks: \
                                                     all, annotate, abundance, \
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \
                                                     seqlen, secretion, seqlenclass [default=abundance]",
-                                                    choices=["all", "annotate", "abundance", "diversity",
+                          choices=["all", "annotate", "abundance", "diversity",
                                                              "fastqc", "productivity", "primer", "5utr", "rsasimple",
                                                              "rsa", "seqlen", "secretion", "seqlenclass"])
-    parser.add_argument('-s', '--seqtype', default='dna', help="Sequence type, supported seq type: dna or protein \
+    optional.add_argument('-s', '--seqtype', default='dna', help="Sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
-                                                        choices=["dna", "protein"])
+                          choices=["dna", "protein"])
     # in parseArgs, we change None to flash by default if there's a -f2 option
-    parser.add_argument('-m', '--merger', help="Choice between different mergers. Omit this if no -f2 option"
+    optional.add_argument('-m', '--merger', help="Choice between different mergers. Omit this if no -f2 option"
                                                 " is specified [default=flash]",
-                        default=None,
-                        choices=['leehom', 'flash', 'pear'])
-    parser.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
-    parser.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1/2]", default=None)
-    parser.add_argument('-f', '--format', dest="fmt", help="Format of input file [default=fastq]",
-                        default="fastq", choices=['fasta', 'fastq'])
+                          default=None,
+                          choices=['leehom', 'flash', 'pear'])
+    optional.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
+    optional.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1/2]", default=None)
+    optional.add_argument('-f', '--format', dest="fmt", help="Format of input file [default=fastq]",
+                          default="fastq", choices=['fasta', 'fastq'])
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
-    parser.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
+    optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                  " Bitscore range (inclusive) to apply on V gene."
                                                  " V genes with bitscores that do not fall within this range"
                                                  " will cause the whole sequence to be filtered out."
                                                  " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    parser.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
+    optional.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
                                                 " Sequences (after alignment to reference) with V"
                                                 " gene that do not fall within this start range (inclusive)"
                                                 " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
-                        default=None)
-    parser.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
+                          default=None)
+    optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
                                                   " Sequences that do not fall within this alignment length range"
                                                   " (inclusive) are filtered."
                                                   " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    parser.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
-                        default=0, type=int)
-    parser.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
-                        default=0, type=int)
-    parser.add_argument('-qs', '--qstart', dest="actualqstart",
-                        help="Query sequence's starting index (1-based indexing). Subsequence before specified "
+    optional.add_argument('-qs', '--qstart', dest="actualqstart",
+                          help="Query sequence's starting index (1-based indexing). Subsequence before specified "
                              "index is ignored during analysis. [default=1]", default=None, type=int)
-    parser.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
-    parser.add_argument('-d', '--database', help="Specify fully qualified path to germline database "
+    optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
+                                                 " analysis [default=[1, inf)]", default=None)
+    optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
+                          default=0, type=int)
+    optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
+                          default=0, type=int)
+    optional.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset [default=0]",
+                          default=0, type=int)
+    optional.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
+    optional.add_argument('-d', '--database', help="Specify fully qualified path to germline database "
                                                  "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
                                                  " to see your default database used by AbSeq",
-                        default=None)
-    parser.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes) [default=8]",
-                        type=int, default=8)
-    parser.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
+                          default=None)
+    optional.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes) [default=8]",
+                          type=int, default=8)
+    optional.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
                                                        " Not implemented yet [default= no report]",
-                        dest="report_interim", action='store_true')
-    parser.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
-                                                 " analysis [default=[1, inf)]", default=None)
-    parser.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
-                                               " --task rsa or --task rsasimple is specified", default=None)
-    parser.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
+                          dest="report_interim", action='store_true')
+    optional.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
                                                  "region [default = no cuts]", dest='fr4cut', action='store_true')
-    parser.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)
-    parser.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file", default=None)
-    parser.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset [default=0]",
-                        default=0, type=int)
+    optional.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
+                                               " --task rsa or --task rsasimple is specified", default=None)
+    optional.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)
+    optional.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file", default=None)
+    optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
+    optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
     return parser, parser.parse_args()
