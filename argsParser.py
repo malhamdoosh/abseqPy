@@ -129,7 +129,15 @@ def parseArgs():
 
     # provided actualqstart is converted to 0-base from 1-based index, -1 is checked later on for default value
     if args.task in ['diversity', 'productivity', 'all']:
-        args.actualqstart = (args.actualqstart - 1) if args.actualqstart is not None else -1
+        if args.actualqstart is not None:
+            if args.actualqstart >= 1:
+                args.actualqstart = args.actualqstart - 1
+            else:
+                print("ActualQStart parameter expects 1-based index. The provided index has an unexpected value of"
+                      " {}.".format(args.actualqstart), file=sys.stderr)
+                sys.exit(0)
+        else:
+            args.actualqstart = -1
 
     # BUGSQ: if user provided value = 0, what happens?: here, only subtract 1 if args.trim5 isn't default 0, or if user
     # didn't provide 0, since the other file that uses this parameter didn't check for negative values
@@ -154,7 +162,7 @@ def parseCommandLineArguments():
     :param argv: sys.argv
     :return: parser object, can be indexed for flag values
     """
-    parser = argparse.ArgumentParser(description='AbSeq antibody library sequencing quality control pipeline',
+    parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
                                      prog="AbSeq")
     parser.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     parser.add_argument('-c', '--chain', default="hv", help="Chain type [default=hv]",
@@ -179,24 +187,36 @@ def parseCommandLineArguments():
                         choices=['leehom', 'flash', 'pear'])
     parser.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
     parser.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1/2]", default=None)
-    parser.add_argument('-f', '--format', dest="fmt", help="Format of input file",
+    parser.add_argument('-f', '--format', dest="fmt", help="Format of input file [default=fastq]",
                         default="fastq", choices=['fasta', 'fastq'])
-    parser.add_argument('-b', '--bitscore', help="Bitscore threshold to apply on V gene, accepted format: num1-num2"
-                                                 " [default=[0, inf)]", default=None)
+    # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
+    parser.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
+                                                 " Bitscore range (inclusive) to apply on V gene."
+                                                 " V genes that do not fall into this range will cause the whole"
+                                                 " sequence to be filtered out."
+                                                 " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+    parser.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
+                                                " Sequences (after alignment to reference) with V"
+                                                " gene that do not start within this range (inclusive)"
+                                                " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
+                        default=None)
+    parser.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
+                                                  " Sequences that do not fall into this alignment length range"
+                                                  " (inclusive) are filtered."
+                                                  " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     parser.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
                         default=0, type=int)
     parser.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
                         default=0, type=int)
-    parser.add_argument('-ss', '--sstart', help="Filter sequences that do not fall into this start range, accepted"
-                                                " format: num1-num2 [default=[1, inf)]", default=None)
-    parser.add_argument('-al', '--alignlen', help="Filter sequences that do not fall into this alignment length range,"
-                                                  " accepted format: num1-num2 [default=[0, inf)]", default=None)
+    parser.add_argument('-qs', '--qstart', dest="actualqstart",
+                        help="Query sequence's starting index (1-based indexing). Subsequence before specified "
+                             "index is ignored during analysis. [default=1]", default=None, type=int)
     parser.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
     parser.add_argument('-d', '--database', help="Specify fully qualified path to germline database "
-                                                           "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
-                                                            " to see your default database used by AbSeq",
+                                                 "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
+                                                 " to see your default database used by AbSeq",
                         default=None)
-    parser.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes)[default=8]",
+    parser.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes) [default=8]",
                         type=int, default=8)
     parser.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
                                                        " Not implemented yet [default= no report]",
@@ -205,9 +225,6 @@ def parseCommandLineArguments():
                                                  " analysis [default=[1, inf)]", default=None)
     parser.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
                                                " --task rsa or --task rsasimple is specified", default=None)
-    parser.add_argument('-qs', '--qstart', dest="actualqstart", help="Specify starting position of query V gene during"
-                                                                     " alignment (1-based indexing) [default=1]",
-                        default=None, type=int)
     parser.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
                                                  "region [default = no cuts]", dest='fr4cut', action='store_true')
     parser.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)

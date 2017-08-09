@@ -86,7 +86,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 #         print("started")
 
         if actualQstart > -1:
-            # if user specified an actualQstart, use it.
+            # if user specified an actualQstart, use it. (parse args already converted it into 0-based)
             offset = actualQstart # zero-based
         else:
             # else, we find the offset by subtracting V query start with IgBLAST's v germline start position (1-index)
