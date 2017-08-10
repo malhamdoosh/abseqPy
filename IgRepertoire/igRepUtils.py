@@ -624,7 +624,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             queryIds = recordsAll.keys()
         else:
             # SeqIO.index can only open string filenames and they must be unzipped
-            recordsAll = SeqIO.index(ungzip(fastaFile), 'fasta')
+            recordsAll = SeqIO.index(gunzip(fastaFile), 'fasta')
             # recordsAll.keys() is of type <dictionary-keyiterator object>, need to cast to list
             queryIds = list(recordsAll.keys())
         for i in range(totalFiles):
