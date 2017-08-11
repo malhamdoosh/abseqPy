@@ -7,6 +7,7 @@
 
 
 import os
+import sys
 
 #SAMTOOLS_PROGRAM= 'samtools'
 #BGZIP = 'bgzip'
@@ -20,7 +21,15 @@ FASTQC = 'fastqc'
 # consensus protein of HV http://discovery.ucl.ac.uk/15808/1/15808.pdf
 FR4_CONSENSUS = {'hv':"WGQGTXVTVSS", 'kv':'FGGGTQ', 'lv':'FGGGTQ'}
 FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC", 
-                     'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'} 
+                     'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'}
 
-tmp = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')  # e.g. 4015976448
-MEM_GB = tmp/(1024.**3)
+GB = (1024.**3)
+
+# sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
+if sys.platform == 'darwin':
+    from psutil import virtual_memory
+    mem = virtual_memory()
+    MEM_GB = mem.total/GB
+else:
+    tmp = os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')  # e.g. 4015976448
+    MEM_GB = tmp/GB

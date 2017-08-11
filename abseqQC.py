@@ -109,16 +109,17 @@ def main():
             os.system("mkdir " + argsVals.outdir)
             outputFile =  argsVals.outdir + argsVals.name + '_length_dist_classes.png'
             plotSeqLenDistClasses(argsVals.f1, argsVals.name, outputFile, argsVals.fmt)
-    
+
+        print ("The analysis started at " + startTimeStr)
+        print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
+        print("Abseq Version " + VERSION)
+
     except Exception as e:
         print("Unexpected error: " + str(e))
         print '-'*60
         traceback.print_exc(file=sys.stdout)
         print '-'*60
     finally:        
-        print ("The analysis started at " + startTimeStr)
-        print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
-        print("Abseq Version " + VERSION)
         if logFile is not None:
             logFile.close()
         
