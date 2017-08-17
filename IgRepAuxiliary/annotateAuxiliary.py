@@ -50,7 +50,9 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
             newFastFile = filesDir + "/seqs.fasta"
         else:
             newFastFile = fastaFile
-        if (noWorkers == 1):            
+        # if we only asked for one worker or if the sequences within the fasta file is smaller than the threshold in
+        # in igRep.seqsPerFile, we can just analyze the file without splitting it
+        if (noWorkers == 1 or noSeqs <= igRep.seqsPerFile):
             (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,                                                 
                                                   seqType, noWorkers)
             sys.stdout.flush()
@@ -82,11 +84,11 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
                     w.start()       
                     sys.stdout.flush()
                 # initialize tasks queue with file names     
-                if (noSeqs > igRep.seqsPerFile): 
-                    for i in range(totalFiles):
-                        tasks.put(filesDir + "/" + prefix + "part"  + `int(i + 1)` + ext)
-                else:
-                    tasks.put(fastaFile)
+                # if (noSeqs > igRep.seqsPerFile):  (already done the check in the if statement before this else block)
+                for i in range(totalFiles):
+                    tasks.put(filesDir + "/" + prefix + "part"  + `int(i + 1)` + ext)
+                #else:
+                #    tasks.put(fastaFile)
                 # Add a poison pill for each worker
                 for i in range(noWorkers + 10):
                     tasks.put(None)                  
