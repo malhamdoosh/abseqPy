@@ -67,13 +67,31 @@ def parseArgs():
     to do any logic checking after this call.
     :return: argparse namespace object, using dot notation to retrieve value: args.value
     """
+    def detectFileFormat(fname):
+        """
+        detects if the filename ends with fastq or fasta extensions (it can be zipped)
+        :param fname: filename for which the extension should be identified (fname can be zipped)
+        :return: "fastq" or "fasta" depending on the extensions
+        """
+        class FileFormatNotSupported(Exception):
+            def __init__(self, value):
+                self.value = value
+
+            def __str__(self):
+                return repr(self.value)
+        if ".fastq" in fname or ".fq" in fname:
+            return "fastq"
+        if ".fasta" in fname or ".fa" in fname:
+            return "fasta"
+        raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
+
+
     parser, args = parseCommandLineArguments()
 
     # canonicalize all values
     args.task = args.task.lower()
     args.seqtype = args.seqtype.lower()
     args.chain = args.chain.lower()
-    args.fmt = args.fmt.lower()
     args.merger = args.merger.lower() if args.merger is not None else args.merger
 
     # check for f1, f2 file existence and expand path
@@ -85,6 +103,14 @@ def parseArgs():
         raise Exception("-f2 file not found!")
     elif args.f2 is not None:
         args.f2 = abspath(args.f2)
+
+    # detect file format (either fastq or fasta); both should be the same type
+    fmt = detectFileFormat(args.f1)
+    if args.f2 is not None and detectFileFormat(args.f2) != fmt:
+        raise Exception("Detected mismatch in file extensions --file1 and --file2!"
+                        " Both should be either FASTA or FASTQ.")
+    args.fmt = fmt
+
 
     # check logic between f1, f2 and merger, setting default merger to flash
     if args.merger is not None and args.f2 is None:
@@ -189,8 +215,6 @@ def parseCommandLineArguments():
                           choices=['leehom', 'flash', 'pear'])
     optional.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
     optional.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1/2]", default=None)
-    optional.add_argument('-f', '--format', dest="fmt", help="Format of input file [default=fastq]",
-                          default="fastq", choices=['fasta', 'fastq'])
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                  " Bitscore range (inclusive) to apply on V gene."
