@@ -16,7 +16,7 @@ from Bio.SeqRecord import SeqRecord
 from config import CLUSTALOMEGA, MEM_GB
 from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
-from collections import Counter
+from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
@@ -173,21 +173,27 @@ def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
+
 def writeClonoTypesToFile(clonoTypes, filename, top = 100, overRepresented=True):
     if exists(filename):
         print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
         return
-    with open(filename, 'w') as out:
-        out.write('Clonotype,Count,Percentage (%)\n')
-        total = sum(clonoTypes.values()) * 1.0
-        t = 1
-        for k in sorted(clonoTypes, key = clonoTypes.get, reverse = overRepresented):
-            out.write(str(k) + ',' + `clonoTypes[k]` + ',' + 
-                      ('%.2f' % (clonoTypes[k] / total * 100)) + '\n' )
-            t += 1
-            if (t > top):
-                break
-        #out.write('TOTAL,' + `total` + ",100")
+
+    total = sum(clonoTypes.values()) * 1.0
+    dic = defaultdict(list)
+    t = 0
+    for k in sorted(clonoTypes, key=clonoTypes.get, reverse=overRepresented):
+        dic['Clonotype'].append(str(k))
+        dic['Count'].append(clonoTypes[k])
+        dic['Percentage (%)'].append(clonoTypes[k] / total * 100)
+        t += 1
+        if (t > top):
+            break
+
+    df = DataFrame(dic)
+    # fixed format (fast read/write) sacrificing search
+    # (should change to table format(t) if search is needed for clonotype clustering/comparison)
+    df.to_hdf(filename, "clonotype", mode="w", format="f")
     print("\tA clonotype file has been written to " + filename.split("/")[-1])
 
 def writeCountsToFile(dist, filename):
