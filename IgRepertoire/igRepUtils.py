@@ -102,12 +102,15 @@ for the best matched germline hit.
 
 IMGT classification system is used to delineate the V domain 
 '''
-def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA"):
+def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA", outputDir=""):
     # Run igblast on a fasta file
     #TODO: update $IGDATA for auxiliary_data to correct path  
-    #TODO: change organism to be fed through parameters 
-      
-    blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+    #TODO: change organism to be fed through parameters
+    if outputDir:
+        head, tail = os.path.split(blastInput)
+        blastOutput = outputDir + tail.replace('.' + tail.split('.')[-1], '.out')
+    else:
+        blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
     if (exists(blastOutput)):
         print("\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput 
@@ -140,9 +143,9 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA
 '''
 IMGT classification system is used to delineate the V domain 
 '''
-def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
+def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB', outputDir=""):
     # Run igblast on a fasta file        
-    blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+    blastOutput = outputDir + blastInput.replace('.' + blastInput.split('.')[-1], '.out')
     if (exists(blastOutput)):
         print("\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput 
