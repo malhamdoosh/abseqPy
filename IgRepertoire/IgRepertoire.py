@@ -76,6 +76,9 @@ class IgRepertoire:
         self.readFile = None
         
     def runFastqc(self, all = False):
+        if self.format == 'fasta':
+            print("Fasta file extension detected, will not perform fastqc")
+            return
         outDir = self.outputDir + "fastqc/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -147,9 +150,9 @@ class IgRepertoire:
 #                 trimSequences(readFasta)   
 #                 self.trimmed = True         
             sys.stdout.flush()
-            # Estimate the IGV family abundance for each library        
-            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,                                                                                                            
-                                                          self.seqType)
+            # Estimate the IGV family abundance for each library
+            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
+                                                          self.seqType, outdir=outDir)
             sys.stdout.flush()            
             gc.collect()
             if (len(filteredIDs) > 0):
