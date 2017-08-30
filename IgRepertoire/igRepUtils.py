@@ -196,7 +196,8 @@ def writeClonoTypesToFile(clonoTypes, filename, top = 100, overRepresented=True)
     df = DataFrame(dic)
     # fixed format (fast read/write) sacrificing search
     # (should change to table format(t) if search is needed for clonotype clustering/comparison)
-    df.to_hdf(filename, "clonotype", mode="w", format="f")
+    # df.to_hdf(filename, "clonotype", mode="w", format="f")
+    df.to_csv(filename + ".gz", mode="w", compression="gzip")
     print("\tA clonotype file has been written to " + filename.split("/")[-1])
 
 def writeCountsToFile(dist, filename):

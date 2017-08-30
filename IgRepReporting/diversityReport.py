@@ -29,12 +29,12 @@ def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
     if (not os.path.exists(cloneFolder)):
         os.system("mkdir " + cloneFolder)
     for k in clonoTypes.keys():
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.h5" % (k, topClonotypes))
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.csv" % (k, topClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
           overRepresented = True)
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.h5" % (k, topClonotypes))
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.csv" % (k, topClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
