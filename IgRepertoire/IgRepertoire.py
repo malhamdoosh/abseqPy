@@ -75,7 +75,7 @@ class IgRepertoire:
         self.cloneAnnot = None
         self.readFile = None
         
-    def runFastqc(self, all = False):
+    def runFastqc(self):
         if self.format == 'fasta':
             print("Fasta file extension detected, will not perform fastqc")
             return
@@ -153,7 +153,7 @@ class IgRepertoire:
             # Estimate the IGV family abundance for each library
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
                                                           self.seqType, outdir=outDir)
-            sys.stdout.flush()            
+            sys.stdout.flush()
             gc.collect()
             if (len(filteredIDs) > 0):
                 writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
@@ -164,8 +164,8 @@ class IgRepertoire:
             self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')  
             writeParams(self.args, outDir)    
         print("Number of clones that are annotated is {0:,}".format(
-                                     int(self.cloneAnnot.shape[0])))      
-        if outDirFilter or all:    
+                                     int(self.cloneAnnot.shape[0])))
+        if outDirFilter or all:
             if outDirFilter is None:
                 outDirFilter = outDir
             ## Filter clones based on bitscore, alignLen and sStart
@@ -189,7 +189,7 @@ class IgRepertoire:
                              retained * 100.0 / self.cloneAnnot.shape[0],
                              retained,
                              int(self.cloneAnnot.shape[0])))
-            self.cloneAnnot = self.cloneAnnot[selectedRows]        
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
 
     def analyzeAbundance(self, all = False):    
         # Estimate the IGV family abundance for each library        

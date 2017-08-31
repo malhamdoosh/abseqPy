@@ -9,7 +9,7 @@
 
 import sys
 import os
-from IgRepertoire.IgRepertoire import IgRepertoire
+from IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 import time
 from argsParser import parseArgs
 import traceback
@@ -49,50 +49,50 @@ def main():
         sys.stdout = logFile
         if (argsVals.task == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
-            igRepertoire = IgRepertoire(argsVals)
-            igRepertoire.runFastqc(all=True)
+            igRepertoire = IgMultiRepertoire(argsVals)
+            igRepertoire.runFastqc()
             igRepertoire.annotateClones(all=True)
             igRepertoire.analyzeAbundance(all=True)
             igRepertoire.analyzeProductivity(all=True)
             igRepertoire.analyzeDiversity(all=True)
         if (argsVals.task == 'fastqc'):
             printFormattedTitle("Sequencing QC Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.runFastqc()
         elif (argsVals.task == 'annotate'):
             printFormattedTitle("Clone Identification and Classification")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.annotateClones()
         elif (argsVals.task == 'abundance'):
             printFormattedTitle("IGV Abundance and QC Plots")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeAbundance() # estimateIGVDist()
         elif (argsVals.task == 'productivity'):
             printFormattedTitle("Clone Productivity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeProductivity()
         elif (argsVals.task == 'diversity'):
             printFormattedTitle("Diversity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeDiversity()
         elif (argsVals.task == 'secretion'):
             #analyze the sequences upstream of the IGV genes
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeSecretionSignal()
         elif (argsVals.task == '5utr'):
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyze5UTR()
         elif (argsVals.task == 'rsasimple'):
             printFormattedTitle("Simple Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSitesSimple()
         elif (argsVals.task == 'rsa'):
             printFormattedTitle("Comprehensive Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSites()
         elif (argsVals.task == 'primer'):
             printFormattedTitle("Primer Specificity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
+            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzePrimerSpecificity()
         elif (argsVals.task == 'seqlen'):
             printFormattedTitle("Sequence Length Distribution")
