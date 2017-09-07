@@ -43,10 +43,10 @@ def main():
     logFile = None
     try:        
         argsVals = parseArgs()
-        print("Abseq output has been logged into " + argsVals.log)
-        logFile = open(argsVals.log, 'a')
+        # print("Abseq output has been logged into " + argsVals.log)
+        # logFile = open(argsVals.log, 'a')
         origStdout = sys.stdout
-        sys.stdout = logFile
+        # sys.stdout = logFile
         if (argsVals.task == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
             igRepertoire = IgMultiRepertoire(argsVals)

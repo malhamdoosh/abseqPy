@@ -143,7 +143,8 @@ class IgRepertoire:
             if self.format == 'fastq':        
                 readFasta = fastq2fasta(self.readFile, self.outputDir)                
             elif self.format == 'fasta':
-                readFasta = self.readFile
+                # unzip the fasta file if need be
+                readFasta = gunzip(self.readFile)
             else:
                 raise Exception('unknown file format! ' + self.format)
 #             if self.trim3End > 0 or self.trim5End > 0:

@@ -25,24 +25,19 @@ class GeneralWorker(Process):
     def run(self):
         while True:
             job = self.jobQueue.get()
-            import sys
             if job is None:
-                print("Breaking")
-                sys.stdout.flush()
                 break
-            else:
-                print("Whoops")
-                sys.stdout.flush()
-            if self.args and not self.kwargs:
-                getattr(job, self.jobDescription)(*self.args)
-            elif not self.args and self.kwargs:
-                getattr(job, self.jobDescription)(**self.kwargs)
-            else:
-                getattr(job, self.jobDescription)(*self.args, **self.kwargs)
-
+            try:
+                if self.args and not self.kwargs:
+                    getattr(job, self.jobDescription)(*self.args)
+                elif not self.args and self.kwargs:
+                    getattr(job, self.jobDescription)(**self.kwargs)
+                else:
+                    getattr(job, self.jobDescription)(*self.args, **self.kwargs)
+            except Exception as e:
+                print(str(job.name) + ":: An error occured while processing " + str(self.jobDescription))
+                raise e
             # job done
             if self.resultQueue is not None:
                 self.resultQueue.put(job)
-        print("Process: {} Job done!".format(current_process().name))
-        sys.stdout.flush()
         return
