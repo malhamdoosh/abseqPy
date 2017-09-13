@@ -29,9 +29,6 @@ class GeneralWorker(Process):
             if job is None:
                 break
             try:
-                print("Got job: {} args: {} kwargs: {}".format(self.jobDescription, self.args, self.kwargs))
-                import sys
-                sys.stdout.flush()
                 if self.args and not self.kwargs:
                     getattr(job, self.jobDescription)(*self.args)
                 elif not self.args and self.kwargs:
