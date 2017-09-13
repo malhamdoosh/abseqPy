@@ -450,7 +450,18 @@ class IgRepertoire:
         self.analyzeSequences(self.name, [1, expectLength - 1], True)
         # analyze 
         
-        
+    def analyzeSeqLen(self, klass=False):
+        self.args.outdir += 'annot/'
+        if not os.path.exists(self.args.outdir):
+            os.mkdir(self.args.outdir)
+        if klass:
+            outputFile = self.args.outdir + self.args.name + '_length_dist_classes.png'
+            plotSeqLenDistClasses(self.args.f1, self.args.name, outputFile, self.args.fmt)
+        else:
+            outputFile = self.args.outdir + self.args.name + '_seq_length_dist.png'
+            plotSeqLenDist(self.args.f1, self.args.name, outputFile, self.args.fmt, maxbins=-1)
+
+
     def loadValidSequences(self, sampleName, expectLength, startCodon=True, type='secsig'):
         print("\tSequences between %d and %d are being extracted ... "
               % (expectLength[0], expectLength[1]))

@@ -2,7 +2,7 @@ from multiprocessing import Process, current_process
 
 
 class GeneralWorker(Process):
-    ops = FASTQC, ANNOT, ABUN, PROD, DIVER, SECR, UTR5, RSAS, RSA, PRIM = 'runFastqc', 'annotateClones', \
+    ops = FASTQC, ANNOT, ABUN, PROD, DIVER, SECR, UTR5, RSAS, RSA, PRIM, SEQLEN = 'runFastqc', 'annotateClones', \
                                                                           'analyzeAbundance',\
                                                                           'analyzeProductivity',\
                                                                           'analyzeDiversity', \
@@ -10,7 +10,8 @@ class GeneralWorker(Process):
                                                                           'analyze5UTR', \
                                                                           'analyzeRestrictionSitesSimple', \
                                                                           'analyzePrimerSpecificity', \
-                                                                          'analyzeRestrictionSites'
+                                                                          'analyzeRestrictionSites', \
+                                                                          'analyzeSeqLen'
 
     def __init__(self, jobQueue, resultQueue, jobDescription, *args, **kwargs):
         super(GeneralWorker, self).__init__()
@@ -28,6 +29,9 @@ class GeneralWorker(Process):
             if job is None:
                 break
             try:
+                print("Got job: {} args: {} kwargs: {}".format(self.jobDescription, self.args, self.kwargs))
+                import sys
+                sys.stdout.flush()
                 if self.args and not self.kwargs:
                     getattr(job, self.jobDescription)(*self.args)
                 elif not self.args and self.kwargs:
@@ -35,8 +39,11 @@ class GeneralWorker(Process):
                 else:
                     getattr(job, self.jobDescription)(*self.args, **self.kwargs)
             except Exception as e:
-                print(str(job.name) + ":: An error occured while processing " + str(self.jobDescription))
-                raise e
+                print(str(job.name) + ":: An error occurred while processing " + str(self.jobDescription))
+                print("Error description: {}".format(str(e)))
+                if self.resultQueue is not None:
+                    self.resultQueue.put(None)
+                continue
             # job done
             if self.resultQueue is not None:
                 self.resultQueue.put(job)

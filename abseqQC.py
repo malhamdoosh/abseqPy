@@ -41,15 +41,15 @@ def main():
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     logFile = None
-    try:        
+    try:
         argsVals = parseArgs()
+        igRepertoire = IgMultiRepertoire(argsVals)
         # print("Abseq output has been logged into " + argsVals.log)
         # logFile = open(argsVals.log, 'a')
         origStdout = sys.stdout
         # sys.stdout = logFile
         if (argsVals.task == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.runFastqc()
             igRepertoire.annotateClones(all=True)
             igRepertoire.analyzeAbundance(all=True)
@@ -57,58 +57,44 @@ def main():
             igRepertoire.analyzeDiversity(all=True)
         if (argsVals.task == 'fastqc'):
             printFormattedTitle("Sequencing QC Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.runFastqc()
         elif (argsVals.task == 'annotate'):
             printFormattedTitle("Clone Identification and Classification")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.annotateClones()
         elif (argsVals.task == 'abundance'):
             printFormattedTitle("IGV Abundance and QC Plots")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeAbundance() # estimateIGVDist()
         elif (argsVals.task == 'productivity'):
             printFormattedTitle("Clone Productivity Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeProductivity()
         elif (argsVals.task == 'diversity'):
             printFormattedTitle("Diversity Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeDiversity()
         elif (argsVals.task == 'secretion'):
             #analyze the sequences upstream of the IGV genes
-            igRepertoire = IgMultiRepertoire(argsVals)
+            printFormattedTitle("Secretion signal Alanysis")
             igRepertoire.analyzeSecretionSignal()
         elif (argsVals.task == '5utr'):
-            igRepertoire = IgMultiRepertoire(argsVals)
+            printFormattedTitle("5'UTR analysis")
             igRepertoire.analyze5UTR()
         elif (argsVals.task == 'rsasimple'):
             printFormattedTitle("Simple Restriction Sites Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSitesSimple()
         elif (argsVals.task == 'rsa'):
             printFormattedTitle("Comprehensive Restriction Sites Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSites()
         elif (argsVals.task == 'primer'):
             printFormattedTitle("Primer Specificity Analysis")
-            igRepertoire = IgMultiRepertoire(argsVals)
             igRepertoire.analyzePrimerSpecificity()
         elif (argsVals.task == 'seqlen'):
             printFormattedTitle("Sequence Length Distribution")
             # calculate the distribution of sequence lengths of a sample
-            argsVals.outdir += 'annot/'
-            os.system("mkdir " + argsVals.outdir)
-            outputFile =  argsVals.outdir + argsVals.name + '_seq_length_dist.png'
-            plotSeqLenDist(argsVals.f1, argsVals.name, outputFile, argsVals.fmt,
-                           maxbins=-1)
+            igRepertoire.analyzeSeqLen()
         elif (argsVals.task == 'seqlenclass'):
+            printFormattedTitle("Class Sequence Length Distribution")
             # calculate the distribution of sequences in different IGV families
             # input file must be a file of IGV genes
-            argsVals.o += 'annot/'
-            os.system("mkdir " + argsVals.outdir)
-            outputFile =  argsVals.outdir + argsVals.name + '_length_dist_classes.png'
-            plotSeqLenDistClasses(argsVals.f1, argsVals.name, outputFile, argsVals.fmt)
+            igRepertoire.analyzeSeqLen(klass=True)
 
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
@@ -119,7 +105,7 @@ def main():
         print '-'*60
         traceback.print_exc(file=sys.stdout)
         print '-'*60
-    finally:        
+    finally:
         if logFile is not None:
             logFile.close()
         

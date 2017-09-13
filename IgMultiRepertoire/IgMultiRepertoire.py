@@ -83,6 +83,20 @@ class IgMultiRepertoire:
     def analyzeSecretionSignal(self):
         self.__beginWork(self.queue, self.result, GeneralWorker.SECR)
 
+    def analyzeSeqLen(self, klass=False):
+        self.__beginWork(self.queue, self.result, GeneralWorker.SEQLEN, klass=klass)
+
+    def finish(self):
+        """
+        Queue might still be buffered, finish off cleanup here
+        :return: None
+        """
+        # pop all items
+        while not self.queue.empty():
+            self.queue.get()
+        while not self.result.empty():
+            self.result.get()
+
     def __pairFiles(self, folder):
         """
         given a list of files, attempt to pair them based on prefix name

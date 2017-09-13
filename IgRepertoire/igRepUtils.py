@@ -494,10 +494,10 @@ def compressCountsFamilyLevel(countsDict):
 '''
     perform multiple sequence alignment using CLUSTAL
 '''
-def alignListOfSeqs(signals):
+def alignListOfSeqs(signals, outDir):
     L = map(len, signals)
     print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
-    tempSeq = "csl_temp_seq.fasta"
+    tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
@@ -511,7 +511,7 @@ def alignListOfSeqs(signals):
     alignedSeq = []
     for rec in alignment:
         alignedSeq.append(str(rec.seq))
-    os.system("rm %s %s " % (tempSeq, tempAlign) )
+    os.system("rm %s %s " % (tempSeq, tempAlign))
     return alignedSeq
 
 
