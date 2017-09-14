@@ -41,13 +41,14 @@ def main():
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     logFile = None
+    log = "AbSeq.log"
     try:
         argsVals = parseArgs()
         igRepertoire = IgMultiRepertoire(argsVals)
-        # print("Abseq output has been logged into " + argsVals.log)
-        # logFile = open(argsVals.log, 'a')
+        print("Abseq output has been logged into " + log)
+        logFile = open(log, 'a')
         origStdout = sys.stdout
-        # sys.stdout = logFile
+        sys.stdout = logFile
         if (argsVals.task == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
             igRepertoire.runFastqc()
