@@ -49,7 +49,9 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         cloneAnnot = cloneAnnotOriginal.copy()        
         queryIds = cloneAnnot.index#[4200000:]
         (refineFlagNames, refineFlagMsgs) = loadRefineFlagInfo()
-#         manager = Manager()        
+#         manager = Manager()
+        records = None
+        workers = None
         try:    
             # process clones from the FASTA/FASTQ file
 
@@ -57,7 +59,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             # if the readFile is gzipped, we need to unzip it in the same directory before passing into
             # SeqIO.index because it doesn't accept gzipped nor opened files
             records = SeqIO.index(gunzip(readFile), format)
-            print("\t " +  format + " index created and refinement started ...")    
+            print("\t " +  format + " index created and refinement started ...")
             ### Parallel implementation of the refinement
             noSeqs = len(queryIds)
             totalTasks = int(ceil(noSeqs * 1.0 / seqsPerFile)) 
@@ -121,9 +123,11 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             print("Something went wrong during the refinement process!")
             raise e
         finally:
-            for w in workers:
-                w.terminate()     
-            records.close()
+            if workers:
+                for w in workers:
+                    w.terminate()
+            if records:
+                records.close()
         # Create new data frame of clone annotation
         cloneAnnot = DataFrame(cloneAnnotList, columns=getAnnotationFields(chain))
         cloneAnnot.index = cloneAnnot.queryid

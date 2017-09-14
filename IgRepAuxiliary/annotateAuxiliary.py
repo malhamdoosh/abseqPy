@@ -19,7 +19,7 @@ from IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
         if (fastaFile == None):
@@ -32,8 +32,10 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
         if totalFiles <  noWorkers:
             seqsPerFile = int(noSeqs * 1.0 / noWorkers) 
             totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
-        print("\t{0:,} sequences were found to be distributed into {1:,} files".format(noSeqs,
-                                                                             totalFiles))  
+        noSplit = noSeqs <= igRep.seqsPerFile
+        print("\t{0:,} sequences were found to be distributed into {1:,} file(s)".format(noSeqs,
+                                                                                         (totalFiles
+                                                                                          if not noSplit else 1)))
 #         print(noSeqs, seqsPerFile, totalFiles)
 #         sys.exit()
         if igRep.primer > 0:
@@ -52,9 +54,9 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna'):
             newFastFile = fastaFile
         # if we only asked for one worker or if the sequences within the fasta file is smaller than the threshold in
         # in igRep.seqsPerFile, we can just analyze the file without splitting it
-        if (noWorkers == 1 or noSeqs <= igRep.seqsPerFile):
-            (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,                                                 
-                                                  seqType, noWorkers)
+        if (noWorkers == 1 or noSplit):
+            (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
+                                                  seqType, noWorkers, outdir)
             sys.stdout.flush()
         else:
             # split FASTA file into smaller files 

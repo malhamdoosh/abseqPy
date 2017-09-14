@@ -67,7 +67,7 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
     return outDict
 
 def generateMotif(sequences, name, alphabet, filename, 
-                  align = False, transSeq = False, protein =False, weights = None):
+                  align = False, transSeq = False, protein =False, weights = None, outDir=None):
     if (exists(filename)):
         print("\t" + name + " motif logo was found" )
         return        
@@ -89,7 +89,7 @@ def generateMotif(sequences, name, alphabet, filename,
             seqs = random.sample(seqs, 10000) 
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
-        alignedSeq = IgRepertoire.igRepUtils.alignListOfSeqs(seqs)
+        alignedSeq = IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir)
 #                 print(alignedSeq[:10])
     else:                
         # if alignment is not required, add "-" to short sequences
@@ -108,7 +108,7 @@ def generateMotif(sequences, name, alphabet, filename,
     print("\tMotif logo is being created for %s ..." % (name))
     m = motifs.create(alignedSeq, alphabet)  #             print(m.counts)
     # create sequence logo
-    generateMotifLogo(m, filename, not transSeq and not protein)
+    generateMotifLogo(m, filename, outDir, not transSeq and not protein)
     return m
     
     
@@ -143,7 +143,7 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
         filename = logosFolder + group.replace('/', '') + '.png'    
         seqs = seqGroups[group]
         m = generateMotif(seqs, group, alphabet, filename, align, transSeq, 
-                          protein)
+                          protein, outDir=logosFolder)
         motifSeqs = m.instances
         pwm = m.counts.normalize(pseudocounts=None)  # {'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}
         consensusMax = str(m.consensus)      
@@ -218,28 +218,23 @@ def findMotifClusters(ighvMotifs, outputPrefix):
             print("Motifs couldn't be clustered!")
 #             raise
 
-
-
-        
-def generateMotifLogo(m, filename, dna=True):
+def generateMotifLogo(m, filename, outdir, dna=True):
     instances = m.instances
     records = []
     for i in range(len(instances)):
         records.append(SeqRecord(instances[i], id=`i`))
-    SeqIO.write(records, 'temp_seq_logos.fasta', 'fasta')
-    
-    command = "%s -f %s  -o %s -A %s -F png -n 200 -D fasta -s medium " 
-    command += "-c %s --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO" 
-    os.system(command % (WEBLOGO, 'temp_seq_logos.fasta', 
+    tmpFile = (((outdir+'/') if outdir else "") + 'temp_seq_logos.fasta').replace('//', '/')
+    SeqIO.write(records, tmpFile, 'fasta')
+
+    command = "%s -f %s  -o %s -A %s -F png -n 200 -D fasta -s medium "
+    command += "-c %s --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO"
+
+    os.system(command % (WEBLOGO, tmpFile,
                          filename, "dna" if dna else "protein",
                          "classic" if dna else "auto"))
-
-    os.system('rm temp_seq_logos.fasta')     
+    os.remove(tmpFile)
         
-      
 
-
-    
 def maxlen(x):
     return max(map(len, x))
 
