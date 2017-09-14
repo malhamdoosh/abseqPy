@@ -15,7 +15,7 @@ class IgMultiRepertoire:
         self.sampleCount = 0
         self.resource = args.threads
         if os.path.isdir(args.f1):
-            clusterFiles = self.__pairFiles(args.f1)
+            clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
             avgResource = int(floor(self.resource/self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
@@ -26,7 +26,7 @@ class IgMultiRepertoire:
                 if type(sample) == tuple:
                     # paired end sample
                     f1name, f2name = sample
-                    retval = inferSampleName(f1name)
+                    retval = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = f2name
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
@@ -37,7 +37,7 @@ class IgMultiRepertoire:
                 else:
                     # single ended
                     f1name = sample
-                    retval = inferSampleName(f1name)
+                    retval = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
@@ -97,7 +97,7 @@ class IgMultiRepertoire:
         while not self.result.empty():
             self.result.get()
 
-    def __pairFiles(self, folder):
+    def __pairFiles(self, folder, args):
         """
         given a list of files, attempt to pair them based on prefix name
         :param folder: folder in which these files are found in
@@ -130,9 +130,9 @@ class IgMultiRepertoire:
             reduced = []
             for f in files:
                 if type(f) == tuple:
-                    _, sampleName = inferSampleName(f[0])
+                    _, sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
                 else:
-                    _, sampleName = inferSampleName(f)
+                    _, sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
                 if sampleName not in seen:
                     seen.add(sampleName)
                     reduced.append(f)

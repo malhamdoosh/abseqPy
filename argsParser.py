@@ -107,7 +107,7 @@ def parseArgs():
         if args.name is not None:
             args.outdir += ("/" + args.name)
         else:
-            retval = inferSampleName(args.f1)
+            retval = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
             args.outdir += retval[0]
             args.name = retval[1]
         args.outdir = (abspath(args.outdir) + "/").replace("//", "/")

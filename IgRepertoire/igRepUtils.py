@@ -41,7 +41,7 @@ def detectFileFormat(fname):
         return "fasta"
     raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
 
-def inferSampleName(fname):
+def inferSampleName(fname, merger, fastqc):
     """
     infers the sample name from a given file.
     EG: SRR1002_R1.fastq.gz => SRR1002
@@ -51,16 +51,17 @@ def inferSampleName(fname):
     :return: 2-tuple of (args.outdir, args.name)
     """
     f1name = fname.split("/")[-1]
-    # if f1name.find("_R") != -1 and (args.merger is not None or args.task.lower() == "fastqc"):
-    if f1name.find("_R") != -1:
+    # read is paired end ==> remove everything after _R1.fast*...
+    if f1name.find("_R") != -1 and (merger or fastqc):
         ext = '_' + f1name.split("_")[-1]
     else:
         ext = f1name[f1name.find("."):]
+
     outdir = "/" + f1name.replace(ext, "")
+    f1name = f1name.replace(ext, "")
     sampleName = f1name.split("_")[0] + "_"
     sampleName += f1name.split("_")[-1].split(".")[0]
-    name = sampleName
-    return outdir, name
+    return outdir, sampleName
 
 # U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)
 def safeOpen(filename, mode="rU"):
