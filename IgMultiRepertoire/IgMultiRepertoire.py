@@ -138,11 +138,13 @@ class IgMultiRepertoire:
                     reduced.append(f)
             return reduced
 
+        def acceptedFormat(filename):
+            return detectFileFormat(filename, noRaise=True) is not None
 
         res = []
         paired = set()
         for f in files:
-            if f in paired:     # if this F was already paired with a previous file (paired end), ignore it
+            if f in paired or not acceptedFormat(f):
                 continue
             if "_r1" in f.lower() or "_r2" in f.lower():
                 partner = findPartner(f)

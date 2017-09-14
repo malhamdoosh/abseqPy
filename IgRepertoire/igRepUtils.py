@@ -23,11 +23,11 @@ from config import VERSION
 import gzip
 import shutil
 
-def detectFileFormat(fname):
+def detectFileFormat(fname, noRaise=False):
     """
     detects if the filename ends with fastq or fasta extensions (it can be zipped)
     :param fname: filename for which the extension should be identified (fname can be zipped)
-    :return: "fastq" or "fasta" depending on the extensions
+    :return: "fastq" or "fasta" or None depending on the extensions
     """
     class FileFormatNotSupported(Exception):
         def __init__(self, value):
@@ -39,7 +39,9 @@ def detectFileFormat(fname):
         return "fastq"
     if ".fasta" in fname or ".fa" in fname:
         return "fasta"
-    raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
+    if not noRaise:
+        raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
+    return None
 
 def inferSampleName(fname, merger, fastqc):
     """
