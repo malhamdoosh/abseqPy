@@ -5,7 +5,6 @@
     Changes log: check git commits. 
 ''' 
 
-import numpy as np
 from os.path import exists
 import os
 import sys
@@ -20,11 +19,48 @@ from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
-from argsParser import PROGRAM_VALID_ARGS
 from config import VERSION
 import gzip
 import shutil
 
+def detectFileFormat(fname):
+    """
+    detects if the filename ends with fastq or fasta extensions (it can be zipped)
+    :param fname: filename for which the extension should be identified (fname can be zipped)
+    :return: "fastq" or "fasta" depending on the extensions
+    """
+    class FileFormatNotSupported(Exception):
+        def __init__(self, value):
+            self.value = value
+
+        def __str__(self):
+            return repr(self.value)
+    if ".fastq" in fname or ".fq" in fname:
+        return "fastq"
+    if ".fasta" in fname or ".fa" in fname:
+        return "fasta"
+    raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
+
+def inferSampleName(fname):
+    """
+    infers the sample name from a given file.
+    EG: SRR1002_R1.fastq.gz => SRR1002
+        Sample1_R1.fastq.gz => Sample1
+        Sample1.fastq.gz    => Sample1
+    :param fname: filename to infer
+    :return: 2-tuple of (args.outdir, args.name)
+    """
+    f1name = fname.split("/")[-1]
+    # if f1name.find("_R") != -1 and (args.merger is not None or args.task.lower() == "fastqc"):
+    if f1name.find("_R") != -1:
+        ext = '_' + f1name.split("_")[-1]
+    else:
+        ext = f1name[f1name.find("."):]
+    outdir = "/" + f1name.replace(ext, "")
+    sampleName = f1name.split("_")[0] + "_"
+    sampleName += f1name.split("_")[-1].split(".")[0]
+    name = sampleName
+    return outdir, name
 
 # U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)
 def safeOpen(filename, mode="rU"):
@@ -135,8 +171,8 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA
                    )
     else:
         print('ERROR: unsupported chain type.')     
-        sys.exit()   
-        
+        sys.exit()
+
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
@@ -458,10 +494,10 @@ def compressCountsFamilyLevel(countsDict):
 '''
     perform multiple sequence alignment using CLUSTAL
 '''
-def alignListOfSeqs(signals):
+def alignListOfSeqs(signals, outDir):
     L = map(len, signals)
     print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
-    tempSeq = "csl_temp_seq.fasta"
+    tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
@@ -475,7 +511,7 @@ def alignListOfSeqs(signals):
     alignedSeq = []
     for rec in alignment:
         alignedSeq.append(str(rec.seq))
-    os.system("rm %s %s " % (tempSeq, tempAlign) )
+    os.system("rm %s %s " % (tempSeq, tempAlign))
     return alignedSeq
 
 
