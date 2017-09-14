@@ -3,7 +3,7 @@ from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 from multiprocessing import Queue
 from copy import deepcopy
 from config import DEFAULT_MERGER
-from GeneralWorker import GeneralWorker
+from GeneralWorker import GeneralWorker, GeneralWorkerException
 from math import floor
 import os
 
@@ -110,7 +110,7 @@ class IgMultiRepertoire:
             lookingFor = "_r2" if '_r1' in fname.lower() else "_r1"
             canonicalName = fname[:fname.lower().rfind("_r1" if lookingFor == '_r2' else '_r2')]
             for f in files:
-                if f.lower().startswith(canonicalName) and lookingFor in f.lower():
+                if f.lower().startswith(canonicalName.lower()) and lookingFor in f.lower():
                     return f
             return None
 
@@ -124,6 +124,20 @@ class IgMultiRepertoire:
             if '_r1' in a.lower():
                 return a, b
             return b, a
+
+        def distinct(files):
+            seen = set()
+            reduced = []
+            for f in files:
+                if type(f) == tuple:
+                    _, sampleName = inferSampleName(f[0])
+                else:
+                    _, sampleName = inferSampleName(f)
+                if sampleName not in seen:
+                    seen.add(sampleName)
+                    reduced.append(f)
+            return reduced
+
 
         res = []
         paired = set()
@@ -139,7 +153,8 @@ class IgMultiRepertoire:
             else:
                 # single file
                 res.append(os.path.abspath(folder+'/'+f))
-        return res
+
+        return distinct(res)
 
     def __beginWork(self, queue, result, jobdesc, refill=True, *args, **kwargs):
         workers = []
@@ -160,6 +175,8 @@ class IgMultiRepertoire:
             # wait for all workers to complete
             for i in xrange(self.sampleCount):
                 res = self.result.get()
+                if type(res) == tuple:
+                    raise GeneralWorkerException(res[0], res[1])
                 if refill:
                     collectedResult.append(res)
 
@@ -180,8 +197,13 @@ class IgMultiRepertoire:
                     itemsAdded += 1
 
                 assert itemsAdded == self.sampleCount
+        except GeneralWorkerException as e:
+            print("Something went horribly wrong while trying to run AbSeq!")
+            print("=== GeneralWorker error log ===")
+            print(e.errors)
+            print("=== ======================= ===")
+            raise e
         except Exception as e:
-            print("Something went wrong while trying to run AbSeq!")
             raise e
         finally:
             for w in workers:

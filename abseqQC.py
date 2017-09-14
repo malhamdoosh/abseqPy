@@ -96,6 +96,7 @@ def main():
             # input file must be a file of IGV genes
             igRepertoire.analyzeSeqLen(klass=True)
 
+        igRepertoire.finish()
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
         print("Abseq Version " + VERSION)

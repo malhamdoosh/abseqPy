@@ -36,12 +36,18 @@ class GeneralWorker(Process):
                 else:
                     getattr(job, self.jobDescription)(*self.args, **self.kwargs)
             except Exception as e:
-                print(str(job.name) + ":: An error occurred while processing " + str(self.jobDescription))
-                print("Error description: {}".format(str(e)))
+                fmtMsg = (str(job.name) + ":: An error occurred while processing " + str(self.jobDescription))
+                newE = e.message
                 if self.resultQueue is not None:
-                    self.resultQueue.put(None)
+                    self.resultQueue.put((newE, fmtMsg))
                 continue
             # job done
             if self.resultQueue is not None:
                 self.resultQueue.put(job)
         return
+
+
+class GeneralWorkerException(Exception):
+    def __init__(self, message, errors):
+        super(GeneralWorkerException, self).__init__(message)
+        self.errors = errors
