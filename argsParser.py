@@ -8,9 +8,10 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from config import VERSION
+from config import VERSION, DEFAULT_MERGER
 from numpy import Inf
 from os.path import abspath
+from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 
 def extractRanges(strRanges, expNoRanges=2):
     """
@@ -67,13 +68,14 @@ def parseArgs():
     to do any logic checking after this call.
     :return: argparse namespace object, using dot notation to retrieve value: args.value
     """
+
+
     parser, args = parseCommandLineArguments()
 
     # canonicalize all values
     args.task = args.task.lower()
     args.seqtype = args.seqtype.lower()
     args.chain = args.chain.lower()
-    args.fmt = args.fmt.lower()
     args.merger = args.merger.lower() if args.merger is not None else args.merger
 
     # check for f1, f2 file existence and expand path
@@ -86,31 +88,35 @@ def parseArgs():
     elif args.f2 is not None:
         args.f2 = abspath(args.f2)
 
-    # check logic between f1, f2 and merger, setting default merger to flash
-    if args.merger is not None and args.f2 is None:
-        raise Exception("The merger requires two sequence files (use both -f1 and -f2 option)")
-    if args.merger is None and args.f2 is not None:
-        # flash is default merger, as per help message
-        args.merger = 'flash'
+    if os.path.isfile(args.f1):
+        # detect file format (either fastq or fasta); both should be the same type
+        fmt = detectFileFormat(args.f1)
+        if args.f2 is not None and detectFileFormat(args.f2) != fmt:
+            raise Exception("Detected mismatch in file extensions --file1 and --file2!"
+                            " Both should be either FASTA or FASTQ.")
+        args.fmt = fmt
 
-    # appending analysis name to output directory filenames
-    if args.name is not None:
-        args.outdir += ("/" + args.name)
-    else:
-        f1name = args.f1.split("/")[-1]
-        if f1name.find("_R") != -1 and (args.merger is not None or args.task.lower() == "fastqc"):
-            ext = '_' + f1name.split("_")[-1]
+
+        # check logic between f1, f2 and merger, setting default merger to flash
+        if args.merger is not None and args.f2 is None:
+            parser.error("The merger requires two sequence files (use both -f1 and -f2 option)")
+        if args.merger is None and args.f2 is not None:
+            args.merger = DEFAULT_MERGER
+
+        # appending analysis name to output directory filenames
+        if args.name is not None:
+            args.outdir += ("/" + args.name)
         else:
-            ext = f1name[f1name.find("."):]
-        args.outdir += "/" + f1name.replace(ext, "")
-        sampleName = f1name.split("_")[0] + "_"
-        sampleName += f1name.split("_")[-1].split(".")[0]
-        args.name = sampleName
-    args.outdir = (abspath(args.outdir) + "/").replace("//", "/")
+            retval = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
+            args.outdir += retval[0]
+            args.name = retval[1]
+        args.outdir = (abspath(args.outdir) + "/").replace("//", "/")
 
-    # silently ignore creation of out directory if already exists
-    if not os.path.exists(args.outdir):
-        os.makedirs(args.outdir)
+        # silently ignore creation of out directory if already exists
+        if not os.path.exists(args.outdir):
+            os.makedirs(args.outdir)
+
+        args.log = args.outdir + args.name + ".log"
 
     # setting default value of bitscores if not provided, else extract the string ranges provided
     args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
@@ -122,9 +128,7 @@ def parseArgs():
     # confirm that file to sites is provided
     if args.task in ['rsa', 'rsasimple']:
         if args.sites is None:
-            print("Restriction sites should be provided if --task rsa or --task rsasimple was specified",
-                  file=sys.stderr)
-            sys.exit(0)
+            parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
         args.sites = abspath(args.sites)
 
     # provided actualqstart is converted to 0-base from 1-based index, -1 is checked later on for default value
@@ -133,9 +137,8 @@ def parseArgs():
             if args.actualqstart >= 1:
                 args.actualqstart = args.actualqstart - 1
             else:
-                print("ActualQStart parameter expects 1-based index. The provided index has an unexpected value of"
-                      " {}.".format(args.actualqstart), file=sys.stderr)
-                sys.exit(0)
+                parser.error("ActualQStart parameter expects 1-based index."
+                             " The provided index has an unexpected value of {}.".format(args.actualqstart))
         else:
             args.actualqstart = -1
 
@@ -151,7 +154,6 @@ def parseArgs():
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
     args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
-    args.log = args.outdir + args.name + ".log"
 
     return args
 
@@ -166,9 +168,12 @@ def parseCommandLineArguments():
                                        prog="AbSeq", add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    required.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1")
+    required.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1. "
+                                                                           "Alternatively, specify path to directory "
+                                                                           "if there are multiple samples to analyze")
     optional.add_argument('-f2', '--file2', dest="f2", help="Fully qualified path to sequence file 2,"
-                                                            " omit this option if sequences are not paired end",
+                                                            " omit this option if sequences are not paired end or if"
+                                                            " -f1 is a path to directory of samples",
                           default=None)
     optional.add_argument('-c', '--chain', default="hv", help="Chain type [default=hv]",
                           choices=['hv', 'lv', 'kv'])
@@ -182,15 +187,13 @@ def parseCommandLineArguments():
     optional.add_argument('-s', '--seqtype', default='dna', help="Sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
                           choices=["dna", "protein"])
-    # in parseArgs, we change None to flash by default if there's a -f2 option
     optional.add_argument('-m', '--merger', help="Choice between different mergers. Omit this if no -f2 option"
-                                                " is specified [default=flash]",
+                                                " is specified [default={}]".format(DEFAULT_MERGER),
                           default=None,
                           choices=['leehom', 'flash', 'pear'])
     optional.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
-    optional.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1/2]", default=None)
-    optional.add_argument('-f', '--format', dest="fmt", help="Format of input file [default=fastq]",
-                          default="fastq", choices=['fasta', 'fastq'])
+    optional.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1]. This option"
+                                               " is ignored when -f1 is a directory", default=None)
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                  " Bitscore range (inclusive) to apply on V gene."

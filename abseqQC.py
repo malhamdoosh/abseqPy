@@ -9,7 +9,7 @@
 
 import sys
 import os
-from IgRepertoire.IgRepertoire import IgRepertoire
+from IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 import time
 from argsParser import parseArgs
 import traceback
@@ -41,75 +41,63 @@ def main():
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     logFile = None
-    try:        
+    log = "AbSeq.log"
+    try:
         argsVals = parseArgs()
-        print("Abseq output has been logged into " + argsVals.log)
-        logFile = open(argsVals.log, 'a')
+        igRepertoire = IgMultiRepertoire(argsVals)
+        print("Abseq output has been logged into " + log)
+        logFile = open(log, 'a')
         origStdout = sys.stdout
         sys.stdout = logFile
         if (argsVals.task == 'all'):
             printFormattedTitle("Running the complete QC pipeline")
-            igRepertoire = IgRepertoire(argsVals)
-            igRepertoire.runFastqc(all=True)
+            igRepertoire.runFastqc()
             igRepertoire.annotateClones(all=True)
             igRepertoire.analyzeAbundance(all=True)
             igRepertoire.analyzeProductivity(all=True)
             igRepertoire.analyzeDiversity(all=True)
         if (argsVals.task == 'fastqc'):
             printFormattedTitle("Sequencing QC Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.runFastqc()
         elif (argsVals.task == 'annotate'):
             printFormattedTitle("Clone Identification and Classification")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.annotateClones()
         elif (argsVals.task == 'abundance'):
             printFormattedTitle("IGV Abundance and QC Plots")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeAbundance() # estimateIGVDist()
         elif (argsVals.task == 'productivity'):
             printFormattedTitle("Clone Productivity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeProductivity()
         elif (argsVals.task == 'diversity'):
             printFormattedTitle("Diversity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeDiversity()
         elif (argsVals.task == 'secretion'):
             #analyze the sequences upstream of the IGV genes
-            igRepertoire = IgRepertoire(argsVals)
+            printFormattedTitle("Secretion signal Alanysis")
             igRepertoire.analyzeSecretionSignal()
         elif (argsVals.task == '5utr'):
-            igRepertoire = IgRepertoire(argsVals)
+            printFormattedTitle("5'UTR analysis")
             igRepertoire.analyze5UTR()
         elif (argsVals.task == 'rsasimple'):
             printFormattedTitle("Simple Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSitesSimple()
         elif (argsVals.task == 'rsa'):
             printFormattedTitle("Comprehensive Restriction Sites Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzeRestrictionSites()
         elif (argsVals.task == 'primer'):
             printFormattedTitle("Primer Specificity Analysis")
-            igRepertoire = IgRepertoire(argsVals)
             igRepertoire.analyzePrimerSpecificity()
         elif (argsVals.task == 'seqlen'):
             printFormattedTitle("Sequence Length Distribution")
             # calculate the distribution of sequence lengths of a sample
-            argsVals.outdir += 'annot/'
-            os.system("mkdir " + argsVals.outdir)
-            outputFile =  argsVals.outdir + argsVals.name + '_seq_length_dist.png'
-            plotSeqLenDist(argsVals.f1, argsVals.name, outputFile, argsVals.fmt,
-                           maxbins=-1)
+            igRepertoire.analyzeSeqLen()
         elif (argsVals.task == 'seqlenclass'):
+            printFormattedTitle("Class Sequence Length Distribution")
             # calculate the distribution of sequences in different IGV families
             # input file must be a file of IGV genes
-            argsVals.o += 'annot/'
-            os.system("mkdir " + argsVals.outdir)
-            outputFile =  argsVals.outdir + argsVals.name + '_length_dist_classes.png'
-            plotSeqLenDistClasses(argsVals.f1, argsVals.name, outputFile, argsVals.fmt)
+            igRepertoire.analyzeSeqLen(klass=True)
 
+        igRepertoire.finish()
         print ("The analysis started at " + startTimeStr)
         print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
         print("Abseq Version " + VERSION)
@@ -119,7 +107,7 @@ def main():
         print '-'*60
         traceback.print_exc(file=sys.stdout)
         print '-'*60
-    finally:        
+    finally:
         if logFile is not None:
             logFile.close()
         

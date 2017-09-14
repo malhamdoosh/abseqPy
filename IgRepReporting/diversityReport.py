@@ -29,18 +29,18 @@ def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
     if (not os.path.exists(cloneFolder)):
         os.system("mkdir " + cloneFolder)
     for k in clonoTypes.keys():
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.csv" % (k, topClonotypes)) 
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.csv" % (k, topClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
           overRepresented = True)
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.csv" % (k, topClonotypes)) 
+        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.csv" % (k, topClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
           overRepresented = False)
 
-def generateSpectraTypePlots(spectraTypes,  name, outDir):
+def generateSpectraTypePlots(spectraTypes, name, outDir):
     specFolder = outDir + "spectratypes/"
     if (not os.path.exists(specFolder)):
         os.system("mkdir " + specFolder)
@@ -181,19 +181,19 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
         weights = map(lambda x: clonoType[x], seqs)
         # Generate cumulative sequence logos using Toby's approach
         #TODO: generate composition logos by IGV family
-        filename = logosFolder + name + ("_%s_cumulative_logo.png" % (region))        
+        filename = logosFolder + name + ("_%s_cumulative_logo.png" % (region))
         generateCumulativeLogo(seqs, weights, region, filename)
         # Generate sequence motif logos using weblogo                
         # generate logos without alignment
         filename = motifsFolder + name + ("_%s_motif_logo.png" % (region))
         alphabet = createAlphabet(align=False, protein=True, extendAlphabet = True)
-        m = generateMotif(seqs, region, alphabet, filename,  align = False,
-                          protein = True, weights= weights)
+        m = generateMotif(seqs, region, alphabet, filename,  align=False,
+                          protein=True, weights=weights, outDir=outDir)
         # generate  logos after alignment
         filename = motifsFolder + name + ("_%s_motif_aligned_logo.png" % (region))
-        alphabet = createAlphabet(align=True, protein=True, extendAlphabet = True)
-        m = generateMotif(seqs, region, alphabet, filename,  align = True,
-                          protein = True, weights= weights)
+        alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
+        m = generateMotif(seqs, region, alphabet, filename,  align=True,
+                          protein=True, weights=weights, outDir=outDir)
     
     
 

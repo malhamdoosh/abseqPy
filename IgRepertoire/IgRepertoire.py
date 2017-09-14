@@ -75,7 +75,10 @@ class IgRepertoire:
         self.cloneAnnot = None
         self.readFile = None
         
-    def runFastqc(self, all = False):
+    def runFastqc(self):
+        if self.format == 'fasta':
+            print("Fasta file extension detected, will not perform fastqc")
+            return
         outDir = self.outputDir + "fastqc/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -140,17 +143,18 @@ class IgRepertoire:
             if self.format == 'fastq':        
                 readFasta = fastq2fasta(self.readFile, self.outputDir)                
             elif self.format == 'fasta':
-                readFasta = self.readFile
+                # unzip the fasta file if need be
+                readFasta = gunzip(self.readFile)
             else:
                 raise Exception('unknown file format! ' + self.format)
 #             if self.trim3End > 0 or self.trim5End > 0:
 #                 trimSequences(readFasta)   
 #                 self.trimmed = True         
             sys.stdout.flush()
-            # Estimate the IGV family abundance for each library        
-            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,                                                                                                            
-                                                          self.seqType)
-            sys.stdout.flush()            
+            # Estimate the IGV family abundance for each library
+            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
+                                                          self.seqType, outdir=outDir)
+            sys.stdout.flush()
             gc.collect()
             if (len(filteredIDs) > 0):
                 writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
@@ -161,8 +165,8 @@ class IgRepertoire:
             self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')  
             writeParams(self.args, outDir)    
         print("Number of clones that are annotated is {0:,}".format(
-                                     int(self.cloneAnnot.shape[0])))      
-        if outDirFilter or all:    
+                                     int(self.cloneAnnot.shape[0])))
+        if outDirFilter or all:
             if outDirFilter is None:
                 outDirFilter = outDir
             ## Filter clones based on bitscore, alignLen and sStart
@@ -186,7 +190,7 @@ class IgRepertoire:
                              retained * 100.0 / self.cloneAnnot.shape[0],
                              retained,
                              int(self.cloneAnnot.shape[0])))
-            self.cloneAnnot = self.cloneAnnot[selectedRows]        
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
 
     def analyzeAbundance(self, all = False):    
         # Estimate the IGV family abundance for each library        
@@ -446,7 +450,18 @@ class IgRepertoire:
         self.analyzeSequences(self.name, [1, expectLength - 1], True)
         # analyze 
         
-        
+    def analyzeSeqLen(self, klass=False):
+        self.args.outdir += 'annot/'
+        if not os.path.exists(self.args.outdir):
+            os.mkdir(self.args.outdir)
+        if klass:
+            outputFile = self.args.outdir + self.args.name + '_length_dist_classes.png'
+            plotSeqLenDistClasses(self.args.f1, self.args.name, outputFile, self.args.fmt)
+        else:
+            outputFile = self.args.outdir + self.args.name + '_seq_length_dist.png'
+            plotSeqLenDist(self.args.f1, self.args.name, outputFile, self.args.fmt, maxbins=-1)
+
+
     def loadValidSequences(self, sampleName, expectLength, startCodon=True, type='secsig'):
         print("\tSequences between %d and %d are being extracted ... "
               % (expectLength[0], expectLength[1]))

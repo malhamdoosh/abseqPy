@@ -5,7 +5,6 @@
     Changes log: check git commits. 
 ''' 
 
-import numpy as np
 from os.path import exists
 import os
 import sys
@@ -16,15 +15,55 @@ from Bio.SeqRecord import SeqRecord
 from config import CLUSTALOMEGA, MEM_GB
 from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
-from collections import Counter
+from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
-from argsParser import PROGRAM_VALID_ARGS
 from config import VERSION
 import gzip
 import shutil
 
+def detectFileFormat(fname, noRaise=False):
+    """
+    detects if the filename ends with fastq or fasta extensions (it can be zipped)
+    :param fname: filename for which the extension should be identified (fname can be zipped)
+    :return: "fastq" or "fasta" or None depending on the extensions
+    """
+    class FileFormatNotSupported(Exception):
+        def __init__(self, value):
+            self.value = value
+
+        def __str__(self):
+            return repr(self.value)
+    if ".fastq" in fname or ".fq" in fname:
+        return "fastq"
+    if ".fasta" in fname or ".fa" in fname:
+        return "fasta"
+    if not noRaise:
+        raise FileFormatNotSupported("Only FASTQ or FASTA (.fastq, .fq, .fasta, .fa) extensions are supported")
+    return None
+
+def inferSampleName(fname, merger, fastqc):
+    """
+    infers the sample name from a given file.
+    EG: SRR1002_R1.fastq.gz => SRR1002
+        Sample1_R1.fastq.gz => Sample1
+        Sample1.fastq.gz    => Sample1
+    :param fname: filename to infer
+    :return: 2-tuple of (args.outdir, args.name)
+    """
+    f1name = fname.split("/")[-1]
+    # read is paired end ==> remove everything after _R1.fast*...
+    if f1name.find("_R") != -1 and (merger or fastqc):
+        ext = '_' + f1name.split("_")[-1]
+    else:
+        ext = f1name[f1name.find("."):]
+
+    outdir = "/" + f1name.replace(ext, "")
+    f1name = f1name.replace(ext, "")
+    sampleName = f1name.split("_")[0] + "_"
+    sampleName += f1name.split("_")[-1].split(".")[0]
+    return outdir, sampleName
 
 # U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)
 def safeOpen(filename, mode="rU"):
@@ -102,12 +141,15 @@ for the best matched germline hit.
 
 IMGT classification system is used to delineate the V domain 
 '''
-def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA"):
+def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA", outputDir=""):
     # Run igblast on a fasta file
     #TODO: update $IGDATA for auxiliary_data to correct path  
-    #TODO: change organism to be fed through parameters 
-      
-    blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+    #TODO: change organism to be fed through parameters
+    if outputDir:
+        head, tail = os.path.split(blastInput)
+        blastOutput = outputDir + tail.replace('.' + tail.split('.')[-1], '.out')
+    else:
+        blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
     if (exists(blastOutput)):
         print("\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput 
@@ -132,17 +174,17 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA
                    )
     else:
         print('ERROR: unsupported chain type.')     
-        sys.exit()   
-        
+        sys.exit()
+
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
 '''
 IMGT classification system is used to delineate the V domain 
 '''
-def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
+def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB', outputDir=""):
     # Run igblast on a fasta file        
-    blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+    blastOutput = outputDir + blastInput.replace('.' + blastInput.split('.')[-1], '.out')
     if (exists(blastOutput)):
         print("\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput 
@@ -173,21 +215,28 @@ def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB'):
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
+
 def writeClonoTypesToFile(clonoTypes, filename, top = 100, overRepresented=True):
     if exists(filename):
         print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
         return
-    with open(filename, 'w') as out:
-        out.write('Clonotype,Count,Percentage (%)\n')
-        total = sum(clonoTypes.values()) * 1.0
-        t = 1
-        for k in sorted(clonoTypes, key = clonoTypes.get, reverse = overRepresented):
-            out.write(str(k) + ',' + `clonoTypes[k]` + ',' + 
-                      ('%.2f' % (clonoTypes[k] / total * 100)) + '\n' )
-            t += 1
-            if (t > top):
-                break
-        #out.write('TOTAL,' + `total` + ",100")
+
+    total = sum(clonoTypes.values()) * 1.0
+    dic = defaultdict(list)
+    t = 0
+    for k in sorted(clonoTypes, key=clonoTypes.get, reverse=overRepresented):
+        dic['Clonotype'].append(str(k))
+        dic['Count'].append(clonoTypes[k])
+        dic['Percentage (%)'].append(clonoTypes[k] / total * 100)
+        t += 1
+        if (t > top):
+            break
+
+    df = DataFrame(dic)
+    # fixed format (fast read/write) sacrificing search
+    # (should change to table format(t) if search is needed for clonotype clustering/comparison)
+    # df.to_hdf(filename, "clonotype", mode="w", format="f")
+    df.to_csv(filename + ".gz", mode="w", compression="gzip")
     print("\tA clonotype file has been written to " + filename.split("/")[-1])
 
 def writeCountsToFile(dist, filename):
@@ -448,10 +497,10 @@ def compressCountsFamilyLevel(countsDict):
 '''
     perform multiple sequence alignment using CLUSTAL
 '''
-def alignListOfSeqs(signals):
+def alignListOfSeqs(signals, outDir):
     L = map(len, signals)
     print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
-    tempSeq = "csl_temp_seq.fasta"
+    tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
@@ -465,7 +514,7 @@ def alignListOfSeqs(signals):
     alignedSeq = []
     for rec in alignment:
         alignedSeq.append(str(rec.seq))
-    os.system("rm %s %s " % (tempSeq, tempAlign) )
+    os.system("rm %s %s " % (tempSeq, tempAlign))
     return alignedSeq
 
 
