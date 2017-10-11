@@ -28,13 +28,20 @@ def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
     cloneFolder = outDir + "clonotypes/"
     if (not os.path.exists(cloneFolder)):
         os.system("mkdir " + cloneFolder)
+
     for k in clonoTypes.keys():
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_over.csv" % (k, topClonotypes))
+        # check if the required topClonotypes went overboard, if so, cap to the max length
+        if len(clonoTypes[k]) < topClonotypes:
+            stringTopClonotypes = str(len(clonoTypes[k]))
+        else:
+            stringTopClonotypes = 'all' if topClonotypes == float('inf') else str(topClonotypes)
+
+        filename = cloneFolder + name + ("_%s_clonotypes_%s_over.csv" % (k, stringTopClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
           overRepresented = True)
-        filename = cloneFolder + name + ("_%s_clonotypes_%d_under.csv" % (k, topClonotypes))
+        filename = cloneFolder + name + ("_%s_clonotypes_%s_under.csv" % (k, stringTopClonotypes))
         writeClonoTypesToFile(clonoTypes[k], 
           filename, 
           topClonotypes,
