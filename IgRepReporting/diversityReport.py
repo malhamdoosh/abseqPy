@@ -31,7 +31,7 @@ def writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes = 100):
 
     for k in clonoTypes.keys():
         # check if the required topClonotypes went overboard, if so, cap to the max length
-        if len(clonoTypes[k]) < topClonotypes:
+        if topClonotypes != float('inf') and len(clonoTypes[k]) < topClonotypes:
             stringTopClonotypes = str(len(clonoTypes[k]))
         else:
             stringTopClonotypes = 'all' if topClonotypes == float('inf') else str(topClonotypes)
