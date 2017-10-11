@@ -46,6 +46,7 @@ class IgRepertoire:
         self.primer = args.primer
         self.db = args.database
         self.bitScore = args.bitscore
+        self.clonelimit = args.clonelimit
         self.alignLen = args.alignlen
         self.sStart = args.sstart
         self.seqType = args.seqtype
@@ -290,7 +291,7 @@ class IgRepertoire:
         clonoTypes = annotateClonotypes(self.cloneSeqs)              
         #### HERE       
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
-                                100)
+                                self.clonelimit)
         
         writeParams(self.args, outDir)
        
