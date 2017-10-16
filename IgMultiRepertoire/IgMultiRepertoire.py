@@ -72,7 +72,7 @@ class IgMultiRepertoire:
         self.__beginWork(self.queue, self.result, GeneralWorker.RSA)
 
     def analyzePrimerSpecificity(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.PROD)
+        self.__beginWork(self.queue, self.result, GeneralWorker.PRIM)
 
     def analyze5UTR(self):
         self.__beginWork(self.queue, self.result, GeneralWorker.UTR5)

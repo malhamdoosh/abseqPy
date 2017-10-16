@@ -8,7 +8,7 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from config import VERSION, DEFAULT_MERGER
+from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from numpy import Inf
 from os.path import abspath
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
@@ -118,6 +118,13 @@ def parseArgs():
 
         args.log = args.outdir + args.name + ".log"
 
+    if args.clonelimit is None:
+        args.clonelimit = DEFAULT_TOP_CLONE_VALUE
+    elif args.clonelimit.lower() == 'inf':
+        args.clonelimit = float('inf')
+    else:
+        args.clonelimit = int(args.clonelimit)
+
     # setting default value of bitscores if not provided, else extract the string ranges provided
     args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
 
@@ -194,6 +201,11 @@ def parseCommandLineArguments():
     optional.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
     optional.add_argument('-n', '--name', help="Name of analysis [default = name of Sequence file 1]. This option"
                                                " is ignored when -f1 is a directory", default=None)
+    optional.add_argument('-cl', '--clonelimit', help="Outputs an intermediate file (top N overly expressed clones, "
+                                                      "top N under expressed clones) in "
+                                                     "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
+                                                     " a number or inf to retain all clones [default=100]",
+                          default=None)
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                  " Bitscore range (inclusive) to apply on V gene."

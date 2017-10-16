@@ -18,6 +18,7 @@ CLUSTALOMEGA = 'clustal-omega'
 WEBLOGO = 'weblogo'
 FASTQC = 'fastqc'
 DEFAULT_MERGER = 'flash'
+DEFAULT_TOP_CLONE_VALUE = 100
 
 # consensus protein of HV http://discovery.ucl.ac.uk/15808/1/15808.pdf
 FR4_CONSENSUS = {'hv':"WGQGTXVTVSS", 'kv':'FGGGTQ', 'lv':'FGGGTQ'}

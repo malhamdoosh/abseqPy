@@ -229,7 +229,7 @@ def writeClonoTypesToFile(clonoTypes, filename, top = 100, overRepresented=True)
         dic['Count'].append(clonoTypes[k])
         dic['Percentage (%)'].append(clonoTypes[k] / total * 100)
         t += 1
-        if (t > top):
+        if (t >= top):
             break
 
     df = DataFrame(dic)
