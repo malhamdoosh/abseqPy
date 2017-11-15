@@ -9,17 +9,11 @@ from collections import Counter
 
 def _process_hdf(sample_name, fname, outdir=""):
     df = pd.read_hdf(fname)
-    vjframe = Counter(df['v-jframe'].tolist())
-    stopcod = Counter(df['stopcodon'].tolist())
     stopcod_inframe = len(df[(df['v-jframe'] == 'In-frame') & (df['stopcodon'] == 'Yes')])
     outframe_nostop = len(df[(df['v-jframe'] == 'Out-of-frame') & (df['stopcodon'] == 'No')])
     both = len(df[(df['v-jframe'] == 'Out-of-frame') & (df['stopcodon'] == 'Yes')])
     prod_reads = len(df[(df['v-jframe'] == 'In-frame') & (df['stopcodon'] == 'No')])
 
-    # percentage calculated from total of Out-Of-Frame + In-frame
-    frame_sample_total = sum(vjframe.values())
-    # percentage calculated from total of stopcodon + no stop codon
-    cod_sample_total = sum(stopcod.values())
     # percentage calculated from total sample size
     total_size = len(df)
 

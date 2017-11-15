@@ -10,9 +10,9 @@ library(ggrepel)
 
 productivty_plot <- function(sample_name1, sample_name2, sample_name3, dir1, dir2, dir3, path_to_clone) {
 
-    file1 <- paste(dir1, path_to_clone, sample_name1, "_productivity2.csv", sep="")
-    file2 <- paste(dir2, path_to_clone, sample_name2, "_productivity2.csv", sep="")
-    file3 <- paste(dir3, path_to_clone, sample_name3, "_productivity2.csv", sep="")
+    file1 <- paste(dir1, path_to_clone, sample_name1, "_productivity.csv", sep="")
+    file2 <- paste(dir2, path_to_clone, sample_name2, "_productivity.csv", sep="")
+    file3 <- paste(dir3, path_to_clone, sample_name3, "_productivity.csv", sep="")
 
     df1 <- read.csv(file1)
     df2 <- read.csv(file2)
