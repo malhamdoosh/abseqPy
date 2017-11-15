@@ -74,7 +74,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     if (type("") == type(counts)):
         with IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
-        weights = [1] * len(sizes)
+        count = Counter(sizes)
+        sizes = count.keys()
+        weights = count.values()
     elif type(counts) == type([]):        
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
