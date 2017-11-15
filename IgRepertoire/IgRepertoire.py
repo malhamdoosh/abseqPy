@@ -27,7 +27,7 @@ from pandas.io.pytables import read_hdf
 from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from IgRepReporting.abundanceReport import writeAbundanceToFiles
 from IgRepReporting.productivityReport import generateProductivityReport
-from IgRepReporting.diversityReport import generateDiversityReport
+from IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
 from IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes,\
     annotateClonotypes
 from igRepUtils import writeParams
@@ -149,7 +149,7 @@ class IgRepertoire:
             else:
                 raise Exception('unknown file format! ' + self.format)
 #             if self.trim3End > 0 or self.trim5End > 0:
-#                 trimSequences(readFasta)   
+#                 trimSequences(readFasta)
 #                 self.trimmed = True         
             sys.stdout.flush()
             # Estimate the IGV family abundance for each library
@@ -292,7 +292,7 @@ class IgRepertoire:
         #### HERE       
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
                                 self.clonelimit)
-        
+        writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
         writeParams(self.args, outDir)
        
     def analyzeRestrictionSitesSimple(self):

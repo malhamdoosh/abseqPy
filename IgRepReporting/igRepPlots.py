@@ -74,7 +74,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     if (type("") == type(counts)):
         with IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
-        weights = [1] * len(sizes)
+        count = Counter(sizes)
+        sizes = count.keys()
+        weights = count.values()
     elif type(counts) == type([]):        
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
@@ -83,7 +85,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         weights = map(lambda x: counts[x], sizes)
     if removeOutliers:
         sizes, weights = excludeOutliers(sizes, weights)
-    bins = max(sizes) - min(sizes) 
+    bins = max(sizes) - min(sizes)
     if bins > maxbins:
         bins = bins / 2
     if maxbins == -1:
@@ -100,6 +102,8 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         histcals, bins, patches = ax.hist(sizes, bins=bins, range=autoscale, 
                                 normed=normed, weights = weights,
                            histtype=histtype)
+        # write to intermediate csv file too
+        IgRepertoire.igRepUtils.writeHistCSV(sizes, weights, outputFile.replace(".png", ".csv"))
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
             if sigma == 0:

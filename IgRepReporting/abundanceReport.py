@@ -5,7 +5,7 @@
     Changes log: check git commits. 
 ''' 
 
-from collections import Counter
+from collections import Counter, defaultdict
 from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap
 from IgRepertoire.igRepUtils import writeCountsToFile, compressCountsGeneLevel,\
     compressCountsFamilyLevel
@@ -132,12 +132,32 @@ def writeDAbundanceToFiles(stats, sampleName, outDir):
              title = 'IGD Abundance in Sample ' + sampleName)
 
 
+def writeVJAssociationToFiles(stats, sampleName, outDir):
+    def canonicalFamilyName(v, j):
+        vgene, jgene = str(v), str(j)
+        if len(vgene) < 5 or len(jgene) < 5:
+            return None, None
+        return vgene.split("-")[0].split("/")[0].rstrip("D"), jgene.split("*")[0]
+
+    tally = defaultdict(lambda: defaultdict(int))
+    for v, j in zip(stats['vgene'], stats['jgene']):
+        vFamily, jFamily = canonicalFamilyName(v, j)
+        if vFamily is None:     # jFamily is implicitly None too
+            continue
+        tally[vFamily][jFamily] += 1
+
+    with open(outDir + sampleName + "_vjassoc.csv", "w") as fp:
+        header = ["from", "to", "value"]
+        fp.write(",".join(header))
+        fp.write("\n")
+        for vgene, dic in tally.items():
+            for jgene, value in dic.items():
+                fp.write("{},{},{}\n".format(vgene, jgene, value))
+
+
 def writeAbundanceToFiles(stats, sampleName, outDir, chain = "hv"):
-        writeVAbundanceToFiles(stats, sampleName, outDir)
-        writeJAbundanceToFiles(stats, sampleName, outDir)
-        if (chain == "hv"):
-            writeDAbundanceToFiles(stats, sampleName, outDir)
-            
-            
-            
-            
+    writeVAbundanceToFiles(stats, sampleName, outDir)
+    writeJAbundanceToFiles(stats, sampleName, outDir)
+    writeVJAssociationToFiles(stats, sampleName, outDir)
+    if (chain == "hv"):
+        writeDAbundanceToFiles(stats, sampleName, outDir)

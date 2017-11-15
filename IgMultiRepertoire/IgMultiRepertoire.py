@@ -96,6 +96,10 @@ class IgMultiRepertoire:
             self.queue.get()
         while not self.result.empty():
             self.result.get()
+        self.queue.close()
+        self.queue.join_thread()
+        self.result.close()
+        self.result.join_thread()
 
     def __pairFiles(self, folder, args):
         """

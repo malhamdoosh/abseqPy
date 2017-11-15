@@ -10,6 +10,7 @@ from IgRepReporting.igRepPlots import plotDist
 from IgRepertoire.igRepUtils import compressCountsFamilyLevel
 from numpy import isnan
 import gc
+import pandas as pd
 
 
 def generateProductivityReport(cloneAnnot, name, chain, outputDir):
@@ -21,10 +22,43 @@ def generateProductivityReport(cloneAnnot, name, chain, outputDir):
               title='IGV Abundance of Productive Clones',
              proportion=True)
     del productiveFamilyDist
+    writeProdStats(cloneAnnot, name, outputDir)
     writeCDRStats(productive, name, outputDir, suffix = 'productive')
     writeFRStats(productive, name, outputDir, suffix = 'productive')
     writeGeneStats(productive, name, chain, outputDir, suffix = 'productive')
-    
+
+
+def writeProdStats(cloneAnnot, sampleName, outdir):
+    """
+    writes the statistics of un-productiveness vs productiveness.Gives the number of productive clones
+    vs unproductive clones with "reason" for being unproductive - i.e. out-of-frame/stopcodon/both
+    :param cloneAnnot: refined_clones_annot.h5's dataframe object
+    :param sampleName: name of this sample being analysed
+    :param outdir: output directory
+    :return: None. Produces a csv file in outdir
+    """
+    stopcod_inframe = len(cloneAnnot[(cloneAnnot['v-jframe'] == 'In-frame') & (cloneAnnot['stopcodon'] == 'Yes')])
+    outframe_nostop = len(cloneAnnot[(cloneAnnot['v-jframe'] == 'Out-of-frame') & (cloneAnnot['stopcodon'] == 'No')])
+    both = len(cloneAnnot[(cloneAnnot['v-jframe'] == 'Out-of-frame') & (cloneAnnot['stopcodon'] == 'Yes')])
+    prod_reads = len(cloneAnnot[(cloneAnnot['v-jframe'] == 'In-frame') & (cloneAnnot['stopcodon'] == 'No')])
+
+    # percentage calculated from total sample size
+    total_size = len(cloneAnnot)
+
+    res = {
+        'Productivity': ["Productive", "Unproductive", "Unproductive",  "Unproductive"],
+        'Reason': ["-", "Stopcodon", "Out-of-Frame", "Both"],
+        'Percentage': [100*float(prod_reads)/total_size,
+                       100*float(stopcod_inframe)/total_size,
+                       100*float(outframe_nostop)/total_size,
+                       100*float(both)/total_size
+                       ],
+        'Count': [prod_reads, stopcod_inframe, outframe_nostop, both]
+    }
+
+    df = pd.DataFrame.from_dict(res)
+    df.to_csv(outdir + sampleName + "_productivity.csv")
+
 def writeGeneStats(cloneAnnot, name, chain, outputDir, suffix):
     # V gene stats
     gaps = Counter(cloneAnnot['vgaps'].tolist())
