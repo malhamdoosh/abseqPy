@@ -11,6 +11,7 @@ from IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction,\
     plotSeqRecapture, plotSeqRecaptureNew
 import os
+import gzip
 from IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
 from collections import Counter
 
@@ -201,6 +202,42 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType = "protein"):
         alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
         m = generateMotif(seqs, region, alphabet, filename,  align=True,
                           protein=True, weights=weights, outDir=outDir)
+
+
+def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir):
+    """
+    For a given set of similar CDR3 clonotypes, it may be classified as a different clonotype if the entire V region
+    is considered. This writes the unique counts of other region aside form CDR3s to see if the clonotype will differ
+    if the entire V region is considered. Consequently, it's possible to learn which region is (mostly)
+    the one responsible of changing the clonotype if it was included.
+    :param clonoTypes: DataFrame of clonotypes per read. Requires the CDRs and FRs columns
+    :param sampleName: Sample name for output file
+    :param outDir: Out directory for output file
+    :return: None. Produces an output gzipped csv file
+    """
+    # regions of analysis
+    cols = ["cdr1", "cdr2", "fr1", "fr2", "fr3", "fr4"]
+
+    def regionCounts(selectedRows):
+        """ returns a list of numbers that corresponds to the frequency of *UNIQUE* "CDR1", "CDR2", .. "FR4"
+        (in the order of cols as defined above)
+        :param selectedRows: this "DataFrame" of rows should have the same CDR3 region
+        :return: a list of numbers, each representing the number of unique region in the order of
+        COLS as defined above
+        """
+        return [str(len(set(selectedRows[region].tolist()))) for region in cols]
+
+    # obtain all CDR3s
+    cdr3s = set(clonoTypes['cdr3'].tolist())
+
+    with gzip.open(outDir + sampleName + "_clonotype_diversity_region_analysis.csv.gz", "wb") as fp:
+        # write csv header
+        fp.write("cdr3,count," + ','.join(cols) + "\n")
+
+        # for each unique CDR3, find all rows(reads) that have the same CDR3
+        for cdr3 in cdr3s:
+            rows = clonoTypes[clonoTypes['cdr3'] == cdr3]
+            fp.write(cdr3 + "," + str(len(rows)) + "," + ','.join(regionCounts(rows)) + '\n')
     
     
 
