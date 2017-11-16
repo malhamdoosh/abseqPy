@@ -23,7 +23,10 @@
 
 ### Wiki
 <!-- TODO -->
+
+
 There will be more information on contribution guidelines in the [wikipage](link wiki here).
+
 * Writing tests
 * Code review
 * Other guidelines
@@ -37,6 +40,7 @@ There will be more information on contribution guidelines in the [wikipage](link
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
 installed and ready to go. You will require a python 2.7 on your system with the following
 python libraries installed (any versions will do):
+
 1. [pandas](http://pandas.pydata.org/)
 2. [BioPython](http://biopython.org/)
 
@@ -45,7 +49,7 @@ python libraries installed (any versions will do):
 ## Dependencies
 AbSeq requires a few external packages available in your system, namely:
 
-> Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). <br> Pay special
+> Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). Pay special
 attention to the versions - these versions are used during the development and testing process of AbSeq.
 
 
@@ -64,13 +68,13 @@ attention to the versions - these versions are used during the development and t
     - Make sure to follow **_every_** step detailed in the guide
     - **_Important_** Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
      See [here](#exporting-environment-variables)
-* [leeHom](https://github.com/grenaud/leeHom)
+* [leeHom](https://github.com/grenaud/leeHom) any version
     - Follow the installation guide in their README
 * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0
     - Click on "Download the package", extract the tarball
     - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
     - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
-* [adefazio/sampler](https://github.com/adefazio/sampler)
+* [adefazio/sampler](https://github.com/adefazio/sampler) any version
     - Download and compile the sources.
     - Copy the shared object file into python's `lib/python2.7/site-packages/` directory
 * [WebLogo](https://github.com/WebLogo/weblogo/releases/tag/3.4.1) v3.4.1
@@ -137,12 +141,17 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 Let `/Users/john/sequences/` be a directory as such:
 ```bash
 $ ls /Users/john/sequences/
-SRR1_BZ123_CAGGG-GGACT_L001.fasta.gz SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz 
+SRR1_BZ123_CAGGG-GGACT_L001.fasta.gz
+SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz
+SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz 
 ```
 
 Then running AbSeq:
 ```bash
-$ abseq -f1 /Users/john/sequences/ -t all -o results -m leehom -q 4 -cl inf -ss 1.0-3.0 -b 350 -al 260 > SRR.log 2>&1
+$ abseq -f1 /Users/john/sequences/ -t all \
+    -o results -m leehom -q 4 \
+    -cl inf -ss 1.0-3.0 \
+    -b 350 -al 260 > SRR.log 2>&1
 ```
 will produce analysis for `SRR1_L001` in `results/SRR1_BZ123_CAGGG-GGACT_L001/` and 
 `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
@@ -155,7 +164,8 @@ Typically, all that you need is just `AbSeq.log`.
 #### Just one
 Running AbSeq on just one sample:
 ```bash
-$ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz -f2 SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz \
+$ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
+        -f2 SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz \
         -t all -o results -m leehom -q 4  \
         -cl inf -ss 1.0-3.0 -b 350 -al 260 > SRR2.log 2>&1
 ```
