@@ -17,7 +17,7 @@ class IgMultiRepertoire:
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
-            avgResource = int(floor(self.resource/self.sampleCount))
+            avgResource = int(floor(self.resource / self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
             for sample in clusterFiles:
                 modifiedArgs = deepcopy(args)
@@ -32,7 +32,8 @@ class IgMultiRepertoire:
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
                     if f1Fmt != detectFileFormat(modifiedArgs.f2):
                         raise Exception("Detected mismatch in file extensions {} and {}!"
-                                        " Both should be either FASTA or FASTQ.".format(modifiedArgs.f1, modifiedArgs.f2))
+                                        " Both should be either FASTA or FASTQ.".format(modifiedArgs.f1,
+                                                                                        modifiedArgs.f2))
                     modifiedArgs.fmt = f1Fmt
                 else:
                     # single ended
@@ -54,7 +55,7 @@ class IgMultiRepertoire:
             self.queue.put(IgRepertoire(args))
 
     def analyzeAbundance(self, all=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.ABUN,  all=all)
+        self.__beginWork(self.queue, self.result, GeneralWorker.ABUN, all=all)
 
     def runFastqc(self):
         self.__beginWork(self.queue, self.result, GeneralWorker.FASTQC)
@@ -154,11 +155,11 @@ class IgMultiRepertoire:
                 partner = findPartner(f)
                 if partner is None:
                     raise Exception("Failed to find opposite read for file {}".format(f))
-                res.append(reorderRead(os.path.abspath(folder+"/"+f), os.path.abspath(folder+"/"+partner)))
+                res.append(reorderRead(os.path.abspath(folder + "/" + f), os.path.abspath(folder + "/" + partner)))
                 paired.add(partner)
             else:
                 # single file
-                res.append(os.path.abspath(folder+'/'+f))
+                res.append(os.path.abspath(folder + '/' + f))
 
         return distinct(res)
 
@@ -182,7 +183,9 @@ class IgMultiRepertoire:
             for i in xrange(self.sampleCount):
                 res = self.result.get()
                 if type(res) == tuple:
-                    raise GeneralWorkerException(res[0], res[1])
+                    # XXX: encountered an exception! - here, decide to raise it immediately.
+                    # all accompanying processes will halt immediately due to this raise.
+                    raise GeneralWorkerException(*res)
                 if refill:
                     collectedResult.append(res)
 
@@ -197,18 +200,21 @@ class IgMultiRepertoire:
                     res = self.queue.get()
                     assert res is None
 
-                itemsAdded = 0      # sanity check
+                itemsAdded = 0  # sanity check
                 for i in collectedResult:
                     self.queue.put(i)
                     itemsAdded += 1
 
                 assert itemsAdded == self.sampleCount
         except GeneralWorkerException as e:
-            print("Something went horribly wrong while trying to run AbSeq!")
-            print("=== GeneralWorker error log ===")
-            print(e.errors)
-            print("=== ======================= ===")
+            print("\n\nSomething went horribly wrong while trying to run AbSeq!")
+            print("GeneralWorker stacktrace:")
+            print("-" * 120)
+            print(e.tracebackMsg)
+            print("-" * 120)
+            # re-raise exception
             raise e
+        # catch-all exception
         except Exception as e:
             raise e
         finally:
@@ -218,4 +224,3 @@ class IgMultiRepertoire:
     def __fillPoisonPill(self, n, queue, pill=None):
         for _ in range(n):
             queue.put(pill)
-
