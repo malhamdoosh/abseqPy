@@ -39,7 +39,7 @@ There will be more information on contribution guidelines in the [wikipage](link
 ### Installation and configuration
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
 installed and ready to go. You will require a python 2.7 on your system with the following
-python libraries installed (any versions will do):
+python libraries installed (any version will do):
 
 1. [pandas](http://pandas.pydata.org/)
 2. [BioPython](http://biopython.org/)
