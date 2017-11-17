@@ -760,10 +760,8 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
         f = gzip.open(filename + ('' if '.gz' in filename else ".gz"), "wb")
     else:
         f = open(filename, "w")
-    try:
-        f.write(metadata)
-        f.write(header + ("\n" if "\n" not in header else ""))
-        for arg in vals:
-            f.write(template.format(*arg))
-    finally:
-        f.close()
+    f.write(metadata)
+    f.write(header + ("\n" if "\n" not in header else ""))
+    for arg in vals:
+        f.write(template.format(*arg))
+    f.close()
