@@ -279,6 +279,13 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
     Assumption 4: Animals do not lose their marks. 
 '''
 
+"""
+XXX: Note to whoever is using this function - there will be NO R plot for this function
+     because at the time of writing it, this function is NOT used anywhere in AbSeq.
+     If you desire this plot to output the csv file for plotting in R, see plotSeqRecaptureNew's
+     body. It should be trivially easy to translate the code here.
+"""
+
 
 def plotSeqRecapture(seqs, labels, filename, weights=None, title=''):
     if (exists(filename)):
