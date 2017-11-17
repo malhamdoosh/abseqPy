@@ -23,23 +23,6 @@ from config import VERSION
 import gzip
 import shutil
 
-def writeHistCSV(sizes, weights, filename):
-    """
-    writes to a csv file when given lengths (sizes) and counts(weights)
-    :param sizes: lengths
-    :param weights: frequency (count)
-    :param filename: filename to save to
-    :return: None. Produces a csv file in filename
-    """
-    if not filename.endswith(".csv"):
-        filename += ".csv"
-    with open(filename, "w") as fp:
-        fp.write("length,count\n")
-        assert len(sizes) == len(weights)
-        for k, v in zip(sizes, weights):
-            fp.write("{},{}\n".format(k, v))
-
-
 def detectFileFormat(fname, noRaise=False):
     """
     detects if the filename ends with fastq or fasta extensions (it can be zipped)
