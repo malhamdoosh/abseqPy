@@ -344,6 +344,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
     ax.set_xlabel('Sample size')
     ax.set_ylabel('Percent Recapture')
     ax.set_title(title)
+    csvData = []
     for setSeqs, l in zip(seqs, labels):
         total = 35000
         ticks = np.linspace(100, total, 50).astype(int)
@@ -359,10 +360,11 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
                 s2 = set(np.random.choice(setSeqs, j))
                 inter = s2.intersection(s1)
                 hs.append(len(inter) * 100.0 / len(s2))
-            pt.append((j, mean(hs)))
+            pt.append((j, hs))
         # pt.append((len(setSeqs), len(set(setSeqs))))
-        # calculate the mean across 5 samples 
-        ax.plot([d[0] for d in pt], [d[1] for d in pt], label=l)
+        # calculate the mean across 5 samples
+        csvData.extend([(x, y, l) for x, ys in pt for y in ys])
+        ax.plot([d[0] for d in pt], [mean(d[1]) for d in pt], label=l)
     ax.legend(loc="upper left")
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks)
@@ -370,6 +372,8 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks, rotation=90)
     plt.subplots_adjust(bottom=0.21)
+    writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
+             metadata="c(" + str(xticks).strip('[]') + ")\n")
     fig.savefig(filename, dpi=300)
     plt.close()
 
