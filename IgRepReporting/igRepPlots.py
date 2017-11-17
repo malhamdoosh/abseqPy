@@ -14,6 +14,7 @@ from matplotlib import cm
 import IgRepertoire.igRepUtils
 from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast, \
     WeightedPopulation
+import gzip
 import sys
 
 mpl.use('Agg')  # Agg
@@ -221,6 +222,7 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
     ax.set_xlabel('Sample size')
     ax.set_ylabel('Number of Deduplicated Sequences')
     ax.set_title(title)
+    csvData = []
     for setSeqs, l, w in zip(seqs, labels, weights):
         if w is not None:
             total = sum(w)
@@ -250,7 +252,8 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
             # End: very slow
             pt.append((j, hs))
         # pt.append((len(setSeqs), len(set(setSeqs))))
-        # calculate the mean across 5 samples 
+        # calculate the mean across 5 samples
+        csvData.extend([(x, y, l) for x, ys in pt for y in ys])
         ax.plot([d[0] for d in pt], [mean(d[1]) * 1.0 for d in pt], label=l)
     ax.legend(loc="upper left")
     xticks = np.linspace(0, total, 15).astype(int)
@@ -260,6 +263,8 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
     ax.set_xticklabels(xticks, rotation=90)
     plt.subplots_adjust(bottom=0.21)
     fig.savefig(filename, dpi=300)
+    writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
+             metadata="c(" + str(xticks).strip('[]') + ")\n")
     plt.close()
     # sys.exit()
 
@@ -741,7 +746,7 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     :return: None. Outputs a CSV file
     """
     if zip:
-        f = gzip.open(filename, "wb")
+        f = gzip.open(filename + ('' if '.gz' in filename else ".gz"), "wb")
     else:
         f = open(filename, "w")
     try:
