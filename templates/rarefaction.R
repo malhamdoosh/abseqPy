@@ -87,9 +87,9 @@ df.2$sample <- rep(sample_name2, nrow(df.2))
 df.3$sample <- rep(sample_name3, nrow(df.3))
 
 # uncomment to get CDR3 and V region only (by default, all CDR regions)
-# df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
-# df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
-# df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
+df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
+df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
+df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
 
 # get mean, sd, se, and ci
 df.1.m <- summarySE(df.1, measurevar='y', groupvars = c("x", "region", "sample"))

@@ -87,9 +87,9 @@ df.2$sample <- rep(sample_name2, nrow(df.2))
 df.3$sample <- rep(sample_name3, nrow(df.3))
 
 # uncomment to get CDR3 and V region only (by default, all CDR regions)
-# df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
-# df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
-# df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
+df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
+df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
+df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
 
 # get mean, sd, se, and ci
 df.1.m <- summarySE(df.1, measurevar='y', groupvars = c("x", "region", "sample"))
@@ -100,7 +100,7 @@ df.3.m <- summarySE(df.3, measurevar='y', groupvars = c("x", "region", "sample")
 df.al <- rbind(df.1.m, df.2.m)
 df.all <- rbind(df.al, df.3.m)
  
-p <- ggplot(df.3.m, aes(x=x, y=y)) +
+p <- ggplot(df.all, aes(x=x, y=y)) +
   geom_line(aes(linetype=region, color=sample)) +
   scale_x_continuous(breaks=xticks) +
   geom_ribbon(aes(ymin=y-ci, ymax=y+ci, fill=region), alpha=0.2) +
