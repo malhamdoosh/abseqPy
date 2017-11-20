@@ -54,10 +54,14 @@ plotDist <- function(dataframes, sampleNames, gene, title="family") {
   
   
   # merge dataframes into one
-  df.union <- rbind(dataframes[[1]], dataframes[[2]])
-  for (i in 3:frames) {
-    df <- dataframes[[i]]
-    df.union <- rbind(df.union, df)
+  if (frames > 1) {
+    df.union <- rbind(dataframes[[1]], dataframes[[2]])
+    for (i in 3:frames) {
+      df <- dataframes[[i]]
+      df.union <- rbind(df.union, df)
+    }
+  } else {
+    df.union <- dataframes[[1]]
   }
   
   g <- ggplot(df.union, aes(Germline.group, Percentage....)) +
