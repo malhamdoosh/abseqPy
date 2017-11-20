@@ -1,6 +1,11 @@
 library(ggplot2)
 
 plotSpectratype <- function(dataframes, sampleNames, region = "CDR3") {
+  # Plots an amino acid spectratype diagram for a given region.
+  # Args:
+  #     dataframes: A list() type. List of dataframes.
+  #     sampleNames: A vector type. Vectors of strings each representing the samplename
+  #     region: String that will be displayed in the plot title. This specifies which region this spectratype belongs to
   nsample <- length(dataframes)
   stopifnot(nsample == length(sampleNames))
   
