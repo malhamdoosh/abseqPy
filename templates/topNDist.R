@@ -1,4 +1,11 @@
 topNDist <- function(dataframes, sampleNames, top = 10) {
+  # Plots a histogram of top N clonotypes
+  # Args:
+  #      dataframes: A list() type. List of dataframes.
+  #      sampleNames: A vector type. vector of strings representing sample names
+  #                   (should have one-to-one correspondence with dataframes)
+  #      top: Top N clonotypes to plot
+  # Returns: ggplot().
   nsamples <- length(dataframes)
   # sanity check
   stopifnot(nsamples == length(sampleNames))
@@ -46,8 +53,8 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
   g <- ggplot(df.union, aes(x=round, y=Count)) +
     geom_bar(stat='identity', aes(fill=Clonotype)) +
     theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=5)) +
-    labs(title="Top 10 clonotype across each sample",
-         subtitle="Colour coded clonotypes, distribution of each clonotype is relative to top10, not overall.",
+    labs(title=paste("Top", top, "clonotype across each sample"),
+         subtitle=paste("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall.", sep = ""),
          x="round",
          y="Distribution")  +
     scale_fill_manual(values=c30)
