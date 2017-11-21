@@ -56,9 +56,11 @@ plotDist <- function(dataframes, sampleNames, gene, title="family") {
   # merge dataframes into one
   if (frames > 1) {
     df.union <- rbind(dataframes[[1]], dataframes[[2]])
-    for (i in 3:frames) {
-      df <- dataframes[[i]]
-      df.union <- rbind(df.union, df)
+    if (frames > 2) {
+      for (i in 3:frames) {
+        df <- dataframes[[i]]
+        df.union <- rbind(df.union, df)
+      }
     }
   } else {
     df.union <- dataframes[[1]]
@@ -88,7 +90,6 @@ abundancePlot <- function(fs, sampleNames) {
       selectedFiles <- fs[grepl(reg, fs)]
       dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE)
       p <- plotDist(dataframes, sampleNames, toupper(gene), expression)
-      # ggsave(paste("/Users/harry/", expression, gene, debu, ".pdf", sep=""), plot = p)
     }
   }
 }
