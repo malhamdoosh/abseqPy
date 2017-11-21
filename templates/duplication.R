@@ -1,46 +1,57 @@
 library(ggplot2)
-
 theme_set(theme_bw())
-sample_name1 <- "PCR1_L001"
-sample_name2 <- "PCR2_L001"
-sample_name3 <- "PCR3_L001"
-dir1 <- "PCR1_BH5C6_CAACG-CGTGAT_L001"
-dir2<- "PCR2_BH5C6_CTAGCT-CTAGTACG_L001"
-dir3 <-"PCR3_BH5C6_AGGCAGAA-TACAGC_L001"
-path_to_div <- "/diversity/"
-f1 <- paste(dir1, path_to_div, sample_name1, "_cdr_v_duplication.csv", sep="")
-f2 <- paste(dir2, path_to_div, sample_name2, "_cdr_v_duplication.csv", sep="")
-f3 <- paste(dir3, path_to_div, sample_name3, "_cdr_v_duplication.csv", sep="")
 
-# first, obtain the x-axis labels and ticks (metadata from csv's first 2 rows)
-fp <- file(f1, "r")
-xticks <- eval(parse(text=readLines(fp, n=1)))
-xlabels <- eval(parse(text=readLines(fp, n=1)))
-close(fp)
-
-# read files into dataframes
-df.1 <- read.csv(f1, skip=2)
-df.2 <- read.csv(f2, skip=2)
-df.3 <- read.csv(f3, skip=2)
-
-
-df.1$sample <- rep(sample_name1, nrow(df.1))
-df.2$sample <- rep(sample_name2, nrow(df.2))
-df.3$sample <- rep(sample_name3, nrow(df.3))
-
-# uncomment to get CDR3 and V region only (by default, all CDR regions)
-df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
-df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
-df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
-
-
-df.al <- rbind(df.1, df.2)
-df.all <- rbind(df.al, df.3)
-
-p <- ggplot(df.all, aes(x=x, y=y)) +
-  geom_line(aes(linetype=region, color=sample)) +
-  scale_x_continuous(breaks=xticks, labels=xlabels) +
-  theme(axis.text.x = element_text(angle=45, hjust = 1)) +
-  labs(title = "Duplication levels of CDRs and V Domains", x = "Duplication Level", y = "Proportion of Duplicated Sequences")
+plotDuplication <- function(files, sampleNames, regions = c("CDR3", "V")) {
+  # Plots duplication level
+  # Args:
+  #     files: A list() type. List of strings to _cdr_v_duplication.csv (pathname)
+  #     sampleNames: A vector type. Vector of strings each representing the sample name
+  #     regions: A vector type. Which regions to include in the plot. Default = c("CDR3", "V")
+  nsamples <- length(files)
+  # sanity check
+  stopifnot(nsamples == length(sampleNames))
   
-plot(p)
+  # read xticks and xlimits from first 2 row
+  ## little helper function - 'meta-function-composition' ##
+  trimwsNoQuotes <- function(x) {
+    gsub("'", "", trimws(x))
+  }
+  ## trimwsNoQuotes strips whitespaces AND single quotes ##
+  fp <- file(files[[1]], "r")
+  xticks <- strtoi(unlist(lapply(strsplit(readLines(fp, n = 1), ",")[[1]], trimws)))
+  xlabels <- unlist(lapply(strsplit(readLines(fp, n = 1), ",")[[1]], trimwsNoQuotes))
+  close(fp)
+  
+  # read files into dataframes
+  dataframes <- lapply(files, read.csv, skip = 2)
+  
+  # pre-processing & cleanup
+  for (i in 1:nsamples) {
+    df <- dataframes[[i]]
+    df$sample  <- rep(sampleNames[[i]], nrow(df))
+    dataframes[[i]] <- df[df$region %in% regions, ]
+  }
+  
+  # combine!
+  if (nsamples > 1) {
+    df.union <- rbind(dataframes[[1]], dataframes[[2]])
+    if (nsamples > 2) {
+      for (i in 3:nsamples) {
+        df.union <- rbind(df.union, dataframes[[i]])
+      }
+    }
+  } else {
+    df.union <- dataframes[[1]]
+  }
+  
+  g <- ggplot(df.union, aes(x = x, y = y)) + 
+    geom_line(aes(linetype = region, color = sample)) + 
+    scale_x_continuous(breaks = xticks, labels = xlabels) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Duplication levels of CDRs and V domains",
+         x = "Duplication level",
+         y = "Proportion of duplicated sequences")
+}
+
+# fs <- list.files(pattern = "PCR[123].*_cdr_v_duplication.csv", recursive = TRUE, full.names = TRUE)
+# plot(plotDuplication(fs, c("PCR1", "PCR2", "PCR3")))
