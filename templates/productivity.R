@@ -26,8 +26,10 @@ productivityPlot <- function(dataframes, sampleNames) {
   # merge all samples
   if (nsamples > 1) {
     df.union <- rbind(dataframes[[1]], dataframes[[2]])
-    for (i in 3:nsamples) {
-      df.union <- rbind(df.union, dataframes[[i]])
+    if (nsamples > 2) {
+        for (i in 3:nsamples) {
+          df.union <- rbind(df.union, dataframes[[i]])
+        }
     }
   } else {
     df.union <- dataframes[[1]]
