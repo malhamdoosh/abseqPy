@@ -20,8 +20,10 @@ plotSpectratype <- function(dataframes, sampleNames, region = "CDR3") {
   # merge
   if (nsample > 1) {
     df.union <- rbind(dataframes[[1]], dataframes[[2]])
-    for (i in 3:nsample) {
-      df.union <- rbind(df.union, dataframes[[i]])
+    if (nsample > 2) {
+      for (i in 3:nsample) {
+        df.union <- rbind(df.union, dataframes[[i]])
+      }
     }
   } else {
     df.union <- dataframes[[1]]
