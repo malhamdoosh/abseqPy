@@ -78,8 +78,12 @@ plotDist <- function(dataframes, sampleNames, gene, title="family") {
 }
 
 
-# sampleNames can be obtained as such : names(data_fames) <- gsub("\\.csv$", "", my_files)
-abundancePlot <- function(fs, sampleNames) {
+abundancePlot <- function(fs, sampleNames, outputDir) {
+  # Plots 6 abundance plots
+  # Args:
+  #     fs: A List() type. List of files with VDJ distributions (under _ig[VDJ]_dist_[family|variant|gene]_level.csv)
+  #     sampleNames: Vector type. Vector of strings, each representing sample name (1-1 with fs)
+  #     outputDir: Output directory for png files.
   for (expression in c("family", "gene")) {
     for (gene in c('v', 'd', 'j')) {
       # correction, J has no "gene" but rather variant
@@ -90,6 +94,7 @@ abundancePlot <- function(fs, sampleNames) {
       selectedFiles <- fs[grepl(reg, fs)]
       dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE)
       p <- plotDist(dataframes, sampleNames, toupper(gene), expression)
+      ggsave(paste(outputDir, gene, "_dist_", expression, "_level.png", sep=""), plot = p)
     }
   }
 }
@@ -98,4 +103,4 @@ abundancePlot <- function(fs, sampleNames) {
 # test driver:
 # fs can be obtained as such fs <- list.files(pattern = "\\.csv$")
 #fs <- list.files(pattern = "PCR[123].*ig[vdj]_dist_[family|gene|variant].*\\.csv$", full.names = TRUE, recursive = TRUE)
-#abundancePlot(fs, c("PCR1", "PCR2", "PCR3"))
+#abundancePlot(fs, c("PCR1", "PCR2", "PCR3"), "/Users/harry/")
