@@ -1,70 +1,69 @@
 library(ggplot2)
+#source('./summarySE.R')
 source('~/Documents/repo/abseq/templates/summarySE.R')
 theme_set(theme_bw())
 
-sample_name1 <- "PCR1_L001"
-sample_name2 <- "PCR2_L001"
-sample_name3 <- "PCR3_L001"
-dir1 <- "PCR1_BH5C6_CAACG-CGTGAT_L001"
-dir2<- "PCR2_BH5C6_CTAGCT-CTAGTACG_L001"
-dir3 <-"PCR3_BH5C6_AGGCAGAA-TACAGC_L001"
-path_to_div <- "/diversity/"
-f1 <- paste(dir1, path_to_div, sample_name1, "_cdr_v_recapture.csv.gz", sep="")
-f2 <- paste(dir2, path_to_div, sample_name2, "_cdr_v_recapture.csv.gz", sep="")
-f3 <- paste(dir3, path_to_div, sample_name3, "_cdr_v_recapture.csv.gz", sep="")
 
-# first, obtain the x-axis labels and ticks (metadata from csv's first row) - infact, we wan't the maximum (temporary solution for now)
-# things are going to get ugly when the sample sizes are vastly different (you can barely see the tiny samples)
-fp <- file(f1, "r")
-xticks <- eval(parse(text=readLines(fp, n=1)))
-close(fp)
 
-fp <- file(f2, "r")
-candidate <- eval(parse(text=readLines(fp, n=1)))
-close(fp)
-if (tail(candidate, n=1) > tail(xticks, n=1)) {
-  xticks <- candidate
+plotRecapture <- function(files, sampleNames) {
+  nsamples <- length(files)
+  # sanity check
+  stopifnot(nsamples == length(sampleNames))
+  
+  # find minimum (max)xticks value from each sample
+  fp <- file(files[[1]], "r")
+  xticks <- strtoi(unlist(lapply(strsplit(readLines(fp, n = 1), ",")[[1]], trimws)))
+  close(fp)
+  
+  # if there are more
+  if (nsamples > 1) {
+    for (i in 2:nsamples) {
+      fp <- file(files[[i]], "r")
+      candidate <- strtoi(unlist(lapply(strsplit(readLines(fp, n = 1), ",")[[1]], trimws)))
+      close(fp)
+      if (tail(candidate, n = 1) < tail(xticks, n = 1)) {
+        xticks <- candidate
+      }
+    }
+  }
+  
+  # read dataframes
+  dataframes <- lapply(files, read.csv, skip = 1)
+  
+  # cleanup & pre-processing
+  for (i in 1:nsamples) {
+    df <- dataframes[[i]]
+    # append sample name to a new column named sample
+    df$sample <- rep(sampleNames[[i]], nrow(df))
+    # only want CDR3 and V regions - ignore others
+    df <- df[df$region %in% c("CDR3", "V"), ]
+    # get mean, sd, se, and ci
+    dataframes[[i]] <- summarySE(df, measurevar = 'y', groupvars = c("x", "region", "sample"))
+  }
+  
+  # combine!
+  if (nsamples > 1) {
+    df.union <- rbind(dataframes[[1]], dataframes[[2]])
+    if (nsamples > 2) {
+      for (i in 3:nsamples) {
+        df.union <- rbind(df.union, dataframes[[i]])
+      }
+    }
+  } else {
+    df.union <- dataframes[[1]]
+  }
+  
+  # plot!
+  p <- ggplot(df.union, aes(x = x, y = y)) +
+    geom_line(aes(linetype = region, color = sample)) +
+    scale_x_continuous(breaks = xticks) + 
+    geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = region), alpha = 0.2) + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+    labs(title = "Percent recapture of CDRs and V domains",
+         subtitle = "Mean number of recaptured sequences with 95% confidence interval",
+         x = "Sample size", y = "Percent Recapture")
+  return (p)
 }
 
-fp <- file(f3, "r")
-candidate <- eval(parse(text=readLines(fp, n=1)))
-close(fp)
-if (tail(candidate, n=1) > tail(xticks, n=1)) {
-  xticks <- candidate
-}
-# done
-
-# read files into dataframes
-df.1 <- read.csv(f1, skip=1)
-df.2 <- read.csv(f2, skip=1)
-df.3 <- read.csv(f3, skip=1)
-
-
-df.1$sample <- rep(sample_name1, nrow(df.1))
-df.2$sample <- rep(sample_name2, nrow(df.2))
-df.3$sample <- rep(sample_name3, nrow(df.3))
-
-# uncomment to get CDR3 and V region only (by default, all CDR regions)
-df.1 <- df.1[df.1$region %in% c("CDR3", "V"), ]
-df.2 <- df.2[df.2$region %in% c("CDR3", "V"), ]
-df.3 <- df.3[df.3$region %in% c("CDR3", "V"), ]
-
-# get mean, sd, se, and ci
-df.1.m <- summarySE(df.1, measurevar='y', groupvars = c("x", "region", "sample"))
-df.2.m <- summarySE(df.2, measurevar='y', groupvars = c("x", "region", "sample"))
-df.3.m <- summarySE(df.3, measurevar='y', groupvars = c("x", "region", "sample"))
-
-
-df.al <- rbind(df.1.m, df.2.m)
-df.all <- rbind(df.al, df.3.m)
- 
-p <- ggplot(df.all, aes(x=x, y=y)) +
-  geom_line(aes(linetype=region, color=sample)) +
-  scale_x_continuous(breaks=xticks) +
-  geom_ribbon(aes(ymin=y-ci, ymax=y+ci, fill=region), alpha=0.2) +
-  theme(axis.text.x = element_text(angle=90, hjust = 1)) +
-  labs(title = "Percent Recapture of CDRs and V Domains",
-       subtitle="Mean number of recaptured sequences with 95% confidence interval",
-       x = "Sample size", y = "Percent Recapture")
-   
-plot(p)
+fs <- list.files(pattern = "PCR[123].*_cdr_v_recapture.csv.gz$", recursive = TRUE, full.names = TRUE)
+plot(plotRecapture(fs, c("PCR1", "PCR2", "PCR3")))
