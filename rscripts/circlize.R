@@ -38,3 +38,5 @@ plotCirclize <- function(sampleName, path) {
   circos.clear()
   dev.off()
 }
+
+#plotCirclize("PCR3_L001", "./PCR3_BH5C6_AGGCAGAA-TACAGC_L001/abundance/")

@@ -45,5 +45,5 @@ scatterClones <- function(dataframes, sampleNames, outputPath, cloneClass) {
   }
 }
 
-# fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_all_over.csv.gz$", recursive = TRUE, full.names = TRUE)
-# scatterClones(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1_L001", "PCR2_L001", "PCR3_L001"), "/Users/harry/", "CDR3")
+#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_all_over.csv.gz$", recursive = TRUE, full.names = TRUE)
+#scatterClones(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1_L001", "PCR2_L001", "PCR3_L001"), "/Users/harry/", "CDR3")

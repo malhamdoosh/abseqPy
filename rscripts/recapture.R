@@ -71,5 +71,5 @@ plotRecapture <- function(files, sampleNames, regions = c("CDR3", "V")) {
   return (p)
 }
 
-# fs <- list.files(pattern = "PCR[123].*_cdr_v_recapture.csv.gz$", recursive = TRUE, full.names = TRUE)
-# plot(plotRecapture(fs, c("PCR1", "PCR2", "PCR3")))
+#fs <- list.files(pattern = "PCR[123].*_cdr_v_recapture.csv.gz$", recursive = TRUE, full.names = TRUE)
+#plot(plotRecapture(fs, c("PCR1", "PCR2", "PCR3"), c("CDR1", "CDR2", "CDR3", "V")))

@@ -66,5 +66,5 @@ plotRarefaction <- function(files, sampleNames, regions = c("CDR3", "V")) {
   return (g)
 }
 
-# fs <- list.files(pattern = "PCR[123].*_cdr_v_rarefaction.csv.gz", recursive = TRUE, full.names = TRUE)
-# plot(plotRarefaction(fs, c("PCR1_L001", "PCR2_L001", "PCR3_L001")))
+#fs <- list.files(pattern = "PCR[123].*_cdr_v_rarefaction.csv.gz", recursive = TRUE, full.names = TRUE)
+#plot(plotRarefaction(fs, c("PCR1_L001", "PCR2_L001", "PCR3_L001")))

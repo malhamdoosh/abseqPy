@@ -56,4 +56,4 @@ plotDuplication <- function(files, sampleNames, regions = c("CDR3", "V")) {
 }
 
 # fs <- list.files(pattern = "PCR[123].*_cdr_v_duplication.csv", recursive = TRUE, full.names = TRUE)
-# plot(plotDuplication(fs, c("PCR1", "PCR2", "PCR3")))
+# plot(plotDuplication(fs, c("PCR1", "PCR2", "PCR3"), c("CDR3", "CDR1", "CDR2", "V")))

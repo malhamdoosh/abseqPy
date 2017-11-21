@@ -42,3 +42,4 @@ regionAnaylsis <- function(df, sampleName, top = 15) {
 # file = "/Users/harry/sandbox/small/test/results/PCR3_BH5C6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
 # df <- read.csv(file, stringsAsFactors=FALSE)
 # p <- regionAnaylsis(df, "PCR3")
+# plot(p)

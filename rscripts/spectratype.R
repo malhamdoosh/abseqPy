@@ -41,6 +41,6 @@ plotSpectratype <- function(dataframes, sampleNames, region = "CDR3") {
   return (g)
 }
 
-#fs <- list.files(pattern = "PCR[123].*_cdr3_spec.csv", recursive = TRUE, full.names = TRUE)
-#p <- plotSpectratype(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3"))
-#plot(p)
+# fs <- list.files(pattern = "PCR[123].*_cdr3_spectratype_no.*.csv", recursive = TRUE, full.names = TRUE)
+# p <- plotSpectratype(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3"), "CDR3")
+# plot(p)

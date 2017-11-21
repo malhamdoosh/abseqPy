@@ -63,6 +63,6 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
   return (g)
 }
 
-#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_100_over.csv.gz", recursive = TRUE, full.names = TRUE)
+#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_full_over.csv.gz", recursive = TRUE, full.names = TRUE)
 #p <- topNDist(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1_L001", "PCR2_L001", "PCR3_L001"))
-#ggsave('/Users/harry/litmus.pdf', plot = p)
+#plot(p)

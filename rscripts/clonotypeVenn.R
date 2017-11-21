@@ -72,5 +72,5 @@ vennIntersection <- function(dataframes, sampleNames, outFile, top) {
   dev.off()
 }
 
-# fs <- list.files(pattern = "PCR[78].*_cdr3_clonotypes_full_over.csv.gz", recursive = TRUE, full.names = TRUE)
-# vennIntersection(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR7", "PCR8"), "/Users/harry/venn.png")
+#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_all_over.csv.gz", recursive = TRUE, full.names = TRUE)
+#vennIntersection(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3"), "/Users/harry/venn.png")
