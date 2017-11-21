@@ -36,7 +36,7 @@ productivityPlot <- function(dataframes, sampleNames) {
   }
   
   # plot!
-  g <- ggplot(df.union, aes(round, Percentage, label = sprintf("%0.2f%%", round(Percentage)))) +
+  g <- ggplot(df.union, aes(round, Percentage, label = sprintf("%0.2f%%", Percentage))) +
     geom_bar(stat="identity", aes(fill=Reason), width=0.5) +
     facet_grid(~ Productivity)+
     labs(title="Productivity",
@@ -47,7 +47,7 @@ productivityPlot <- function(dataframes, sampleNames) {
     geom_text(position = position_stack(vjust = 0.5))
   return (g)
 }
-# files <- list.files(pattern = "PCR[123].*_productivity.csv$", full.names = TRUE, recursive = TRUE)
-# dataframes <- lapply(files, read.csv, stringsAsFactors = FALSE)
-# p <- productivityPlot(dataframes, c("PCR1_L001", "PCR2_L001", "PCR3_L001"))
-# ggsave("/Users/harry/prod.pdf", plot = p)
+#files <- list.files(pattern = "PCR[123].*_productivity.csv$", full.names = TRUE, recursive = TRUE)
+#dataframes <- lapply(files, read.csv, stringsAsFactors = FALSE)
+#p <- productivityPlot(dataframes, c("PCR1_L001", "PCR2_L001", "PCR3_L001"))
+#plot(p)
