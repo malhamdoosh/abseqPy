@@ -1,11 +1,16 @@
 library(ggplot2)
-#source('./summarySE.R')
-source('~/Documents/repo/abseq/templates/summarySE.R')
+source('./summarySE.R')
 theme_set(theme_bw())
 
 
 
 plotRecapture <- function(files, sampleNames) {
+  # Plots recapture
+  # Args:
+  #     files: A list() type. List of _cdr_v_recapture.csv.gz files.
+  #     sampleNames: A vector type. A vector of strings each representing the name of samples in files.
+  # Returns:
+  #     ggplot()
   nsamples <- length(files)
   # sanity check
   stopifnot(nsamples == length(sampleNames))
@@ -65,5 +70,5 @@ plotRecapture <- function(files, sampleNames) {
   return (p)
 }
 
-fs <- list.files(pattern = "PCR[123].*_cdr_v_recapture.csv.gz$", recursive = TRUE, full.names = TRUE)
-plot(plotRecapture(fs, c("PCR1", "PCR2", "PCR3")))
+# fs <- list.files(pattern = "PCR[123].*_cdr_v_recapture.csv.gz$", recursive = TRUE, full.names = TRUE)
+# plot(plotRecapture(fs, c("PCR1", "PCR2", "PCR3")))
