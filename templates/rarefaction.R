@@ -3,11 +3,12 @@ source('./summarySE.R')
 theme_set(theme_bw())
 
 
-plotRarefaction <- function(files, sampleNames) {
+plotRarefaction <- function(files, sampleNames, regions = c("CDR3", "V")) {
   # Plots rarefaction
   # Args:
   #      files: A list() type. A list of files consisting of path to samples
   #      sampleNames: A vector type. A vector of strings, each being the name of samples in files
+  #      regions: A vector type. A vector of strings - regions to be included. Defaults to c("CDR3", "V")
   # Returns:
   #      ggplot().
   nsamples <- length(files)
@@ -37,7 +38,7 @@ plotRarefaction <- function(files, sampleNames) {
   for (i in 1:nsamples) {
     df <- dataframes[[i]]
     df$sample <- rep(sampleNames[[i]], nrow(df))
-    df <- df[df$region %in% c("CDR3", "V"), ]
+    df <- df[df$region %in% regions, ]
     dataframes[[i]] <- summarySE(df, measurevar = 'y', groupvars = c('x', 'region', 'sample'))
   }
   

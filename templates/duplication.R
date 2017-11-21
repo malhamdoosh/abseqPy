@@ -7,6 +7,8 @@ plotDuplication <- function(files, sampleNames, regions = c("CDR3", "V")) {
   #     files: A list() type. List of strings to _cdr_v_duplication.csv (pathname)
   #     sampleNames: A vector type. Vector of strings each representing the sample name
   #     regions: A vector type. Which regions to include in the plot. Default = c("CDR3", "V")
+  # Returns:
+  #     ggplot().
   nsamples <- length(files)
   # sanity check
   stopifnot(nsamples == length(sampleNames))

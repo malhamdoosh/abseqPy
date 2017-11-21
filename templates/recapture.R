@@ -4,11 +4,12 @@ theme_set(theme_bw())
 
 
 
-plotRecapture <- function(files, sampleNames) {
+plotRecapture <- function(files, sampleNames, regions = c("CDR3", "V")) {
   # Plots recapture
   # Args:
   #     files: A list() type. List of _cdr_v_recapture.csv.gz files.
   #     sampleNames: A vector type. A vector of strings each representing the name of samples in files.
+  #     regions: A vector type. A vector of strings - regions to be included in the plot. defaults to c("CDR3", "V")
   # Returns:
   #     ggplot()
   nsamples <- length(files)
@@ -40,8 +41,8 @@ plotRecapture <- function(files, sampleNames) {
     df <- dataframes[[i]]
     # append sample name to a new column named sample
     df$sample <- rep(sampleNames[[i]], nrow(df))
-    # only want CDR3 and V regions - ignore others
-    df <- df[df$region %in% c("CDR3", "V"), ]
+    # only want selected regions - ignore others
+    df <- df[df$region %in% regions,]
     # get mean, sd, se, and ci
     dataframes[[i]] <- summarySE(df, measurevar = 'y', groupvars = c("x", "region", "sample"))
   }
