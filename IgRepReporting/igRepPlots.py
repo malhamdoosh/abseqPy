@@ -201,7 +201,7 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False):
     # write to csv too - let metadata tell the plotting program to re-scale the X axis to the provided values
     # we know we're using R - so convert to c() representation
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData,
-             metadata="c(" + str(xticks).strip('[]') + ")\n" + "c(" + str(xlabels).strip('[]') + ")\n")
+             metadata=(str(xticks).strip('[]') + "\n" + str(xlabels).strip('[]') + "\n"))
 
 
 '''
@@ -264,7 +264,7 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
     plt.subplots_adjust(bottom=0.21)
     fig.savefig(filename, dpi=300)
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
-             metadata="c(" + str(xticks).strip('[]') + ")\n")
+             metadata=(str(xticks).strip('[]') + "\n"))
     plt.close()
     # sys.exit()
 
@@ -380,7 +380,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
     ax.set_xticklabels(xticks, rotation=90)
     plt.subplots_adjust(bottom=0.21)
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
-             metadata="c(" + str(xticks).strip('[]') + ")\n")
+             metadata=(str(xticks).strip('[]') + "\n"))
     fig.savefig(filename, dpi=300)
     plt.close()
 
