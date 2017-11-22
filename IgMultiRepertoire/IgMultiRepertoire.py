@@ -1,3 +1,4 @@
+from RScriptsManager import RScriptsManager
 from IgRepertoire.IgRepertoire import IgRepertoire
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 from multiprocessing import Queue
@@ -14,6 +15,7 @@ class IgMultiRepertoire:
         self.result = Queue()
         self.sampleCount = 0
         self.resource = args.threads
+        self.rscriptsManager = RScriptsManager(args.rscripts)
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
@@ -47,10 +49,17 @@ class IgMultiRepertoire:
                 modifiedArgs.name = retval[1]
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
+                self.rscriptsManager.addMetadata(retval)
                 if not os.path.exists(modifiedArgs.outdir):
                     os.makedirs(modifiedArgs.outdir)
                 self.queue.put(IgRepertoire(modifiedArgs))
+            # TODO: debug only
+            self.finish()
+            import sys
+            sys.exit(0)
+            # TODO: remove me
         else:
+            self.rscriptsManager.addMetadata((args.outdir, args.name))
             self.sampleCount += 1
             self.queue.put(IgRepertoire(args))
 
@@ -89,7 +98,8 @@ class IgMultiRepertoire:
 
     def finish(self):
         """
-        Queue might still be buffered, finish off cleanup here
+        Queue might still be buffered, finish off cleanup here. then, flush metadata (tmp file)
+        for r scripts to find the right pairings of directory(samples) to plot
         :return: None
         """
         # pop all items
@@ -101,6 +111,7 @@ class IgMultiRepertoire:
         self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
+        self.rscriptsManager.flushMetadata()
 
     def __pairFiles(self, folder, args):
         """
