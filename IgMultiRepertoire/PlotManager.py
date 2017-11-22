@@ -75,14 +75,20 @@ class PlotManager:
             writeBuffer = []
             # refine the entries provided by user in self.rscripts' argument to the canonical name
             # as defined in AbSeq and the directory this sample lives in
-            for pairings in self.rscriptArgs:
-                writeBuffer.append([self.__findBestMatch(sampleName) for sampleName in pairings])
-            # at this point, writeBuffer is a list of list as such:
-            # writeBuffer = [
-            #           [ (PCR1_BZ123_ACGGCT_GCGTA_L001/, PCR1_L001), (PCR2_BZC1_ACGGTA_GAGA_L001/, PCR2_L001), .. ]
-            #           [ (PCR4_BZ123_ACGG_ACGG_L001/, PCR4_L001), (PCR5_....., PCR5_L001), ... ]
-            #           [ ... ]
-            # ] - each inner list is a set of pairing
+            if self.rscriptArgs:
+                for pairings in self.rscriptArgs:
+                    writeBuffer.append([self.__findBestMatch(sampleName) for sampleName in pairings])
+                # at this point, writeBuffer is a list of list as such:
+                # writeBuffer = [
+                #           [ (/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001), (/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
+                #           [ (/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001), (/PCR5_....., PCR5_L001), ... ]
+                #           [ ... ]
+                # ] - each inner list is a set of pairing
+
+            else:
+                # no multiple repertoire plotting, just regular plots in R
+                writeBuffer = map(lambda x: [x], self.metadata)
+
             with open("rscripts_meta.tmp", "w") as fp:
                 for pairing in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
@@ -90,10 +96,10 @@ class PlotManager:
                                           pairing)) + "?")
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
-                    # final result, rscripts_meta.tmp looks like:
-                    # PCR1_BZ123_ACGGCT_GCGTA_L001/, PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, PCR2_L001, ...
-                    # PCR4_BZ123_ACGG_ACGG_L001/, PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
-                    # ...
+            # final result, rscripts_meta.tmp looks like:
+            # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001/, self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, ...
+            # self.outdir/PCR4_BZ123_ACGG_ACGG_L001/, self.outdir/PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
+            # ...
 
     def __findBestMatch(self, sampleName):
         v = float('-inf')
