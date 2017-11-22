@@ -1,6 +1,5 @@
 import os
 
-
 """
 XXX: IMPORTANT NOTE
 As of Nov 22 2017: 
@@ -21,11 +20,12 @@ class PlotManager:
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
 
-    def __init__(self, rscriptArgs):
+    def __init__(self, rscriptArgs, outdir):
         self.rscriptArgs = rscriptArgs
         # there's no R plotting if user specified that r scripts shouldn't run => python's plotting should run instead
         PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
         self.metadata = []
+        self.outdir = outdir
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic above.
@@ -71,7 +71,7 @@ class PlotManager:
 
     def flushMetadata(self):
         # only write metadata if we have to plot in R
-        if not self._pythonPlotting and type(self.rscriptArgs) == list:
+        if not self._pythonPlotting:
             writeBuffer = []
             # refine the entries provided by user in self.rscripts' argument to the canonical name
             # as defined in AbSeq and the directory this sample lives in
@@ -86,13 +86,15 @@ class PlotManager:
             with open("rscripts_meta.tmp", "w") as fp:
                 for pairing in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: x[0].lstrip("/"), pairing)) + "?")
+                    fp.write(','.join(map(lambda x: (self.outdir + "/" + x[0].lstrip("/")).replace("//", "/"),
+                                          pairing)) + "?")
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
                     # final result, rscripts_meta.tmp looks like:
                     # PCR1_BZ123_ACGGCT_GCGTA_L001/, PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, PCR2_L001, ...
                     # PCR4_BZ123_ACGG_ACGG_L001/, PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
                     # ...
+
     def __findBestMatch(self, sampleName):
         v = float('-inf')
         bestMatch = None

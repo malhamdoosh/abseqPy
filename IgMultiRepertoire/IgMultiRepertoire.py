@@ -15,7 +15,7 @@ class IgMultiRepertoire:
         self.result = Queue()
         self.sampleCount = 0
         self.resource = args.threads
-        self.plotManager = PlotManager(args.rscripts)
+        self.plotManager = PlotManager(args.rscripts, args.outdir)
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
