@@ -6,14 +6,17 @@ regionAnaylsis <- function(df, sampleName, top = 15) {
   # sort the df with decreasing counts of CDR3 occurance
   df <- df[with(df, order(-count)), ]
   
-  # grab top N
-  df <- head(df, top)
-  
   # add new column to sum the "unique" regions
   df$sumcounts = rowSums(df[, headers])
   
+  # grab only those whos V-domain will differ. This means sumcounts != 6 (> 6) where 6 = length(headers)
+  df <- df[df$sumcounts > 6, ]
+  
+  # grab top N
+  df <- head(df, top)
+  
   # add new row as reference of "unique regions"
-  de <- data.frame("REFERENCE", Inf,1,1,1,1,1,1,6)
+  de <- data.frame("REFERENCE", Inf, 1, 1, 1, 1, 1, 1, 6)
   names(de) <- names(df)
   df <- rbind(df, de)
   
@@ -39,7 +42,7 @@ regionAnaylsis <- function(df, sampleName, top = 15) {
   return (g)
 }
 
-# file = "/Users/harry/sandbox/small/test/results/PCR3_BH5C6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
-# df <- read.csv(file, stringsAsFactors=FALSE)
-# p <- regionAnaylsis(df, "PCR3")
-# plot(p)
+file = "/Users/harry/sandbox/small/test/results/PCR3_BH5C6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
+df <- read.csv(file, stringsAsFactors=FALSE)
+p <- regionAnaylsis(df, "PCR3")
+plot(p)
