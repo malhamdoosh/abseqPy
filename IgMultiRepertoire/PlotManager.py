@@ -86,7 +86,7 @@ class PlotManager:
             with open("rscripts_meta.tmp", "w") as fp:
                 for pairing in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: x[0], pairing)) + "?")
+                    fp.write(','.join(map(lambda x: x[0].lstrip("/"), pairing)) + "?")
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
                     # final result, rscripts_meta.tmp looks like:
