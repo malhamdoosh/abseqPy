@@ -1,6 +1,22 @@
 import os
 
 
+"""
+XXX: IMPORTANT NOTE
+As of Nov 22 2017: 
+The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False is:
+    1) plotSeqLenDist           -- will be moved to R #TODO
+    2) plotSeqLenDistClasses    -- will be moved to R #TODO
+    3) plotVenn                 - mostly used by restriction sites
+    4) plotHeatMap              - generateStatsHeatmap
+    5) plotHeatmapFromDF
+    6) barLogo                  - generateCumulativeLogo
+The plots that OBEY pythonPlotOn() = False is:
+    1) all diversity plots (rarefaction, duplication, recapture)
+    2) plotDist()
+"""
+
+
 class PlotManager:
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
@@ -55,7 +71,7 @@ class PlotManager:
 
     def flushMetadata(self):
         # only write metadata if we have to plot in R
-        if not self.noRPlot and type(self.rscriptArgs) == list:
+        if not self._pythonPlotting and type(self.rscriptArgs) == list:
             writeBuffer = []
             # refine the entries provided by user in self.rscripts' argument to the canonical name
             # as defined in AbSeq and the directory this sample lives in
