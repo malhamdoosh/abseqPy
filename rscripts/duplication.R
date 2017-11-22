@@ -53,6 +53,7 @@ plotDuplication <- function(files, sampleNames, regions = c("CDR3", "V")) {
     labs(title = "Duplication levels of CDRs and V domains",
          x = "Duplication level",
          y = "Proportion of duplicated sequences")
+  return (p)
 }
 
 # fs <- list.files(pattern = "PCR[123].*_cdr_v_duplication.csv", recursive = TRUE, full.names = TRUE)
