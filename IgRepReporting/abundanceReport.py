@@ -147,12 +147,13 @@ def writeVJAssociationToFiles(stats, sampleName, outDir):
         tally[vFamily][jFamily] += 1
 
     with open(outDir + sampleName + "_vjassoc.csv", "w") as fp:
+        writeBuffer = ""
         header = ["from", "to", "value"]
-        fp.write(",".join(header))
-        fp.write("\n")
+        writeBuffer += ",".join(header) + "\n"
         for vgene, dic in tally.items():
             for jgene, value in dic.items():
-                fp.write("{},{},{}\n".format(vgene, jgene, value))
+                writeBuffer += "{},{},{}\n".format(vgene, jgene, value)
+        fp.write(writeBuffer)
 
 
 def writeAbundanceToFiles(stats, sampleName, outDir, chain = "hv"):
