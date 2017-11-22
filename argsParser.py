@@ -12,7 +12,7 @@ from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAI
 from numpy import Inf
 from os.path import abspath
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
-from IgMultiRepertoire.RScriptsManager import RScriptsManager
+from IgMultiRepertoire.PlotManager import PlotManager
 
 
 def parseArgs():
@@ -70,7 +70,7 @@ def parseArgs():
         args.log = args.outdir + args.name + ".log"
 
         # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
-        if RScriptsManager.rscriptsHasArgs(args.rscripts) and not RScriptsManager.rscriptsOff(args.rscripts):
+        if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):
             parser.error("-rs / --rscripts argument is either empty or "
                          "'off' when -f1 is not a directory - there is nothing to pair with!")
 
@@ -121,7 +121,7 @@ def parseArgs():
     # -rs / --rscripts sanity check!
 
     # -rs / --rscripts: if it was a conf file, make sure it exists!
-    if RScriptsManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
+    if PlotManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
         raise Exception("Provided --rscripts {} file not found!".format(args.rscripts))
     # if the argument to -rs isn't valid, throw parser error
     # Allowed arguments are:
@@ -132,16 +132,16 @@ def parseArgs():
     #   5) -rs / --rscripts "config-pairing-file.txt"
     #   6) -rs / --rscripts config-pairing-file.txt
     #           (note the name doesn't have to be config-pairing-file, it just has to exist)
-    if not (RScriptsManager.rscriptsHasNoArgs(args.rscripts) or  # (1)
-                RScriptsManager.rscriptsOff(args.rscripts) or  # (2)
-                RScriptsManager.rscriptsIsPairedStrings(args.rscripts) or  # (4)
-                RScriptsManager.rscriptsIsConf(args.rscripts)):  # (5)
+    if not (PlotManager.rscriptsHasNoArgs(args.rscripts) or  # (1)
+                PlotManager.rscriptsOff(args.rscripts) or  # (2)
+                PlotManager.rscriptsIsPairedStrings(args.rscripts) or  # (4)
+                PlotManager.rscriptsIsConf(args.rscripts)):  # (5)
         # if none of the above applies, we've exhausted all possible valid arguments!
         parser.error("Unrecognized input to -rs/--rscripts: {}".format(args.rscripts))
 
-    if RScriptsManager.rscriptsIsConf(args.rscripts):
+    if PlotManager.rscriptsIsConf(args.rscripts):
         args.rscripts = parseRscriptsFile(args.rscripts)
-    elif RScriptsManager.rscriptsIsPairedStrings(args.rscripts):
+    elif PlotManager.rscriptsIsPairedStrings(args.rscripts):
         args.rscripts = parseRscriptsStringPair(args.rscripts)
 
     return args

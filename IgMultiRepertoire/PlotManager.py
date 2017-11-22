@@ -1,7 +1,16 @@
 import os
 
 
-class RScriptsManager:
+class PlotManager:
+    # by default, don't plot in python unless rscripting is turned off
+    _pythonPlotting = False
+
+    def __init__(self, rscriptArgs):
+        self.rscriptArgs = rscriptArgs
+        # there's no R plotting if user specified that r scripts shouldn't run => python's plotting should run instead
+        PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
+        self.metadata = []
+
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic above.
     @staticmethod
@@ -14,21 +23,24 @@ class RScriptsManager:
 
     @staticmethod
     def rscriptsOff(arg):
-        return RScriptsManager.rscriptsHasArgs(arg) and str(arg).lower() == 'off'
+        return PlotManager.rscriptsHasArgs(arg) and str(arg).lower() == 'off'
 
     @staticmethod
     def rscriptsIsConf(arg):
-        return RScriptsManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) == 1 and os.path.exists(arg)
+        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) == 1 and os.path.exists(arg)
 
     @staticmethod
     def rscriptsIsPairedStrings(arg):
-        return RScriptsManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) > 1
+        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) > 1
 
-    def __init__(self, rscriptArgs):
-        self.rscriptArgs = rscriptArgs
-        # there's no R plotting if user specified that r scripts shouldn't run
-        self.noRPlot = RScriptsManager.rscriptsOff(self.rscriptArgs)
-        self.metadata = []
+    @staticmethod
+    def pythonPlotOn():
+        """
+        multiple threads / process may read this value. It's a RO value - it'll never be changed after RScriptsManager
+        is instantiated. There's no need to guard this against a race condition.
+        :return: True if python should plot graphs, false otherwise.
+        """
+        return PlotManager._pythonPlotting
 
     def addMetadata(self, sample):
         """
@@ -48,7 +60,7 @@ class RScriptsManager:
             # refine the entries provided by user in self.rscripts' argument to the canonical name
             # as defined in AbSeq and the directory this sample lives in
             for pairings in self.rscriptArgs:
-                writeBuffer.append([self.findBestMatch(sampleName) for sampleName in pairings])
+                writeBuffer.append([self.__findBestMatch(sampleName) for sampleName in pairings])
             # at this point, writeBuffer is a list of list as such:
             # writeBuffer = [
             #           [ (PCR1_BZ123_ACGGCT_GCGTA_L001/, PCR1_L001), (PCR2_BZC1_ACGGTA_GAGA_L001/, PCR2_L001), .. ]
@@ -65,20 +77,15 @@ class RScriptsManager:
                     # PCR1_BZ123_ACGGCT_GCGTA_L001/, PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, PCR2_L001, ...
                     # PCR4_BZ123_ACGG_ACGG_L001/, PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
                     # ...
-
-    def findBestMatch(self, sampleName):
+    def __findBestMatch(self, sampleName):
         v = float('-inf')
         bestMatch = None
         for sampleDir, sampleCName in self.metadata:
-            retVal = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
-            if retVal > v:
+            matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
+            if matchScore > v:
                 bestMatch = (sampleDir, sampleCName)
-                v = retVal
+                v = matchScore
         return bestMatch
-
-    def pythonPlots(self):
-        # if user asked for NO r plots, we plot in python instead
-        return self.noRPlot
 
 
 def _nameMatch(string1, string2, deletionPenalty=-2, insertionPenalty=-2, matchScore=5, mismatchScore=-3):

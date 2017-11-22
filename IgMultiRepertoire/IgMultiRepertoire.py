@@ -1,4 +1,4 @@
-from RScriptsManager import RScriptsManager
+from PlotManager import PlotManager
 from IgRepertoire.IgRepertoire import IgRepertoire
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 from multiprocessing import Queue
@@ -15,7 +15,7 @@ class IgMultiRepertoire:
         self.result = Queue()
         self.sampleCount = 0
         self.resource = args.threads
-        self.rscriptsManager = RScriptsManager(args.rscripts)
+        self.plotManager = PlotManager(args.rscripts)
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
@@ -49,12 +49,12 @@ class IgMultiRepertoire:
                 modifiedArgs.name = retval[1]
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                self.rscriptsManager.addMetadata(retval)
+                self.plotManager.addMetadata(retval)
                 if not os.path.exists(modifiedArgs.outdir):
                     os.makedirs(modifiedArgs.outdir)
                 self.queue.put(IgRepertoire(modifiedArgs))
         else:
-            self.rscriptsManager.addMetadata((args.outdir, args.name))
+            self.plotManager.addMetadata((args.outdir, args.name))
             self.sampleCount += 1
             self.queue.put(IgRepertoire(args))
 
@@ -106,7 +106,7 @@ class IgMultiRepertoire:
         self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
-        self.rscriptsManager.flushMetadata()
+        self.plotManager.flushMetadata()
 
     def __pairFiles(self, folder, args):
         """
