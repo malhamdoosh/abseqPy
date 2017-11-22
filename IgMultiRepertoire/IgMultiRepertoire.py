@@ -53,11 +53,6 @@ class IgMultiRepertoire:
                 if not os.path.exists(modifiedArgs.outdir):
                     os.makedirs(modifiedArgs.outdir)
                 self.queue.put(IgRepertoire(modifiedArgs))
-            # TODO: debug only
-            self.finish()
-            import sys
-            sys.exit(0)
-            # TODO: remove me
         else:
             self.rscriptsManager.addMetadata((args.outdir, args.name))
             self.sampleCount += 1
