@@ -66,7 +66,6 @@ class PlotManager:
         :param sample: sample is a tuple type of (sample's directory, sample's canonical name)
         :return: None
         """
-        # if not self.noPlot:
         self.metadata.append(sample)
 
     def flushMetadata(self):
@@ -85,9 +84,8 @@ class PlotManager:
                 #           [ ... ]
                 # ] - each inner list is a set of pairing
 
-            else:
-                # no multiple repertoire plotting, just regular plots in R
-                writeBuffer = map(lambda x: [x], self.metadata)
+            # the individual samples has to be plotted too!
+            writeBuffer += map(lambda x: [x], self.metadata)
 
             with open("rscripts_meta.tmp", "w") as fp:
                 for pairing in writeBuffer:
@@ -97,9 +95,15 @@ class PlotManager:
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
             # final result, rscripts_meta.tmp looks like:
+                    # (pairings come first)
             # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001/, self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, ...
             # self.outdir/PCR4_BZ123_ACGG_ACGG_L001/, self.outdir/PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
-            # ...
+            # .
+            # .
+            # .
+                    # (then single samples)
+            # self.outdir/PCR1_BZ123_..._L001/, PCR1_L001
+            # self.outdir/PCR2_BZ123_..._L001/, PCR2_L001
 
     def __findBestMatch(self, sampleName):
         v = float('-inf')
