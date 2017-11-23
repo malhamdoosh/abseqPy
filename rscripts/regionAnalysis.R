@@ -1,7 +1,7 @@
 library(reshape2)
 library(ggplot2)
 
-regionAnaylsis <- function(df, sampleName, top = 15) {
+regionAnalysis <- function(df, sampleName, top = 15) {
   headers <- c("fr1", "cdr1", "fr2", "cdr2", "fr3", "fr4")
   # sort the df with decreasing counts of CDR3 occurance
   df <- df[with(df, order(-count)), ]
@@ -46,5 +46,5 @@ regionAnaylsis <- function(df, sampleName, top = 15) {
 #file = "/Users/harry/AGRF/data/PCR2_B5HC6_CTAGTACG-CTAGCT_L001/diversity/PCR2_L001_clonotype_diversity_region_analysis.csv.gz"
 #file = "/Users/harry/AGRF/data/PCR1_B5HC6_CAACGACG-CGTGAT_L001/diversity/PCR1_L001_clonotype_diversity_region_analysis.csv.gz"
 #df <- read.csv(file, stringsAsFactors=FALSE)
-#p <- regionAnaylsis(df, "PCR1")
+#p <- regionAnalysis(df, "PCR1")
 #plot(p)
