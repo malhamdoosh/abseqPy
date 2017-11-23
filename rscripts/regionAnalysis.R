@@ -1,7 +1,14 @@
 library(reshape2)
 library(ggplot2)
 
-regionAnalysis <- function(df, sampleName, top = 15) {
+regionAnalysis <- function(path, sampleName, top = 15) {
+  # Plots region analysis for a given sample
+  # Args:
+  #       path: Path to diversity folder (where <sampleName>_clonotype_diversity_region_analysis.csv.gz is located)
+  #       sampleName: name of this sample
+  #       top: Top N number of clones to consider in the plot (top N AFTER filtering out those that have similar clones when all regions are considered)
+  df <- read.csv(paste(path, sampleName, "_clonotype_diversity_region_analysis.csv.gz", sep = ""), stringsAsFactors = FALSE)
+  
   headers <- c("fr1", "cdr1", "fr2", "cdr2", "fr3", "fr4")
   # sort the df with decreasing counts of CDR3 occurance
   df <- df[with(df, order(-count)), ]
@@ -42,9 +49,8 @@ regionAnalysis <- function(df, sampleName, top = 15) {
   return (g)
 }
 
-#file = "/Users/harry/AGRF/data/PCR3_B5HC6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
-#file = "/Users/harry/AGRF/data/PCR2_B5HC6_CTAGTACG-CTAGCT_L001/diversity/PCR2_L001_clonotype_diversity_region_analysis.csv.gz"
-#file = "/Users/harry/AGRF/data/PCR1_B5HC6_CAACGACG-CGTGAT_L001/diversity/PCR1_L001_clonotype_diversity_region_analysis.csv.gz"
-#df <- read.csv(file, stringsAsFactors=FALSE)
-#p <- regionAnalysis(df, "PCR1")
+#path = "/Users/harry/AGRF/data/PCR3_B5HC6_AGGCAGAA-TACAGC_L001/diversity/"
+#path = "/Users/harry/AGRF/data/PCR2_B5HC6_CTAGTACG-CTAGCT_L001/diversity/"
+#path = "/Users/harry/AGRF/data/PCR1_B5HC6_CAACGACG-CGTGAT_L001/diversity/"
+#p <- regionAnalysis(path, "PCR1_L001")
 #plot(p)
