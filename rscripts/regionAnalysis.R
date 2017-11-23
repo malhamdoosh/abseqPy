@@ -42,7 +42,9 @@ regionAnaylsis <- function(df, sampleName, top = 15) {
   return (g)
 }
 
-file = "/Users/harry/sandbox/small/test/results/PCR3_BH5C6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
-df <- read.csv(file, stringsAsFactors=FALSE)
-p <- regionAnaylsis(df, "PCR3")
-plot(p)
+#file = "/Users/harry/AGRF/data/PCR3_B5HC6_AGGCAGAA-TACAGC_L001/diversity/PCR3_L001_clonotype_diversity_region_analysis.csv.gz"
+#file = "/Users/harry/AGRF/data/PCR2_B5HC6_CTAGTACG-CTAGCT_L001/diversity/PCR2_L001_clonotype_diversity_region_analysis.csv.gz"
+#file = "/Users/harry/AGRF/data/PCR1_B5HC6_CAACGACG-CGTGAT_L001/diversity/PCR1_L001_clonotype_diversity_region_analysis.csv.gz"
+#df <- read.csv(file, stringsAsFactors=FALSE)
+#p <- regionAnaylsis(df, "PCR1")
+#plot(p)
