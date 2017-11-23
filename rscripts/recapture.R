@@ -65,7 +65,7 @@ plotRecapture <- function(files, sampleNames, regions = c("CDR3", "V")) {
     scale_x_continuous(breaks = xticks) + 
     geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = region), alpha = 0.2) + 
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-    labs(title = "Percent recapture of CDRs and V domains",
+    labs(title = paste("Percent recapture of", paste(regions, collapse = ", ")),
          subtitle = "Mean number of recaptured sequences with 95% confidence interval",
          x = "Sample size", y = "Percent Recapture")
   return (p)
