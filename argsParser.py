@@ -32,11 +32,11 @@ def parseArgs():
 
     # check for f1, f2 file existence and expand path
     if not os.path.exists(args.f1):
-        raise Exception("-f1 file not found!")
+        parser.error("-f1 file not found!")
     else:
         args.f1 = abspath(args.f1)
     if args.f2 is not None and not os.path.exists(args.f2):
-        raise Exception("-f2 file not found!")
+        parser.error("-f2 file not found!")
     elif args.f2 is not None:
         args.f2 = abspath(args.f2)
 
@@ -44,8 +44,8 @@ def parseArgs():
         # detect file format (either fastq or fasta); both should be the same type
         fmt = detectFileFormat(args.f1)
         if args.f2 is not None and detectFileFormat(args.f2) != fmt:
-            raise Exception("Detected mismatch in file extensions --file1 and --file2!"
-                            " Both should be either FASTA or FASTQ.")
+            parser.error("Detected mismatch in file extensions --file1 and --file2!"
+                         " Both should be either FASTA or FASTQ.")
         args.fmt = fmt
 
         # check logic between f1, f2 and merger, setting default merger to flash
@@ -122,7 +122,7 @@ def parseArgs():
 
     # -rs / --rscripts: if it was a conf file, make sure it exists!
     if PlotManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
-        raise Exception("Provided --rscripts {} file not found!".format(args.rscripts))
+        parser.error("Provided --rscripts {} file not found!".format(args.rscripts))
     # if the argument to -rs isn't valid, throw parser error
     # Allowed arguments are:
     #   1) -rs / --rscripts <blank>

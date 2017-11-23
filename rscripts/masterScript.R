@@ -1,25 +1,48 @@
+# -------------------------------------------------------------------------------- #
+#
+#       Driver program - Plots all csv files with instructions taken from
+#                        'metadata' file - rscripts_meta.tmp
+#
+# -------------------------------------------------------------------------------- #
+
 library(ggplot2)
 
-#TODO: (any summarySE.R too!)
-sapply(Sys.glob('~/Documents/repo/abseq/rscripts/*.R'), source)
+metaFile <- "rscripts_meta.tmp"
+f <- file(metaFile, "r")
+abSeqRoot <- readLines(f, n = 1)
+close(f)
 
-#TODO: remove rscipts_meta.tmp!
-pairings <- scan("rscripts_meta.tmp", character(), quote = "")
+source(paste(abSeqRoot, '/rscripts/summarySE.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/abundance.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/circlize.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/cloneScatter.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/clonotypeVenn.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/duplication.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/productivity.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/rarefaction.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/recapture.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/regionAnalysis.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/spectratype.R', sep = ""))
+source(paste(abSeqRoot, '/rscripts/topNDist.R', sep = ""))
+
+
+
+# find all pairings (each different set of pairings is separated by a new line)
+pairings <- scan(metaFile, character(), quote = "", skip = 1)
 
 # for each set of pairing - plot!
 for (i in 1:length(pairings)) {
   pair <- unlist(strsplit(pairings[i], "\\?"))
   directories <- unlist(strsplit(pair[1], ","))
   sampleNames <- unlist(strsplit(pair[2], ","))
-  
+  resultFolder <- unlist(strsplit(directories[1], "/"))[1]
+
   # different logic in obtaining folder names and sample directory names depending on sample lengths
   if (length(sampleNames) > 1) {
-    resultFolder <- head(tail(unlist(strsplit(directories[1], "/")), n = 2), n = 1)
     outputDir <- paste(resultFolder, '/', paste(sampleNames, collapse = "_vs_"), '/', sep = "")
     dir.create(outputDir)
   } else {
-    resultFolder <- head(tail(unlist(strsplit(directories[1], "/")), n = 2), n = 1)
-    sampleDirectory <- tail(tail(unlist(strsplit(directories[1], "/")), n = 2), n = 1) 
+    sampleDirectory <- unlist(strsplit(directories[1], "/"))[2]
     outputDir <- paste(resultFolder, '/', sampleDirectory, '/', sep = "")
   }
   

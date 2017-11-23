@@ -15,7 +15,7 @@ class IgMultiRepertoire:
         self.result = Queue()
         self.sampleCount = 0
         self.resource = args.threads
-        self.plotManager = PlotManager(args.rscripts, os.path.abspath(args.outdir))
+        self.plotManager = PlotManager(args)
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
@@ -54,7 +54,8 @@ class IgMultiRepertoire:
                     os.makedirs(modifiedArgs.outdir)
                 self.queue.put(IgRepertoire(modifiedArgs))
         else:
-            self.plotManager.addMetadata(("", args.name)) # outdir already has sample dir
+            self.plotManager.addMetadata(
+                (inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')[0], args.name))
             self.sampleCount += 1
             self.queue.put(IgRepertoire(args))
 
@@ -93,8 +94,8 @@ class IgMultiRepertoire:
 
     def finish(self):
         """
-        Queue might still be buffered, finish off cleanup here. then, flush metadata (tmp file)
-        for r scripts to find the right pairings of directory(samples) to plot
+        Queue might still be buffered, finish off cleanup here.
+        Then, delegate to plot manager to decide if there's further plotting required.
         :return: None
         """
         # pop all items
@@ -106,7 +107,7 @@ class IgMultiRepertoire:
         self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
-        self.plotManager.flushMetadata()
+        self.plotManager.plot()
 
     def __pairFiles(self, folder, args):
         """

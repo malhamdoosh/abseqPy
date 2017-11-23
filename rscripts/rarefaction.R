@@ -1,5 +1,4 @@
 library(ggplot2)
-source('./summarySE.R')
 theme_set(theme_bw())
 
 

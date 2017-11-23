@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 
 """
 XXX: IMPORTANT NOTE
@@ -19,13 +21,23 @@ The plots that OBEY pythonPlotOn() = False is:
 class PlotManager:
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
+    _tmpFile = "rscripts_meta.tmp"
 
-    def __init__(self, rscriptArgs, outdir):
-        self.rscriptArgs = rscriptArgs
+    def __init__(self, args):
+        self.rscriptArgs = args.rscripts
         # there's no R plotting if user specified that r scripts shouldn't run => python's plotting should run instead
         PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
         self.metadata = []
-        self.outdir = outdir
+
+        if os.path.isdir(args.f1):
+            # args.outdir is relative
+            self.outdir = args.outdir
+        else:
+            # args.outdir is absolute - change to relative
+            # for example: /Users/harry/sandbox/small/foo/PCR1_BH5C6_CAACG-CGTGAT_L001/
+            # we want /Users/harry/sandbox/small/foo/
+            path = args.outdir[:args.outdir.rstrip("/").rfind("/") + 1]
+            self.outdir = os.path.relpath(path)
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic above.
@@ -43,7 +55,7 @@ class PlotManager:
 
     @staticmethod
     def rscriptsIsConf(arg):
-        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) == 1 and os.path.exists(arg)
+        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) == 1
 
     @staticmethod
     def rscriptsIsPairedStrings(arg):
@@ -68,7 +80,31 @@ class PlotManager:
         """
         self.metadata.append(sample)
 
-    def flushMetadata(self):
+    def plot(self):
+        abSeqRoot = sys.path[0]
+        self._flushMetadata(abSeqRoot)
+        subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
+        #os.remove(PlotManager._tmpFile)
+
+    def _flushMetadata(self, abSeqRootDir):
+        """
+        AbSeq's way of communicating with external Rscript. AbSeq's python component supplies R with
+        all the necessary information to find (CSVs) and generate plots.
+
+        The first line is the absolute path to abseq's root directory.
+
+        Output format is of:
+        /path/to/sampleDirectory1, /path/to/sampleDirectory2, ... /path/to/sampleDirectoryN ? sampleName1, ..., sampleNameN
+
+        Where commas separate pairings of samples and question mark denotes that everything on RHS is the
+        canonical sample name used throughout AbSeq for each given sample (in the order they appeared on LHS)
+
+        Non-paired samples (even paired samples requires R to plot sample individually) will have the format of:
+
+        /path/to/sampleDirectory/ ? sampleName
+        (it's the same as multi-sample except that there are no commas)
+        :return: None. Side effect : writes a temporary file
+        """
         # only write metadata if we have to plot in R
         if not self._pythonPlotting:
             writeBuffer = []
@@ -87,7 +123,9 @@ class PlotManager:
             # the individual samples has to be plotted too!
             writeBuffer += map(lambda x: [x], self.metadata)
 
-            with open("rscripts_meta.tmp", "w") as fp:
+            with open(PlotManager._tmpFile, "w") as fp:
+                # tell R where AbSeq lives
+                fp.write(abSeqRootDir + "\n")
                 for pairing in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
                     fp.write(','.join(map(lambda x: (self.outdir + "/" + x[0].lstrip("/")).replace("//", "/"),
