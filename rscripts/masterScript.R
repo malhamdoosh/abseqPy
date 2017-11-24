@@ -42,8 +42,7 @@ for (i in 1:length(pairings)) {
     outputDir <- paste(resultFolder, '/', paste(sampleNames, collapse = "_vs_"), '/', sep = "")
     dir.create(outputDir)
   } else {
-    sampleDirectory <- unlist(strsplit(directories[1], "/"))[2]
-    outputDir <- paste(resultFolder, '/', sampleDirectory, '/', sep = "")
+    outputDir <- paste(directories, '/', sep = "")
   }
   
   ##################################################
