@@ -5,9 +5,10 @@
     Changes log: check git commits. 
 ''' 
 
+import os
 from collections import Counter, defaultdict
 from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap
-from IgRepertoire.igRepUtils import writeCountsToFile, compressCountsGeneLevel,\
+from IgRepertoire.igRepUtils import compressCountsGeneLevel,\
     compressCountsFamilyLevel
 
 
@@ -17,18 +18,12 @@ def writeVAbundanceToFiles(stats, sampleName, outDir):
         print("WARNING: No IGV hits were detected.")
         return        
     
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igvDist, outDir + sampleName + 
-                      '_igv_dist_variant_level.csv')
-    
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igvDistSub = compressCountsGeneLevel(igvDist)
 #         for k in igvDist.keys():
 #             ksub = k.split('*')[0]
 #             igvDistSub[ksub] = igvDistSub.get(ksub, 0) + igvDist[k]
-    writeCountsToFile(igvDistSub, outDir + sampleName + 
-                      '_igv_dist_gene_level.csv')
-    plotDist(igvDistSub, sampleName, outDir + sampleName + 
+    plotDist(igvDistSub, sampleName, outDir + sampleName +
              '_igv_dist_gene_level.png', rotateLabels=False, vertical=False)
     
     # Group IGVs based on the families and then write into a text file
@@ -36,9 +31,7 @@ def writeVAbundanceToFiles(stats, sampleName, outDir):
 #         for k in igvDistSub.keys():
 #             kfam = k.split('-')[0].split('/')[0]
 #             igvDistfam[kfam] = igvDistfam.get(kfam, 0) + igvDistSub[k]
-    writeCountsToFile(igvDistfam, outDir + sampleName + 
-                       '_igv_dist_family_level.csv')
-    
+
     # Plot the family level distribution
     plotDist(igvDistfam, sampleName, outDir + sampleName + 
              '_igv_dist_family_level.png')
@@ -80,23 +73,16 @@ def writeJAbundanceToFiles(stats, sampleName, outDir):
         print("WARNING: No IGJ hits were detected.")
         return        
     
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igjDist, outDir + sampleName + 
-                      '_igj_dist_variant_level.csv')
-    plotDist(igjDist, sampleName, outDir + sampleName + 
+    plotDist(igjDist, sampleName, outDir + sampleName +
                   '_igj_dist_variant_level.png', rotateLabels=False, vertical=False)
     
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igjDistSub = compressCountsGeneLevel(igjDist)
-#     writeCountsToFile(igjDistSub, outDir + sampleName + 
-#                       '_igj_dist_gene_level.csv')
-#     plotDist(igjDistSub, sampleName, outDir + sampleName + 
+#     plotDist(igjDistSub, sampleName, outDir + sampleName +
 #              '_igj_dist_gene_level.png', rotateLabels=False, vertical=False)
 #     
     # Group IGVs based on the families and then write into a text file
     igjDistfam = compressCountsFamilyLevel(igjDistSub)
-    writeCountsToFile(igjDistfam, outDir + sampleName + 
-                       '_igj_dist_family_level.csv')    
     # Plot the family level distribution
     plotDist(igjDistfam, sampleName, outDir + sampleName + 
              '_igj_dist_family_level.png',
@@ -110,22 +96,14 @@ def writeDAbundanceToFiles(stats, sampleName, outDir):
         print("WARNING: No IGD hits were detected.")
         return        
     
-    # Write the counts of all IGVs into a text file
-    writeCountsToFile(igdDist, outDir + sampleName + 
-                      '_igd_dist_variant_level.csv')
-    
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igdDistSub = compressCountsGeneLevel(igdDist)
-    writeCountsToFile(igdDistSub, outDir + sampleName + 
-                      '_igd_dist_gene_level.csv')
-    plotDist(igdDistSub, sampleName, outDir + sampleName + 
+    plotDist(igdDistSub, sampleName, outDir + sampleName +
              '_igd_dist_gene_level.png', rotateLabels=False, vertical=False,
              title = 'IGD Abundance in Sample ' + sampleName )
     
     # Group IGVs based on the families and then write into a text file
     igdDistfam = compressCountsFamilyLevel(igdDistSub)
-    writeCountsToFile(igdDistfam, outDir + sampleName + 
-                       '_igd_dist_family_level.csv')    
     # Plot the family level distribution
     plotDist(igdDistfam, sampleName, outDir + sampleName + 
              '_igd_dist_family_level.png',
@@ -139,6 +117,10 @@ def writeVJAssociationToFiles(stats, sampleName, outDir):
             return None, None
         return vgene.split("-")[0].split("/")[0].rstrip("D"), jgene.split("*")[0]
 
+    fname = outDir + sampleName + "_vjassoc.csv"
+    if os.path.exists(fname):
+        return
+
     tally = defaultdict(lambda: defaultdict(int))
     for v, j in zip(stats['vgene'], stats['jgene']):
         vFamily, jFamily = canonicalFamilyName(v, j)
@@ -146,7 +128,7 @@ def writeVJAssociationToFiles(stats, sampleName, outDir):
             continue
         tally[vFamily][jFamily] += 1
 
-    with open(outDir + sampleName + "_vjassoc.csv", "w") as fp:
+    with open(fname, "w") as fp:
         writeBuffer = ""
         header = ["from", "to", "value"]
         writeBuffer += ",".join(header) + "\n"

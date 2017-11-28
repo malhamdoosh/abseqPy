@@ -1,11 +1,17 @@
 library(ggplot2)
 
-plotSpectratype <- function(dataframes, sampleNames, region = "CDR3") {
+plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratype", subtitle = "", xlabel = "Length(AA)", ylabel = "Distribution") {
   # Plots an amino acid spectratype diagram for a given region.
   # Args:
   #     dataframes: A list() type. List of dataframes.
   #     sampleNames: A vector type. Vectors of strings each representing the samplename
   #     region: String that will be displayed in the plot title. This specifies which region this spectratype belongs to
+  #     title: A string type.
+  #     subtitle: A string type.
+  #     xlabel: A string type.
+  #     ylabel: A string type.
+  # Returns:
+  #    ggplot().
   nsample <- length(dataframes)
   stopifnot(nsample == length(sampleNames))
   
@@ -29,15 +35,23 @@ plotSpectratype <- function(dataframes, sampleNames, region = "CDR3") {
     df.union <- dataframes[[1]]
   }
   
+  if (!missing(region)) {
+    plotTitle <- paste(region, "amino acid spectratype")
+    plotSubTitle <- paste("Distribution of", region, "amino acid lengths")
+  } else {
+    plotTitle <- title
+    plotSubTitle <- subtitle
+  }
+  
   g <- ggplot(df.union, aes(length, percent)) +
     geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge") +
     #geom_smooth(aes(colour=round), se=F, method="glm", formula=y~ns(x, 3), lwd=0.7)+
     #geom_text_repel(aes(label = count), size = 3) +
     #geom_text(aes(label = count), vjust=-1, size = 3) +
-    labs(title = paste(region, "amino acid spectratype"),
-         subtitle = paste("Distribution of", region, "amino acid lengths"),
-         x = "Length(AA)",
-         y = "Distribution")
+    labs(title = plotTitle,
+         subtitle = plotSubTitle,
+         x = xlabel,
+         y = ylabel)
   return (g)
 }
 

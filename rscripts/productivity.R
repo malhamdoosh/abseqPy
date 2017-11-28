@@ -39,14 +39,41 @@ productivityPlot <- function(dataframes, sampleNames) {
   g <- ggplot(df.union, aes(round, Percentage, label = sprintf("%0.2f%%", Percentage))) +
     geom_bar(stat="identity", aes(fill=Reason), width=0.5) +
     facet_grid(~ Productivity)+
-    labs(title="Productivity",
+    labs(title="Productivity proportions",
          subtitle="Percentage of unproductive reads due to stop codons and frameshifts",
          x="Round",
-         y="Percentage") +
+         y="Percentage (%)") +
     scale_y_continuous(limits=c(0,100)) +
     geom_text(position = position_stack(vjust = 0.5))
   return (g)
 }
+
+prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
+                         regions = c("cdr1", "cdr2", "cdr3", "fr1", "fr2", "fr3", "igv", "igd", "igj")) {
+  # Plots a distribution plot for different productivity analysis files
+  # Args:
+  #     productivityDirectories: A vector type. directories where all productivity csv files lives (usually <samplename>/productivity/)
+  #     sampleNames: A vector type. Vector of strings.
+  #     title: Title to give the plot
+  #     reg: Regular expression to find the right files for this particular distribution plot (see samples in masterScript.R)
+  #     regions: Most of the dist plots are regional based. use c("") if no regions are involved
+  # Returns:
+  #     a list of ggplot()s.
+  plots <- list()
+  i = 1
+  for (region in regions) {
+    fs <- list.files(path = productivityDirectories,
+                     pattern = paste(".*", region, reg, sep = ""),
+                     full.names = TRUE,
+                     recursive = TRUE)
+    dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
+    plotTitle <- paste(title, toupper(region))
+    plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
+    i <- i + 1
+  }
+  return (plots)
+}
+
 #files <- list.files(pattern = "PCR[123].*_productivity.csv$", full.names = TRUE, recursive = TRUE)
 #dataframes <- lapply(files, read.csv, stringsAsFactors = FALSE)
 #p <- productivityPlot(dataframes, c("PCR1_L001", "PCR2_L001", "PCR3_L001"))
