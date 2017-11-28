@@ -782,6 +782,9 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     :param metadata: Prints metadata before csv header. [default=""]
     :return: None. Outputs a CSV file
     """
+    # if the file or the gzipped file exists, then don't have to write again
+    if exists(filename) or exists(filename + '.gz'):
+        return
     if zip:
         f = gzip.open(filename + ('' if '.gz' in filename else ".gz"), "wb")
     else:
