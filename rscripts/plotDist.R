@@ -69,9 +69,18 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   }
   
   if (!vert) {
-    g <- ggplot(df.union, aes(y, x)) + coord_flip()
+    g <- ggplot(df.union, aes(y, x, label = sprintf("%0.2f%%", x))) + coord_flip()
+    if (frames == 1) {
+      g <- g + geom_text(hjust = -0.25)
+    }
   } else {
-    g <- ggplot(df.union, aes(x, y))
+    g <- ggplot(df.union, aes(x, y, label = sprintf("%0.2f%%", y)))
+    if (frames == 1) {
+      g <- g + geom_text(vjust = -0.5)
+    }
+    if (is.numeric(df.union$x)) {
+      g <- g + scale_x_continuous(breaks = df.union$x, labels = df.union$x)
+    }
   }
   g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge') +
     #theme(text = element_text(size = 10), axis.text.x = element_text(angle = 74, vjust = 0.4)) +
