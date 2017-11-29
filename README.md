@@ -9,9 +9,9 @@
 * [Dependencies](#dependencies)
 * [Usage](#usage)
     * [Parameter definitions](#parameter-definitions)
-    * [A typical usage](#a-typical-usage)
+    * [Use cases](#use-cases)
         * [Directory of samples](#directory-of-samples)
-        * [Just one](#just-one)
+        * [Single sample](#single-sample)
 
 ## Introduction
 ### AbSeq
@@ -119,7 +119,7 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-b, --bitscore`             	| range values (inclusive). If only one value is provided, implicitly start from the value. Example: `-b 300-inf` is equivalent to `-b 300` [default = 0-inf]    	| **Filtering criterion**  <br /> Filters sequences based on the V-gene bitscore from IgBLAST.                                                                                                                                                                                                                                                                                                                                                                                                                                                 	|
 | `-ss, --sstart`              	| range values (inclusive). If only one value is provided, implicitly starts from the value. Example: `-ss 1-inf` is equivalent to `-ss 1` [default = 1-inf]     	| **Filtering criterion**  <br /> Filters sequences based on the V-gene starting index.                                                                                                                                                                                                                                                                                                                                                                                                                                                        	|
 | `-al, --alignlen`            	| range values (inclusive). If only one value is provided, implicitly starts from the value. Example: `-al 300-inf` is equivalent to `-al 300` [default = 0-inf] 	| **Filtering criterion**  <br /> Filters sequences based on the sequence length.                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
-| `-qs, --qstart`              	| integer value [default = 1]                                                                                                                                    	|  Subsequences prior to this index are ignored. (Can be used to ignore primer residue in the front of sequences)                                                                                                                                                                                                                                                                                                                                                                                                                       	|
+| `-qs, --qstart`              	| integer value [default = 1]                                                                                                                                    	|  Subsequences prior to this index are ignored. (Can be used to ignore primer residue in front of sequences)                                                                                                                                                                                                                                                                                                                                                                                                                       	|
 | `-u, --upstream`             	| range values. [default = 1-inf]                                                                                                                                	| Range of upstream sequences, secretion signal analysis.                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
 | `-t5, --trim5`               	| integer value [default = 0]                                                                                                                                    	| Number of nucleotides to trim on the 5'end of V gene                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|
 | `-t3, --trim3`               	| integer value [default = 0]                                                                                                                                    	| Number of nucleotides to trim on the 3'end of V gene                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|
@@ -127,6 +127,7 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-p, --primer`               	| integer value [default = -1]                                                                                                                                   	| Not implemented yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
 | `-d, --database`             	| /path/to/database/ Defaults to `$IGBLASTDB` env variable setup [earlier](#exporting-environment-variables)                                                     	| Path to `igblastDB/databases/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	|
 | `-q, --threads`              	| integer value [default = 8]                                                                                                                                    	| Number of processes running concurrently                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
+| `-rs, --rscripts`             | empty, string, or a file [default = empty]                                                                                                                        | Reporting engine and sample pairing flag. When `-rs <arg>` is specified, where: <br /> `<arg>` is a string of samples, then there will be R plots generated to compare the samples explicitly. <br /> `<arg>` is a filename, then there will be R plots generated to compare the samples explicitly. The samples pairings are separated by newlines. <br /> `<arg>` is the string `off`, then AbSeq plots in python instead of R. Note that there is no sample comparison available when plotting in python. <br /> `<arg>` is not specified, then the default behaviour of plotting in R with no explicit sample pairing is conducted. <br /> Not that the supplied string or file for sample pairing only makes sense when `-f1` is supplied with a directory. See [use case examples](#directory-of-samples)
 | `-r, --report-interim`       	| no arguments                                                                                                                                                   	| Specify this flag to generate report. Not implemented yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
 | `-f4c, -fr4cut`              	| no arguments                                                                                                                                                   	| Specify this flag to remove subsequence after FR4 region. Not specified by default.                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
 | `-st, --sites`               	| /path/to/file                                                                                                                                                  	| Required if `-t rsa` or `-t rsasimple` is specified. (todo)                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
@@ -134,8 +135,7 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-p5, --primer5end`          	| /path/to/file                                                                                                                                                  	| Path to primer 5'end file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             	|
 | `-v, --version`              	| no arguments                                                                                                                                                   	| Prints the current AbSeq version and exits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
 | `-h, --help`                 	| no arguments                                                                                                                                                   	| Prints this help message and exits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    	|
-
-### A typical usage
+### Use cases
 
 #### Directory of samples
 Let `/Users/john/sequences/` be a directory as such:
@@ -144,29 +144,55 @@ $ ls /Users/john/sequences/
 SRR1_BZ123_CAGGG-GGACT_L001.fasta.gz
 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz
 SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz 
+SRR3_BZ929_CAGGG-GGACT_L001.fastq.gz 
 ```
+We wish to analyze all samples and explicitly compare samples SRR1 and SRR2, and also SRR1, SRR2, and SRR3.
 
 Then running AbSeq:
 ```bash
 $ abseq -f1 /Users/john/sequences/ -t all \
     -o results -m leehom -q 4 \
     -cl inf -ss 1.0-3.0 \
-    -b 350 -al 260 > SRR.log 2>&1
+    -b 350 \
+    -al 260 \
+    -rs "SRR1,SRR2,, SRR1,SRR2_BZ929_L001, SRR3"
 ```
-will produce analysis for `SRR1_L001` in `results/SRR1_BZ123_CAGGG-GGACT_L001/` and 
-`SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
+will produce analysis for `SRR1_L001` in `results/SRR1_BZ123_CAGGG-GGACT_L001/`,
+`SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`, `SRR3_L001` in `results/SRR3_BZ929_CAGGG-GGACT_L001/`,
+multiple sample analysis for `SRR1_L001` and `SRR2_L001` in `results/SRR1_L001_vs_SRR2_L001/`, `SRR1_L001`, `SRR2_L001`,
+and `SRR3_L001` in `results/SRR1_L001_vs_SRR2_L001_vs_SRR3_L001/`.
 
 The logfile(s) `AbSeq.log` and `SRR.log` can be found in the directory that AbSeq was run.
 Typically, all that you need is just `AbSeq.log`.
 
-> Quicktip: To prevent SIGHUP from terminating your processes, run AbSeq with `$ nohup abseq ...`
+> Tip 1: `-rs` uses fuzzy string search. Therefore, providing either the full sample file name or truncated name will work
+fine. Note the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` would work fine too.
 
-#### Just one
-Running AbSeq on just one sample:
+> Tip 2: `-rs` ignores whitespaces between sample names. Feel free to put spaces between commas and sample names.
+
+Assuming 
+```bash
+$ cat pairing_config.txt
+SRR1, SRR2
+SRR1_L001, SRR2, SRR3
+```
+> Tip 3: `-rs pairing_config.txt` would've worked exactly the same as above
+
+#### Single sample
+Running AbSeq on one sample:
+```bash
+$ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
+        -f2 SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz \
+        -t all -o results -m leehom -q 4 \
+        -cl inf -ss 1.0-3.0 -b 350 -al 260
+```
+will produce analysis for `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
+
+To turn off R plots and use python's plotting engine instead:
 ```bash
 $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
         -f2 SRR2_BZ929_CAGGG-GGACT_L001_R2.fastq.gz \
         -t all -o results -m leehom -q 4  \
-        -cl inf -ss 1.0-3.0 -b 350 -al 260 > SRR2.log 2>&1
+        -cl inf -ss 1.0-3.0 -b 350  -al 260 \
+        -rs off
 ```
-will produce analysis for `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
