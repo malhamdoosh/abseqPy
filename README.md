@@ -7,11 +7,16 @@
     * [Download](#download)
     * [Installation and configuration](#installation-and-configuration)
 * [Dependencies](#dependencies)
+    * [Binary dependencies](#binary-dependencies)
+    * [R library dependencies](#r-library-dependencies)
+    * [Exporting variables](#exporting-variables)
+    * [Exporting environment variables](#exporting-environment-variables)
 * [Usage](#usage)
     * [Parameter definitions](#parameter-definitions)
     * [Use cases](#use-cases)
         * [Directory of samples](#directory-of-samples)
         * [Single sample](#single-sample)
+            * [Python-only plot](#python-only-plot)
 
 ## Introduction
 ### AbSeq
@@ -38,15 +43,19 @@ There will be more information on contribution guidelines in the [wikipage](link
 
 ### Installation and configuration
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
-installed and ready to go. You will require a python 2.7 on your system with the following
+installed and ready to go. You will require python v2.7 in your system with the following
 python libraries installed (any version will do):
 
 1. [pandas](http://pandas.pydata.org/)
 2. [BioPython](http://biopython.org/)
 
+Additionally, you will also need R installed in your machine [unless you choose not to](#r-library-dependencies).
+
 > macOS users will also require the psutil library.
 
 ## Dependencies
+
+### Binary dependencies
 AbSeq requires a few external packages available in your system, namely:
 
 > Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). Pay special
@@ -66,7 +75,7 @@ attention to the versions - these versions are used during the development and t
 * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
     - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
     - Make sure to follow **_every_** step detailed in the guide
-    - **_Important_** Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
+    - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
      See [here](#exporting-environment-variables)
 * [leeHom](https://github.com/grenaud/leeHom) any version
     - Follow the installation guide in their README
@@ -80,8 +89,20 @@ attention to the versions - these versions are used during the development and t
 * [WebLogo](https://github.com/WebLogo/weblogo/releases/tag/3.4.1) v3.4.1
     - Download (also get [ghostscript](https://www.ghostscript.com/) if you haven't - WebLogo requires it)
     - Simply run `./build.sh`
+    
+### R library dependencies
 
-#### Exporting variables
+The plotting facilities provided by AbSeq uses a few R libraries. You can avoid R and all its dependencies entirely
+if you explicitly tell AbSeq to [plot in python only](#python-only-plot). Otherwise, you will require `ggplot2`,
+`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`.
+
+To make your life easier, you can simply execute
+```bash
+$ Rscript rscripts/installer.R
+```
+to install all of the above libraries. It will check if it's installed in your system before installing them.
+
+### Exporting variables
 To make these programs available in your `$PATH` variable:
 ```bash
 export PATH="/path/to/fastqc:/path/to/leehom/:$PATH"
@@ -92,7 +113,7 @@ in your `.bashrc` or equivalent.
 each separated by colons. Repeat this for every dependency. Alternatively, move all binaries into one
 folder (eg, `/Users/john/bin/`) and `export PATH="/Users/john/bin/:$PATH"`
 
-#### Exporting environment variables
+### Exporting environment variables
 Make sure `$IGBLASTDB` and `$IGDATA` are exported.
 ```bash
 export IGBLASTDB="/path/to/data/igblastDB/databases/"
@@ -157,10 +178,17 @@ $ abseq -f1 /Users/john/sequences/ -t all \
     -al 260 \
     -rs "SRR1,SRR2,, SRR1,SRR2_BZ929_L001, SRR3"
 ```
-will produce analysis for `SRR1_L001` in `results/SRR1_BZ123_CAGGG-GGACT_L001/`,
-`SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`, `SRR3_L001` in `results/SRR3_BZ929_CAGGG-GGACT_L001/`,
-multiple sample analysis for `SRR1_L001` and `SRR2_L001` in `results/SRR1_L001_vs_SRR2_L001/`, `SRR1_L001`, `SRR2_L001`,
-and `SRR3_L001` in `results/SRR1_L001_vs_SRR2_L001_vs_SRR3_L001/`.
+
+will produce analysis for:
+
+  * `SRR1_L001` in `results/SRR1_BZ123_CAGGG-GGACT_L001/`,
+  * `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`,
+  * `SRR3_L001` in `results/SRR3_BZ929_CAGGG-GGACT_L001/`,
+  
+sample comparison analysis for:
+
+  * `SRR1_L001` and `SRR2_L001` in `results/SRR1_L001_vs_SRR2_L001/`,
+  * `SRR1_L001`, `SRR2_L001`, and `SRR3_L001` in `results/SRR1_L001_vs_SRR2_L001_vs_SRR3_L001/`.
 
 The logfile(s) `AbSeq.log` and `SRR.log` can be found in the directory that AbSeq was run.
 Typically, all that you need is just `AbSeq.log`.
@@ -188,6 +216,7 @@ $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
 ```
 will produce analysis for `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
 
+##### Python-only plot
 To turn off R plots and use python's plotting engine instead:
 ```bash
 $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
