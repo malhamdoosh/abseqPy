@@ -7,7 +7,6 @@ from config import DEFAULT_MERGER
 from GeneralWorker import GeneralWorker, GeneralWorkerException
 from math import floor
 import os
-import gc
 
 
 class IgMultiRepertoire:
@@ -108,7 +107,6 @@ class IgMultiRepertoire:
         self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
-        gc.collect()
         self.plotManager.plot()
 
     def __pairFiles(self, folder, args):
