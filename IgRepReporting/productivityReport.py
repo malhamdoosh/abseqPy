@@ -189,7 +189,7 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
              proportion=False, rotateLabels=False)
     frGaps = Counter(outOfFrame['fr2.gaps'].tolist())
     plotDist(frGaps, name, outputDir + name + 
-             '_outframe_fr2_gaps_dist.png', title='Gaps in FR2',
+             '_fr2_gaps_dist_out_of_frame.png', title='Gaps in FR2',
              proportion=False, rotateLabels=False)
     del cdrGaps, frGaps
     # Indels in CDR3 and FR3

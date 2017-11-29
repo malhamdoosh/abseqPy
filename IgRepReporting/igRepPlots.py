@@ -6,26 +6,26 @@
 '''
 
 import matplotlib as mpl
-import matplotlib.mlab as mlab
-from collections import Counter
-import math
-import numpy
-from matplotlib import cm
-import IgRepertoire.igRepUtils
-from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast, \
-    WeightedPopulation
-import gzip
-import sys
-
 mpl.use('Agg')  # Agg
-
+import matplotlib.mlab as mlab
+import gzip
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.colors as mcolors
+import math
+import numpy
+import IgRepertoire.igRepUtils
+import random
+from matplotlib import cm
+from collections import Counter
+from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast, \
+    WeightedPopulation
+from IgMultiRepertoire.PlotManager import PlotManager
 from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
-import random
+
+
 
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf):
@@ -109,13 +109,13 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                  [(k, v) for k, v in zip(sizes, weights)])
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
-            if sigma == 0:
-                # the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
-                # eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
-                assert (len(sizes) == 1)
-                sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
-            y = mlab.normpdf(bins, mu, sigma)
-            ax.plot(bins, y, 'r--')
+            if sigma != 0:
+                ## the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
+                ## eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
+                #assert (len(sizes) == 1)
+                #sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
+                y = mlab.normpdf(bins, mu, sigma)
+                ax.plot(bins, y, 'r--')
     else:
         if all([(x == 1) for x in weights]):
             tmp = Counter(sizes)
@@ -149,14 +149,15 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False):
     if (exists(filename)):
         print('\tFile found ... ' + filename.split('/')[-1])
         return
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.grid()
-    ax.set_xlabel('Duplication Level')
-    ax.set_ylabel('Proportion of Duplicated Sequences')
-    if (not grouped):
-        ax.set_title(title + '\nTotal is {:,}'.format(int(sum(frequencies[0]))))
-    else:
-        ax.set_title(title + '\nTotal is {:,}'.format(sum(map(lambda x: sum(x), frequencies))))
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.grid()
+        ax.set_xlabel('Duplication Level')
+        ax.set_ylabel('Proportion of Duplicated Sequences')
+        if (not grouped):
+            ax.set_title(title + '\nTotal is {:,}'.format(int(sum(frequencies[0]))))
+        else:
+            ax.set_title(title + '\nTotal is {:,}'.format(sum(map(lambda x: sum(x), frequencies))))
     csvData = []
     for freqs, l in zip(frequencies, labels):
         # sort frequencies in ascending order
@@ -182,26 +183,32 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False):
             # merge ticks and proportions to construct the final plot data
         y = less10Y + y
         ticks = less10Ticks + ticks
-        # plot the curve 
-        ax.plot(ticks, y, label=l)
+
         csvData.extend([(i, j, l) for i, j in zip(ticks, y)])
-    # set the ticks and labels on the x-axis 
+
+        if PlotManager.pythonPlotOn():
+            # plot the curve
+            ax.plot(ticks, y, label=l)
+
+    # set the ticks and labels on the x-axis
     xticks = range(1, 10, 2) + [10] + range(11, 21, 2)
-    ax.set_xticks(xticks)
     xlabels = range(1, 10, 2) + ['>=10']
     xlabels += map(lambda x: '>' + `int(x) - int(x) % 100` if x > 100 else '>=' + `int(x)`,
                    np.linspace(10, 10000, (len(xticks) - len(xlabels)) * 2).tolist()[1::2])
-    ax.set_xticklabels(xlabels, rotation=45)
-    ax.legend()
-    ax.legend(loc="upper left")
-    # plt.tight_layout()
-    plt.subplots_adjust(bottom=0.2)
-    fig.savefig(filename, dpi=300)
-    plt.close()
+
     # write to csv too - let metadata tell the plotting program to re-scale the X axis to the provided values
-    # we know we're using R - so convert to c() representation
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData,
-             metadata="c(" + str(xticks).strip('[]') + ")\n" + "c(" + str(xlabels).strip('[]') + ")\n")
+             metadata=(str(xticks).strip('[]') + "\n" + str(xlabels).strip('[]') + "\n"))
+
+    if PlotManager.pythonPlotOn():
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xlabels, rotation=45)
+        ax.legend()
+        ax.legend(loc="upper left")
+        # plt.tight_layout()
+        plt.subplots_adjust(bottom=0.2)
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 '''
@@ -217,11 +224,12 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
     if (exists(filename)):
         print('\tFile found ... ' + filename.split('/')[-1])
         return
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.grid()
-    ax.set_xlabel('Sample size')
-    ax.set_ylabel('Number of Deduplicated Sequences')
-    ax.set_title(title)
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.grid()
+        ax.set_xlabel('Sample size')
+        ax.set_ylabel('Number of Deduplicated Sequences')
+        ax.set_title(title)
     csvData = []
     for setSeqs, l, w in zip(seqs, labels, weights):
         if w is not None:
@@ -254,19 +262,24 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
         # pt.append((len(setSeqs), len(set(setSeqs))))
         # calculate the mean across 5 samples
         csvData.extend([(x, y, l) for x, ys in pt for y in ys])
-        ax.plot([d[0] for d in pt], [mean(d[1]) * 1.0 for d in pt], label=l)
-    ax.legend(loc="upper left")
+
+        if PlotManager.pythonPlotOn():
+            ax.plot([d[0] for d in pt], [mean(d[1]) * 1.0 for d in pt], label=l)
+
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks[:-1])
     xticks.append(total)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks, rotation=90)
-    plt.subplots_adjust(bottom=0.21)
-    fig.savefig(filename, dpi=300)
+
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
-             metadata="c(" + str(xticks).strip('[]') + ")\n")
-    plt.close()
-    # sys.exit()
+             metadata=(str(xticks).strip('[]') + "\n"))
+
+    if PlotManager.pythonPlotOn():
+        ax.legend(loc="upper left")
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks, rotation=90)
+        plt.subplots_adjust(bottom=0.21)
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 '''
@@ -291,11 +304,12 @@ def plotSeqRecapture(seqs, labels, filename, weights=None, title=''):
     if (exists(filename)):
         print('\tFile found ... ' + filename.split('/')[-1])
         return
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.grid()
-    ax.set_xlabel('Sample size')
-    ax.set_ylabel('Percent Recapture')
-    ax.set_title(title)
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.grid()
+        ax.set_xlabel('Sample size')
+        ax.set_ylabel('Percent Recapture')
+        ax.set_title(title)
     for setSeqs, l, w in zip(seqs, labels, weights):
         if w is not None:
             total = sum(w)
@@ -325,16 +339,18 @@ def plotSeqRecapture(seqs, labels, filename, weights=None, title=''):
             pt.append((j, mean(hs)))
         # pt.append((len(setSeqs), len(set(setSeqs))))
         # calculate the mean across 5 samples 
-        ax.plot([d[0] for d in pt], [d[1] for d in pt], label=l)
-    ax.legend(loc="upper left")
+        if PlotManager.pythonPlotOn():
+            ax.plot([d[0] for d in pt], [d[1] for d in pt], label=l)
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks[:-1])
     xticks.append(total)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks, rotation=90)
-    plt.subplots_adjust(bottom=0.21)
-    fig.savefig(filename, dpi=300)
-    plt.close()
+    if PlotManager.pythonPlotOn():
+        ax.legend(loc="upper left")
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks, rotation=90)
+        plt.subplots_adjust(bottom=0.21)
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 '''
@@ -346,11 +362,12 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
     if (exists(filename)):
         print('\tFile found ... ' + filename.split('/')[-1])
         return
-    fig, ax = plt.subplots(figsize=(8, 5))
-    ax.grid()
-    ax.set_xlabel('Sample size')
-    ax.set_ylabel('Percent Recapture')
-    ax.set_title(title)
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.grid()
+        ax.set_xlabel('Sample size')
+        ax.set_ylabel('Percent Recapture')
+        ax.set_title(title)
     csvData = []
     for setSeqs, l in zip(seqs, labels):
         total = 35000
@@ -371,18 +388,23 @@ def plotSeqRecaptureNew(seqs, labels, filename, title=''):
         # pt.append((len(setSeqs), len(set(setSeqs))))
         # calculate the mean across 5 samples
         csvData.extend([(x, y, l) for x, ys in pt for y in ys])
-        ax.plot([d[0] for d in pt], [mean(d[1]) for d in pt], label=l)
-    ax.legend(loc="upper left")
+
+        if PlotManager.pythonPlotOn():
+            ax.plot([d[0] for d in pt], [mean(d[1]) for d in pt], label=l)
+
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks)
     #     xticks.append(total)
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks, rotation=90)
-    plt.subplots_adjust(bottom=0.21)
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
-             metadata="c(" + str(xticks).strip('[]') + ")\n")
-    fig.savefig(filename, dpi=300)
-    plt.close()
+             metadata=(str(xticks).strip('[]') + "\n"))
+
+    if PlotManager.pythonPlotOn():
+        ax.legend(loc="upper left")
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks, rotation=90)
+        plt.subplots_adjust(bottom=0.21)
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 '''
@@ -414,7 +436,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     if (exists(filename)):
         print("File found ... " + filename.split('/')[-1])
         return
-    # This function creates bar plot for the distribution counts/proportions 
+
+    # This function creates bar plot for the distribution counts/proportions
     if sortValues:
         classes = sorted(ighvDistfam, key=ighvDistfam.get, reverse=True)
     else:
@@ -444,6 +467,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         topvalFormat = '{:,}'
     # Create the bar plot and format it      
     if vertical:
+        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(classes, stats)],
+                 metadata="vert\n")
         rects = ax.bar(ind, stats, width)
         ax.set_xticks(ind + width / 2)
         ax.set_ylim(top=max(stats) * 1.1)
@@ -464,6 +489,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
                         (topvalFormat.format(height)),
                         ha='center', va='bottom', size=10, color='red')
     else:
+        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(stats, classes)],
+                 metadata="hori\n")
         rects = ax.barh(ind, stats, width)
         ax.set_yticks(ind + width / 2)
         ax.set_xlim(right=max(stats) * 1.1)
@@ -489,7 +516,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     title += '\nTotal is {:,}'.format(int(total))
     ax.set_title(title)
     plt.tight_layout()
-    fig.savefig(filename, dpi=300)
+    if PlotManager.pythonPlotOn():
+        fig.savefig(filename, dpi=300)
     plt.close()
 
 
@@ -756,6 +784,9 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     :param metadata: Prints metadata before csv header. [default=""]
     :return: None. Outputs a CSV file
     """
+    # if the file or the gzipped file exists, then don't have to write again
+    if exists(filename) or exists(filename + '.gz'):
+        return
     if zip:
         f = gzip.open(filename + ('' if '.gz' in filename else ".gz"), "wb")
     else:

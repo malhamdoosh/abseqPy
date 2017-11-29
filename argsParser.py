@@ -8,58 +8,11 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
+from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR
 from numpy import Inf
 from os.path import abspath
-from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
-
-def extractRanges(strRanges, expNoRanges=2):
-    """
-    Returns the range given an input
-    :param strRanges: string range, allowed format: 0-10,23-25 or 0-10 or 0
-    :param expNoRanges: maximum number of allowed ranges, eg: expNoRange=1 implies only 1 range, expNoRange=2
-    implies 0-10,20-25 is allowed, and so on
-    :return: a nested list of ranges
-    """
-    numRanges = []
-    ranges = strRanges.split(',')
-    if (len(ranges) > expNoRanges):
-        raise Exception("Number of bitScore, alignLen and sstart ranges should match the number of files")
-        
-    for i in range(len(ranges)):
-        scores = ranges[i].split('-')
-        if (len(scores) == 2):
-            numRanges.append([float(scores[0]), float(scores[1])])
-            if (numRanges[-1][0] >= numRanges[-1][1]):
-                raise Exception("Invalid ranges " + strRanges)
-                
-        else:
-            numRanges.append([float(scores[0]), Inf])
-
-    # BUGSQ: if (len(numRanges) == 1 < expNoRanges):
-    if len(numRanges) < expNoRanges:
-        numRanges = numRanges * expNoRanges
-    return numRanges
-
-PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
-                 '-f1', '-f2', '-fmt', '-o', '-merge', '-merger',  
-                 '-seqtype', '-threads', '-db',  
-                  '-bitscore', '-alignlen', '-sstart', '-actualqstart',     
-                  '-trim5' ,'-trim3',  '-fr4cut',            
-                   '-sites',
-                  '-primer', 
-                  '-5end', '-3end', 
-                  '-5endoffset',
-                 '-upstream',
-                 '-report_interim'
-                  ]
-
-
-def printUsage(parser, additional_msg=None):
-    parser.print_help()
-    if additional_msg is not None:
-        print(additional_msg, file=sys.stderr)
-    sys.exit(0)
+from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
+from IgMultiRepertoire.PlotManager import PlotManager
 
 
 def parseArgs():
@@ -68,7 +21,6 @@ def parseArgs():
     to do any logic checking after this call.
     :return: argparse namespace object, using dot notation to retrieve value: args.value
     """
-
 
     parser, args = parseCommandLineArguments()
 
@@ -80,11 +32,11 @@ def parseArgs():
 
     # check for f1, f2 file existence and expand path
     if not os.path.exists(args.f1):
-        raise Exception("-f1 file not found!")
+        parser.error("-f1 file not found!")
     else:
         args.f1 = abspath(args.f1)
     if args.f2 is not None and not os.path.exists(args.f2):
-        raise Exception("-f2 file not found!")
+        parser.error("-f2 file not found!")
     elif args.f2 is not None:
         args.f2 = abspath(args.f2)
 
@@ -92,10 +44,9 @@ def parseArgs():
         # detect file format (either fastq or fasta); both should be the same type
         fmt = detectFileFormat(args.f1)
         if args.f2 is not None and detectFileFormat(args.f2) != fmt:
-            raise Exception("Detected mismatch in file extensions --file1 and --file2!"
-                            " Both should be either FASTA or FASTQ.")
+            parser.error("Detected mismatch in file extensions --file1 and --file2!"
+                         " Both should be either FASTA or FASTQ.")
         args.fmt = fmt
-
 
         # check logic between f1, f2 and merger, setting default merger to flash
         if args.merger is not None and args.f2 is None:
@@ -117,6 +68,11 @@ def parseArgs():
             os.makedirs(args.outdir)
 
         args.log = args.outdir + args.name + ".log"
+
+        # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
+        if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):
+            parser.error("-rs / --rscripts argument is either empty or "
+                         "'off' when -f1 is not a directory - there is nothing to pair with!")
 
     if args.clonelimit is None:
         args.clonelimit = DEFAULT_TOP_CLONE_VALUE
@@ -151,7 +107,7 @@ def parseArgs():
 
     # BUGSQ: if user provided value = 0, what happens?: here, only subtract 1 if args.trim5 isn't default 0, or if user
     # didn't provide 0, since the other file that uses this parameter didn't check for negative values
-    args.trim5 -= args.trim5 > 0            # again, transform args.trim5 to 0-based if provided value is > 0, else 0
+    args.trim5 -= args.trim5 > 0  # again, transform args.trim5 to 0-based if provided value is > 0, else 0
 
     # retrieve filenames for primer analysis on 5' and 3' end
     if args.task == 'primer':
@@ -161,6 +117,32 @@ def parseArgs():
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
     args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
+
+    # -rs / --rscripts sanity check!
+
+    # -rs / --rscripts: if it was a conf file, make sure it exists!
+    if PlotManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
+        parser.error("Provided --rscripts {} file not found!".format(args.rscripts))
+    # if the argument to -rs isn't valid, throw parser error
+    # Allowed arguments are:
+    #   1) -rs / --rscripts <blank>
+    #   2) -rs / --rscripts off
+    #   3) -rs / --rscripts "off"
+    #   4) -rs / --rscripts "sample_1.fastq, sample_2.fasta, ..."
+    #   5) -rs / --rscripts "config-pairing-file.txt"
+    #   6) -rs / --rscripts config-pairing-file.txt
+    #           (note the name doesn't have to be config-pairing-file, it just has to exist)
+    if not (PlotManager.rscriptsHasNoArgs(args.rscripts) or  # (1)
+                PlotManager.rscriptsOff(args.rscripts) or  # (2)
+                PlotManager.rscriptsIsPairedStrings(args.rscripts) or  # (4)
+                PlotManager.rscriptsIsConf(args.rscripts)):  # (5)
+        # if none of the above applies, we've exhausted all possible valid arguments!
+        parser.error("Unrecognized input to -rs/--rscripts: {}".format(args.rscripts))
+
+    if PlotManager.rscriptsIsConf(args.rscripts):
+        args.rscripts = parseRscriptsFile(args.rscripts)
+    elif PlotManager.rscriptsIsPairedStrings(args.rscripts):
+        args.rscripts = parseRscriptsStringPair(args.rscripts)
 
     return args
 
@@ -172,7 +154,7 @@ def parseCommandLineArguments():
     :return: parser object, can be indexed for flag values
     """
     parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
-                                       prog="AbSeq", add_help=False)
+                                     prog="AbSeq", add_help=False)
     required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
     required.add_argument('-f1', '--file1', dest="f1", required=True, help="Fully qualified path to sequence file 1. "
@@ -189,13 +171,13 @@ def parseCommandLineArguments():
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \
                                                     seqlen, secretion, seqlenclass [default=abundance]",
                           choices=["all", "annotate", "abundance", "diversity",
-                                                             "fastqc", "productivity", "primer", "5utr", "rsasimple",
-                                                             "rsa", "seqlen", "secretion", "seqlenclass"])
+                                   "fastqc", "productivity", "primer", "5utr", "rsasimple",
+                                   "rsa", "seqlen", "secretion", "seqlenclass"])
     optional.add_argument('-s', '--seqtype', default='dna', help="Sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
                           choices=["dna", "protein"])
     optional.add_argument('-m', '--merger', help="Choice between different mergers. Omit this if no -f2 option"
-                                                " is specified [default={}]".format(DEFAULT_MERGER),
+                                                 " is specified [default={}]".format(DEFAULT_MERGER),
                           default=None,
                           choices=['leehom', 'flash', 'pear'])
     optional.add_argument('-o', '--outdir', help="Output directory [default = current working directory]", default="./")
@@ -203,29 +185,29 @@ def parseCommandLineArguments():
                                                " is ignored when -f1 is a directory", default=None)
     optional.add_argument('-cl', '--clonelimit', help="Outputs an intermediate file (top N overly expressed clones, "
                                                       "top N under expressed clones) in "
-                                                     "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
-                                                     " a number or inf to retain all clones [default=100]",
+                                                      "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
+                                                      " a number or inf to retain all clones [default=100]",
                           default=None)
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
-                                                 " Bitscore range (inclusive) to apply on V gene."
-                                                 " V genes with bitscores that do not fall within this range"
-                                                 " will cause the whole sequence to be filtered out."
-                                                 " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+                                                   " Bitscore range (inclusive) to apply on V gene."
+                                                   " V genes with bitscores that do not fall within this range"
+                                                   " will cause the whole sequence to be filtered out."
+                                                   " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     optional.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
-                                                " Sequences (after alignment to reference) with V"
-                                                " gene that do not fall within this start range (inclusive)"
-                                                " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
+                                                  " Sequences (after alignment to reference) with V"
+                                                  " gene that do not fall within this start range (inclusive)"
+                                                  " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
                           default=None)
     optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
-                                                  " Sequences that do not fall within this alignment length range"
-                                                  " (inclusive) are filtered."
-                                                  " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+                                                    " Sequences that do not fall within this alignment length range"
+                                                    " (inclusive) are filtered."
+                                                    " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     optional.add_argument('-qs', '--qstart', dest="actualqstart",
                           help="Query sequence's starting index (1-based indexing). Subsequence before specified "
-                             "index is ignored during analysis. [default=1]", default=None, type=int)
+                               "index is ignored during analysis. [default=1]", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
-                                                 " analysis [default=[1, inf)]", default=None)
+                                                   " analysis [default=[1, inf)]", default=None)
     optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
                           default=0, type=int)
     optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
@@ -234,20 +216,105 @@ def parseCommandLineArguments():
                           default=0, type=int)
     optional.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
     optional.add_argument('-d', '--database', help="Specify fully qualified path to germline database "
-                                                 "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
-                                                 " to see your default database used by AbSeq",
+                                                   "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
+                                                   " to see your default database used by AbSeq",
                           default=None)
     optional.add_argument('-q', '--threads', help="Number of threads to use (spawns separate processes) [default=8]",
                           type=int, default=8)
+
+    optional.add_argument('-rs', '--rscripts', nargs='?',
+                          help="Reporting engine and sample pairing flag. -rs <arg> where arg = 'off' to switch R plotting off (only plots in python). When arg = \"sample_1,sample_2,sample_3" + RSCRIPT_PAIRING_SEPARATOR +
+                               "sample_1,sample2\" generates explicit comparisons for sample 1, 2 and 3, then sample 1 and 2 respectively. When" \
+                               " arg = <filename>, it expects filename to have pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR \
+                               + "'. Particularly useful if pairings are complicated and long. Note that these pairing options are only available when " \
+                                 "-f1 is supplied with a directory. Specifying -rs without any arguments is similar to not specifying -rs at all." \
+                                 "The default behaviour is to plot in R (and switches python plotting off) with no explicit sample comparisons. [default=Rplot]",
+                          default=None)
     optional.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
-                                                       " Not implemented yet [default= no report]",
+                                                         " Not implemented yet [default= no report]",
                           dest="report_interim", action='store_true')
     optional.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
-                                                 "region [default = no cuts]", dest='fr4cut', action='store_true')
+                                                   "region [default = no cuts]", dest='fr4cut', action='store_true')
     optional.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
-                                               " --task rsa or --task rsasimple is specified", default=None)
+                                                 " --task rsa or --task rsasimple is specified", default=None)
     optional.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)
     optional.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file", default=None)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
     return parser, parser.parse_args()
+
+
+def extractRanges(strRanges, expNoRanges=2):
+    """
+    Returns the range given an input
+    :param strRanges: string range, allowed format: 0-10,23-25 or 0-10 or 0
+    :param expNoRanges: maximum number of allowed ranges, eg: expNoRange=1 implies only 1 range, expNoRange=2
+    implies 0-10,20-25 is allowed, and so on
+    :return: a nested list of ranges
+    """
+    numRanges = []
+    ranges = strRanges.split(',')
+    if (len(ranges) > expNoRanges):
+        raise Exception("Number of bitScore, alignLen and sstart ranges should match the number of files")
+
+    for i in range(len(ranges)):
+        scores = ranges[i].split('-')
+        if (len(scores) == 2):
+            numRanges.append([float(scores[0]), float(scores[1])])
+            if (numRanges[-1][0] >= numRanges[-1][1]):
+                raise Exception("Invalid ranges " + strRanges)
+
+        else:
+            numRanges.append([float(scores[0]), Inf])
+
+    # BUGSQ: if (len(numRanges) == 1 < expNoRanges):
+    if len(numRanges) < expNoRanges:
+        numRanges = numRanges * expNoRanges
+    return numRanges
+
+
+PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
+                      '-f1', '-f2', '-fmt', '-o', '-merge', '-merger',
+                      '-seqtype', '-threads', '-db',
+                      '-bitscore', '-alignlen', '-sstart', '-actualqstart',
+                      '-trim5', '-trim3', '-fr4cut',
+                      '-sites',
+                      '-primer',
+                      '-5end', '-3end',
+                      '-5endoffset',
+                      '-upstream',
+                      '-report_interim'
+                      ]
+
+
+def printUsage(parser, additional_msg=None):
+    parser.print_help()
+    if additional_msg is not None:
+        print(additional_msg, file=sys.stderr)
+    sys.exit(0)
+
+
+def parseRscriptsFile(fname):
+    """
+    parses rscripts' config file that tells AbSeq the pairings of samples when -f1 is a directory.
+    returns results in [(sample1, sample2, ..., sample-n), ... (tuple-n) ] format, where
+    the tuples in the list represent a "pair"
+    :param fname: rscripts' config file
+    :return: list of tuples, tuples representing pairings
+    """
+    with safeOpen(fname, "r") as fp:
+        # filter blank lines from array of lines, then deconstruct pairs by splitting via commas (and stripping white-
+        # space) before reconstructing it back into a tuple
+        return map(lambda x: tuple(map(lambda y: y.strip(), x.split(","))),
+                   filter(None, [line.strip() for line in fp.readlines()]))
+
+
+def parseRscriptsStringPair(string):
+    """
+    analogous to parseRscriptsFile, except that it's a string. The newlines that separate the pairings in
+    parseRscriptsFile is substituted with RSCRIPT_PAIRING_SEPERATOR here. The output is identical in format
+    :param string: string with pairings separated by RSCRIPT_PAIRING_SEPARATOR, (internally separated by commas)
+    :return: list of tuples, tuples representing pairings
+    """
+    return map(lambda x: tuple(x.split(",")),
+               map(lambda y: y.strip(), string.split(RSCRIPT_PAIRING_SEPARATOR)))
