@@ -292,7 +292,10 @@ class IgRepertoire:
         #### HERE       
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
                                 self.clonelimit)
-        writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
+
+        # remove this for now - it's unoptimized and extremely slow
+        #writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
+
         writeParams(self.args, outDir)
        
     def analyzeRestrictionSitesSimple(self):
