@@ -156,6 +156,8 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-p5, --primer5end`          	| /path/to/file                                                                                                                                                  	| Path to primer 5'end file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             	|
 | `-v, --version`              	| no arguments                                                                                                                                                   	| Prints the current AbSeq version and exits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
 | `-h, --help`                 	| no arguments                                                                                                                                                   	| Prints this help message and exits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    	|
+
+
 ### Use cases
 
 #### Directory of samples
@@ -176,7 +178,7 @@ $ abseq -f1 /Users/john/sequences/ -t all \
     -cl inf -ss 1.0-3.0 \
     -b 350 \
     -al 260 \
-    -rs "SRR1,SRR2,, SRR1,SRR2_BZ929_L001, SRR3"
+    -rs "SRR1,SRR2,, SRR1, SRR2_BZ929_L001,SRR3"
 ```
 
 will produce analysis for:
@@ -190,8 +192,7 @@ sample comparison analysis for:
   * `SRR1_L001` and `SRR2_L001` in `results/SRR1_L001_vs_SRR2_L001/`,
   * `SRR1_L001`, `SRR2_L001`, and `SRR3_L001` in `results/SRR1_L001_vs_SRR2_L001_vs_SRR3_L001/`.
 
-The logfile(s) `AbSeq.log` and `SRR.log` can be found in the directory that AbSeq was run.
-Typically, all that you need is just `AbSeq.log`.
+**Note** that `,,` in `-rs` separates different sample pairings while `,` separates samples __within__ the same pairing.
 
 > Tip 1: `-rs` uses fuzzy string search. Therefore, providing either the full sample file name or truncated name will work
 fine. Note the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` would work fine too.
@@ -205,6 +206,7 @@ SRR1, SRR2
 SRR1_L001, SRR2, SRR3
 ```
 > Tip 3: `-rs pairing_config.txt` would've worked exactly the same as above
+
 
 #### Single sample
 Running AbSeq on one sample:
