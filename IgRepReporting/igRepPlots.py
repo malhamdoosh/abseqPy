@@ -109,13 +109,13 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                  [(k, v) for k, v in zip(sizes, weights)])
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
-            if sigma == 0:
-                # the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
-                # eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
-                assert (len(sizes) == 1)
-                sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
-            y = mlab.normpdf(bins, mu, sigma)
-            ax.plot(bins, y, 'r--')
+            if sigma != 0:
+                ## the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
+                ## eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
+                #assert (len(sizes) == 1)
+                #sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
+                y = mlab.normpdf(bins, mu, sigma)
+                ax.plot(bins, y, 'r--')
     else:
         if all([(x == 1) for x in weights]):
             tmp = Counter(sizes)
