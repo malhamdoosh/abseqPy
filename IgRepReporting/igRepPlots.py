@@ -516,7 +516,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     title += '\nTotal is {:,}'.format(int(total))
     ax.set_title(title)
     plt.tight_layout()
-    fig.savefig(filename, dpi=300)
+    if PlotManager.pythonPlotOn():
+        fig.savefig(filename, dpi=300)
     plt.close()
 
 
