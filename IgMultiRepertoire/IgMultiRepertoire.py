@@ -107,6 +107,7 @@ class IgMultiRepertoire:
         self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
+        #gc.collect() TODO will this help?
         self.plotManager.plot()
 
     def __pairFiles(self, folder, args):

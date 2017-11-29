@@ -30,17 +30,17 @@ class PlotManager:
         self.metadata = []
 
         if os.path.isdir(args.f1):
-            # args.outdir is relative
+            # args.outdir is already relative
             self.outdir = args.outdir
         else:
             # args.outdir is absolute - change to relative
             # for example: /Users/harry/sandbox/small/foo/PCR1_BH5C6_CAACG-CGTGAT_L001/
-            # we want /Users/harry/sandbox/small/foo/
+            # we want /Users/harry/sandbox/small/foo/ removed
             path = args.outdir[:args.outdir.rstrip("/").rfind("/") + 1]
             self.outdir = os.path.relpath(path)
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
-    # It's trivially easy to write but it improves reading when checking for parser logic above.
+    # It's trivially easy to write but it improves reading when checking for parser logic
     @staticmethod
     def rscriptsHasNoArgs(arg):
         return arg is None
@@ -174,6 +174,5 @@ def _nameMatch(string1, string2, deletionPenalty=-2, insertionPenalty=-2, matchS
             matrix[i][j] = max(matrix[i][j - 1] + deletionPenalty, matrix[i - 1][j] + insertionPenalty,
                                matrix[i - 1][j - 1] + (
                                    matchScore if string1[j - 1] == string2[i - 1] else mismatchScore))
-            if matrix[i][j] > maxval:
-                maxval = matrix[i][j]
+            maxval = max(maxval, matrix[i][j])
     return maxval
