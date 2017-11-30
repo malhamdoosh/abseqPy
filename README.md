@@ -65,7 +65,6 @@ attention to the versions - these versions are used during the development and t
 * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
     - Download and extract the tarball or install the pre-compiled binaries
     - Follow the installation guide [here](http://www.clustal.org/omega/INSTALL)
-    - Rename the binary from `clustalo` to `clustal-omega`
 * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
     - Download and extract
     - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
