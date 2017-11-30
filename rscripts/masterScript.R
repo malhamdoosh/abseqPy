@@ -109,7 +109,6 @@ for (i in 1:length(pairings)) {
     abunOut
   )
   
-  # plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "")
   # plot igv mismatches distribution
   abunIgvMismatchFiles <- list.files(path = abundanceDirectories,
                                      pattern = ".*_igv_mismatches_dist\\.csv(\\.gz)?$",
