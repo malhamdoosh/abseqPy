@@ -87,10 +87,15 @@ class PlotManager:
         self.metadata.append(sample)
 
     def plot(self):
-        abSeqRoot = sys.path[0]
-        self._flushMetadata(abSeqRoot)
-        subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
-        # os.remove(PlotManager._tmpFile)        TODO: necessary?
+        """
+        plots csv files. If python plotting was on, then this function will have no effect
+        :return: None. Side effects: plots in R if specified as such
+        """
+        if not PlotManager._pythonPlotting:
+            abSeqRoot = sys.path[0]
+            self._flushMetadata(abSeqRoot)
+            subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
+            # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def _flushMetadata(self, abSeqRootDir):
         """
