@@ -108,11 +108,16 @@ class IgRepertoire:
             self.readFile = mergedFastq
         if outDir is not None:
             # generate plot of clone sequence length distribution
-            outputFile =  outDir + self.name + '_all_clones_len_dist.png'   
+            outputFile = outDir + self.name + '_all_clones_len_dist.png'
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
-                               maxbins=40, histtype = 'bar', removeOutliers=False,
-                               normed = True)
-    
+                           maxbins=40, histtype='bar', removeOutliers=False,
+                           normed=True)
+            # generate plot of clone sequence length distribution with outliers removed
+            outputFile = outDir + self.name + '_all_clones_len_dist_no_outliers.png'
+            plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
+                           maxbins=40, histtype='bar', removeOutliers=True,
+                           normed=True)
+
     def annotateClones(self, outDirFilter= None, all = False):    
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):

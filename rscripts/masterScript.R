@@ -75,6 +75,8 @@ for (i in 1:length(pairings)) {
   annotOut <- paste(outputDir, "annot/", sep = "")
   dir.create(annotOut)
   annotDirectories <- unlist(lapply(directories, paste, "/annot/", sep = ""))
+  
+  # with outliers
   g <- plotSpectratype(
     lapply(list.files(path = annotDirectories,
                       pattern = ".*_all_clones_len_dist\\.csv(\\.gz)?$",
@@ -88,6 +90,19 @@ for (i in 1:length(pairings)) {
   )
   ggsave(paste(annotOut, mashedNames, "_all_clones_len_dist.png", sep = ""), plot = g)
   
+  # without outliers
+  g <- plotSpectratype(
+    lapply(list.files(path = annotDirectories,
+                      pattern = ".*_all_clones_len_dist_no_outliers\\.csv(\\.gz)?$",
+                      full.names = TRUE,
+                      recursive = TRUE),
+           read.csv),
+    sampleNames,
+    title = "Sequence lengths",
+    xlabel = "Sequence Length (bp)",
+    ylabel = "Proportion"
+  )
+  ggsave(paste(annotOut, mashedNames, "_all_clones_len_dist_no_outliers.png", sep = ""), plot = g)
   
   ##################################################
   #                                                #
