@@ -14,7 +14,7 @@ import sys
 #TABIX = 'tabix'
 VERSION = '1.1.1'
 CLUSTALW = 'clustalw2'
-CLUSTALOMEGA = 'clustal-omega'
+CLUSTALOMEGA = 'clustalo'
 WEBLOGO = 'weblogo'
 FASTQC = 'fastqc'
 DEFAULT_MERGER = 'flash'
