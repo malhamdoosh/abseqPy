@@ -148,7 +148,7 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-p, --primer`               	| integer value [default = -1]                                                                                                                                   	| Not implemented yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
 | `-d, --database`             	| /path/to/database/ Defaults to `$IGBLASTDB` env variable setup [earlier](#exporting-environment-variables)                                                     	| Path to `igblastDB/databases/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        	|
 | `-q, --threads`              	| integer value [default = 8]                                                                                                                                    	| Number of processes running concurrently                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
-| `-rs, --rscripts`             | empty, string, or a file [default = empty]                                                                                                                        | Reporting engine and sample pairing flag. When `-rs <arg>` is specified, where: <br /> `<arg>` is a string of samples, then there will be R plots generated to compare the samples explicitly. <br /> `<arg>` is a filename, then there will be R plots generated to compare the samples explicitly. The samples pairings are separated by newlines. <br /> `<arg>` is the string `off`, then AbSeq plots in python instead of R. Note that there is no sample comparison available when plotting in python. <br /> `<arg>` is not specified, then the default behaviour of plotting in R with no explicit sample pairing is conducted. <br /> Not that the supplied string or file for sample pairing only makes sense when `-f1` is supplied with a directory. See [use case examples](#directory-of-samples)
+| `-rs, --rscripts`             | empty, string, or a file [default = empty]                                                                                                                        | Reporting engine and sample pairing flag. When `-rs <arg>` is specified, where: <br /> `<arg>` is a string of samples, then there will be R plots generated to compare the samples explicitly. <br /> `<arg>` is a filename, then there will be R plots generated to compare the samples explicitly. The samples pairings are separated by newlines. <br /> `<arg>` is the string `off`, then AbSeq plots in python instead of R. Note that there is no sample comparison available when plotting in python. <br /> `<arg>` is not specified, then the default behaviour of plotting in R with no explicit sample pairing is conducted. <br /> Not that the supplied string or file for sample pairing only makes sense when `-f1` is supplied with a directory. <br /> See [use case examples](#directory-of-samples) for examples of this flag in use.
 | `-r, --report-interim`       	| no arguments                                                                                                                                                   	| Specify this flag to generate report. Not implemented yet.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
 | `-f4c, -fr4cut`              	| no arguments                                                                                                                                                   	| Specify this flag to remove subsequence after FR4 region. Not specified by default.                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
 | `-st, --sites`               	| /path/to/file                                                                                                                                                  	| Required if `-t rsa` or `-t rsasimple` is specified. (todo)                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
@@ -178,7 +178,7 @@ $ abseq -f1 /Users/john/sequences/ -t all \
     -cl inf -ss 1.0-3.0 \
     -b 350 \
     -al 260 \
-    -rs "SRR1,SRR2,, SRR1, SRR2_BZ929_L001,SRR3"
+    -rs "SRR1 | SRR2; SRR1|SRR2_BZ929_L001|SRR3"
 ```
 
 will produce analysis for:
@@ -192,18 +192,18 @@ sample comparison analysis for:
   * `SRR1_L001` and `SRR2_L001` in `results/SRR1_L001_vs_SRR2_L001/`,
   * `SRR1_L001`, `SRR2_L001`, and `SRR3_L001` in `results/SRR1_L001_vs_SRR2_L001_vs_SRR3_L001/`.
 
-**Note** that `,,` in `-rs` separates different sample pairings while `,` separates samples __within__ the same pairing.
+**Note** that `;` in `-rs` separates different _sample pairings_ while `|` _separates samples_ **within** the same pairing.
 
 > Tip 1: `-rs` uses fuzzy string search. Therefore, providing either the full sample file name or truncated name will work
-fine. Note the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` would work fine too.
+fine. Note the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` and `SRR2_L001_BZ929_CAGGG-GGACT_L001_R1.fastq.gz` works just fine too.
 
-> Tip 2: `-rs` ignores whitespaces between sample names. Feel free to put spaces between commas and sample names.
+> Tip 2: `-rs` ignores whitespaces. Feel free to put spaces between `|`s and `;`s.
 
 Assuming 
 ```bash
 $ cat pairing_config.txt
-SRR1, SRR2
-SRR1_L001, SRR2, SRR3
+SRR1 | SRR2
+SRR1_L001 | SRR2 | SRR3
 ```
 > Tip 3: `-rs pairing_config.txt` would've worked exactly the same as above
 

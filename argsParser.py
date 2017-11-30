@@ -8,7 +8,7 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR
+from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR, RSCRIPT_SAMPLE_SEPARATOR
 from numpy import Inf
 from os.path import abspath
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
@@ -223,13 +223,19 @@ def parseCommandLineArguments():
                           type=int, default=8)
 
     optional.add_argument('-rs', '--rscripts', nargs='?',
-                          help="Reporting engine and sample pairing flag. -rs <arg> where arg = 'off' to switch R plotting off (only plots in python). When arg = \"sample_1,sample_2,sample_3" + RSCRIPT_PAIRING_SEPARATOR +
-                               "sample_1,sample2\" generates explicit comparisons for sample 1, 2 and 3, then sample 1 and 2 respectively. When" \
-                               " arg = <filename>, it expects filename to have pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR \
-                               + "'. Particularly useful if pairings are complicated and long. Note that these pairing options are only available when " \
-                                 "-f1 is supplied with a directory. Specifying -rs without any arguments is similar to not specifying -rs at all." \
-                                 "The default behaviour is to plot in R (and switches python plotting off) with no explicit sample comparisons. [default=Rplot]",
-                          default=None)
+                          help="Reporting engine and sample pairing flag. -rs <arg> where arg = 'off' to switch R "
+                               "plotting off (only plots in python). When arg = \"sample_1 {0} sample_2 {0} sample_3"
+                               " {1} ".format(RSCRIPT_SAMPLE_SEPARATOR, RSCRIPT_PAIRING_SEPARATOR) +
+                               "sample_1 {0} sample_2\", AbSeq will generate explicit comparisons for "
+                               "sample 1, 2 and 3, ".format(RSCRIPT_SAMPLE_SEPARATOR) +
+                               "then samples 1 and 2 respectively. When arg = <filename>, it expects filename to have "
+                               "pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR + "'. This is"
+                               " particularly useful if pairings are complicated and long. Note that these pairing "
+                               "options are only available when -f1 is supplied with a directory."
+                               " Specifying -rs without any arguments is similar to not specifying -rs at all."
+                               " The default behaviour is to plot in R (and python plots off) with no"
+                               " explicit sample comparisons (if -f1 is a directory). [default=Rplot] ",
+                               default=None)
     optional.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
                                                          " Not implemented yet [default= no report]",
                           dest="report_interim", action='store_true')
@@ -305,7 +311,7 @@ def parseRscriptsFile(fname):
     with safeOpen(fname, "r") as fp:
         # filter blank lines from array of lines, then deconstruct pairs by splitting via commas (and stripping white-
         # space) before reconstructing it back into a tuple
-        return map(lambda x: tuple(map(lambda y: y.strip(), x.split(","))),
+        return map(lambda x: tuple(map(lambda y: y.strip(), x.split(RSCRIPT_SAMPLE_SEPARATOR))),
                    filter(None, [line.strip() for line in fp.readlines()]))
 
 
@@ -313,8 +319,9 @@ def parseRscriptsStringPair(string):
     """
     analogous to parseRscriptsFile, except that it's a string. The newlines that separate the pairings in
     parseRscriptsFile is substituted with RSCRIPT_PAIRING_SEPERATOR here. The output is identical in format
-    :param string: string with pairings separated by RSCRIPT_PAIRING_SEPARATOR, (internally separated by commas)
+    :param string: string with pairings separated by RSCRIPT_PAIRING_SEPARATOR, (internally separated by
+                   RSCRIPT_SAMPLE_SEPARATOR)
     :return: list of tuples, tuples representing pairings
     """
-    return map(lambda x: tuple(x.split(",")),
+    return map(lambda x: tuple(x.split(RSCRIPT_SAMPLE_SEPARATOR)),
                map(lambda y: y.strip(), string.split(RSCRIPT_PAIRING_SEPARATOR)))
