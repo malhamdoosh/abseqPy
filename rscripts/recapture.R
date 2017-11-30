@@ -62,12 +62,18 @@ plotRecapture <- function(files, sampleNames, regions = c("CDR3", "V")) {
   df.union$compound <- paste(df.union$region, df.union$sample)
   
   # plot!
-  p <- ggplot(df.union, aes(x = x, y = y)) +
-    geom_line(aes(linetype = region, color = sample)) +
-    scale_x_continuous(breaks = xticks) + 
+  p <- ggplot(df.union, aes(x = x, y = y))
+  
+  if (nsamples == 1) {
+     p <- p + geom_line(aes(linetype = region, color = sample), color = BLUEHEX) + guides(color = FALSE)
+  } else {
+     p <- p + geom_line(aes(linetype = region, color = sample))
+  }
+  
+  p <- p + scale_x_continuous(breaks = xticks) + 
     geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = compound), alpha = 0.2, show.legend = FALSE) + 
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-    labs(title = paste("Percent recapture of", paste(regions, collapse = ", ")),
+    labs(title = paste("Percent recapture of", paste(regions, collapse = ", "), "in", paste(sampleNames, collapse = ", ")),
          subtitle = "Mean number of recaptured sequences with 95% confidence interval",
          x = "Sample size", y = "Percent Recapture")
   return (p)

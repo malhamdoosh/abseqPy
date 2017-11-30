@@ -67,7 +67,7 @@ prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
                      full.names = TRUE,
                      recursive = TRUE)
     dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
-    plotTitle <- paste(title, toupper(region))
+    plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
     plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
     i <- i + 1
   }

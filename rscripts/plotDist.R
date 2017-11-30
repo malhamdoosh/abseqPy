@@ -80,22 +80,31 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   }
   
   if (!vert) {
-    g <- ggplot(df.union, aes(y, x, label = sprintf(placeholder, x))) + coord_flip()
+    g <- ggplot(df.union, aes(x = reorder(y, x), y = x, label = sprintf(placeholder, x))) + coord_flip()
+    
     if (frames == 1) {
-      g <- g + geom_text(hjust = -0.15, size = 3)
+      # single sample -> blue colour plot
+      g <- g + geom_text(hjust = -0.15, size = 3) + 
+        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+    } else {
+      # multiple samples -> multi-coloured plot
+      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
+    
   } else {
-    g <- ggplot(df.union, aes(x, y, label = sprintf(placeholder, y)))
+    g <- ggplot(df.union, aes(x = reorder(x, -y), y = y, label = sprintf(placeholder, y)))
+    
     if (frames == 1) {
-      g <- g + geom_text(vjust = -0.5, size = 3)
-    }
-    if (is.numeric(df.union$x)) {
-      g <- g + scale_x_continuous(breaks = df.union$x, labels = df.union$x)
+      # single sample -> blue colour plot
+      g <- g + geom_text(vjust = -0.5, size = 3) + 
+        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+    } else {
+      # multiple samples -> multi-coloured plot
+      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
   }
-  g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge') +
-    #theme(text = element_text(size = 10), axis.text.x = element_text(angle = 74, vjust = 0.4)) +
-    theme(text = element_text(size = 10)) +
+  
+  g <- g + theme(text = element_text(size = 10)) +
     labs(title = plotTitle,
          x = xlabel,
          y = ylabel,

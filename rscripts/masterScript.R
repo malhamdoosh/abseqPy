@@ -40,6 +40,7 @@ for (i in 1:length(pairings)) {
   # resultFolder : this will be the same string as supplied / generated output folder in AbSeq's python code
   resultFolder <- unlist(strsplit(directories[1], "/"))[1]
   mashedNames <- paste(sampleNames, collapse = "_")
+  combinedNames <- paste(sampleNames, collapse = ", ") 
 
   # different logic in obtaining folder names and sample directory names depending on sample lengths
   if (length(sampleNames) > 1) {
@@ -84,7 +85,7 @@ for (i in 1:length(pairings)) {
                       recursive = TRUE),
            read.csv),
     sampleNames,
-    title = "Sequence lengths",
+    title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
     xlabel = "Sequence Length (bp)",
     ylabel = "Proportion"
   )
@@ -98,7 +99,7 @@ for (i in 1:length(pairings)) {
                       recursive = TRUE),
            read.csv),
     sampleNames,
-    title = "Sequence lengths",
+    title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
     xlabel = "Sequence Length (bp)",
     ylabel = "Proportion"
   )
@@ -132,7 +133,7 @@ for (i in 1:length(pairings)) {
   abunIgvMismatches <- plotDist(
     lapply(abunIgvMismatchFiles, read.csv, skip = 1),
     sampleNames,
-    "Number of mismatches in V gene",
+    paste("Number of mismatches in V gene in", combinedNames),
     checkVert(abunIgvMismatchFiles[[1]])
   )
   ggsave(paste(abunOut, mashedNames, "_igv_mismatches_dist.png", sep = ""), plot = abunIgvMismatches)
@@ -144,7 +145,7 @@ for (i in 1:length(pairings)) {
   abunIgvGaps <- plotDist(
     lapply(abunIgvGapsFiles, read.csv, skip = 1),
     sampleNames,
-    "Number of gaps in V gene",
+    paste("Number of gaps in V gene in ", combinedNames),
     checkVert(abunIgvGapsFiles[[1]])
   )
   ggsave(paste(abunOut, mashedNames, "_igv_gaps_dist.png", sep = ""), plot = abunIgvGaps)
