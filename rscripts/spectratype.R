@@ -1,0 +1,67 @@
+library(ggplot2)
+
+plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratype", subtitle = "", xlabel = "Length(AA)", ylabel = "Distribution") {
+  # Plots an amino acid spectratype diagram for a given region.
+  # Args:
+  #     dataframes: A list() type. List of dataframes.
+  #     sampleNames: A vector type. Vectors of strings each representing the samplename
+  #     region: String that will be displayed in the plot title. This specifies which region this spectratype belongs to
+  #     title: A string type.
+  #     subtitle: A string type.
+  #     xlabel: A string type.
+  #     ylabel: A string type.
+  # Returns:
+  #    ggplot().
+  nsample <- length(dataframes)
+  stopifnot(nsample == length(sampleNames))
+  
+  # pre-processing
+  for (i in 1:nsample) {
+    df <- dataframes[[i]]
+    df$sample<- rep(sampleNames[i], nrow(df))
+    df$percent <- df$count / sum(df$count)
+    dataframes[[i]] <- df
+  }
+  
+  # merge
+  if (nsample > 1) {
+    df.union <- rbind(dataframes[[1]], dataframes[[2]])
+    if (nsample > 2) {
+      for (i in 3:nsample) {
+        df.union <- rbind(df.union, dataframes[[i]])
+      }
+    }
+  } else {
+    df.union <- dataframes[[1]]
+  }
+  
+  # title logic
+  # if reion is not missing, it's a spectratype for FR/CDRs
+  # else, it's a 'general' spectratype plot - can be reused for other length distributions E.G.: whole seq length
+  if (!missing(region)) {
+    plotTitle <- paste(region, "amino acid spectratype")
+    plotSubTitle <- paste("Distribution of", region, "amino acid lengths")
+  } else {
+    plotTitle <- title
+    plotSubTitle <- subtitle
+  }
+  # Always name your sample(s)!
+  plotTitle <- paste(plotTitle, "in", paste(sampleNames, collapse = ", "))
+  
+  g <- ggplot(df.union, aes(length, percent))
+  
+  if (nsample == 1) {
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge", show.legend = FALSE, fill = BLUEHEX)
+  } else {
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge")
+  }
+  g <- g + labs(title = plotTitle, subtitle = plotSubTitle, x = xlabel, y = ylabel)
+    #geom_smooth(aes(colour=round), se=F, method="glm", formula=y~ns(x, 3), lwd=0.7)+
+    #geom_text_repel(aes(label = count), size = 3) +
+    #geom_text(aes(label = count), vjust=-1, size = 3) +
+  return (g)
+}
+
+# fs <- list.files(pattern = "PCR[123].*_cdr3_spectratype_no.*.csv", recursive = TRUE, full.names = TRUE)
+# p <- plotSpectratype(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3"), "CDR3")
+# plot(p)
