@@ -13,7 +13,7 @@ vennIntersection <- function(dataframes, sampleNames, outFile, top) {
   stopifnot(nsample == length(sampleNames))
   
   # output
-  png(file = outFile)
+  png(file = outFile, width = VENN_WIDTH, height = VENN_HEIGHT, units = "in", res = 300)
   
   # cleanups
   colNames <- c("Clonotype", "Count")

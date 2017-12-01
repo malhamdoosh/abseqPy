@@ -62,12 +62,9 @@ prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
   plots <- list()
   i = 1
   for (region in regions) {
-    fs <- list.files(path = productivityDirectories,
-                     pattern = paste(".*", region, reg, sep = ""),
-                     full.names = TRUE,
-                     recursive = TRUE)
+    fs <- listFilesInOrder(path = productivityDirectories, pattern = paste0(".*", region, reg))
     dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
-    plotTitle <- paste(title, toupper(region))
+    plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
     plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
     i <- i + 1
   }

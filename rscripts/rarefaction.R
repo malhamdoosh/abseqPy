@@ -57,12 +57,18 @@ plotRarefaction <- function(files, sampleNames, regions = c("CDR3", "V")) {
   df.union$compound <- paste(df.union$sample, df.union$region)
   
   # plot!
-  g <- ggplot(df.union, aes(x = x, y = y)) +
-    geom_line(aes(linetype = region, color = sample)) +
-    scale_x_continuous(breaks = xticks, limits = c(head(xticks, n = 1), tail(xticks, n = 1))) +
+  g <- ggplot(df.union, aes(x = x, y = y))
+  
+  if (nsamples == 1) {
+    g <- g + geom_line(aes(linetype = region, color = sample), color = BLUEHEX) + guides(color = FALSE)
+  } else {
+    g <- g + geom_line(aes(linetype = region, color = sample))
+  }
+  
+  g <- g + scale_x_continuous(breaks = xticks, limits = c(head(xticks, n = 1), tail(xticks, n = 1))) +
     geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = compound), alpha = 0.2, show.legend = FALSE) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
-    labs(title = paste("Rarefaction of", paste(regions, collapse = ", ")),
+    labs(title = paste("Rarefaction of", paste(regions, collapse = ", "), "in", paste(sampleNames, collapse = ", ")),
          subtitle = "Mean number of deduplicated sequences with 95% confidence interval",
          x = 'Sample size', y = "Number of deduplicated sequences")
   return (g)

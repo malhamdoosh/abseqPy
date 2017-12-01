@@ -1,6 +1,6 @@
-plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "") {
-  # Plots a dodging histogram for all sample in dataframes.
-  #
+plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE) {
+  # Plots a dodging histogram for all sample in dataframes. If length(sampleNames) == 1, then the bars will
+  # also have y-values (or x if horizontal plot) labels on them. Use 'perc' to control if the values are percentages.
   # Args:
   #   dataframes: A list() type. List of dataframes
   #   sampleNames: A vector type. Vector of sampleNames corresponding 1-1 to dataframes.
@@ -8,6 +8,8 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   #   vert: A boolean type. True if the plot should be vertical
   #   xlabel: A string type. 
   #   ylabel: A string type.
+  #   perc: Boolean type. True if data's axis is a % proportion (instead of 0-1)
+  #         only meaningful if length(sampleNames) == 1
   # Returns:
   #   ggplot().
   
@@ -19,6 +21,12 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   CUTOFF <- 15
   # If there was a cutoff, caps will display the right message, by default it's empty
   caps <- ""
+  # if it was percentage, put a % sign in labels, otherwise just normal values
+  if (perc) {
+    placeholder <- "%0.2f%%"
+  } else {
+    placeholder <- "%0.2f"
+  }
   
   # ------------  cleaning & transforming data   ----------- #
   
@@ -65,26 +73,38 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   }
   
   if (missing(ylabel)) {
-    ylabel <- "Proportion (%)"
+    ylabel <- "Proportion"
+    if (perc) {
+      ylabel <- paste(ylabel, "(%)")
+    }
   }
   
   if (!vert) {
-    g <- ggplot(df.union, aes(y, x, label = sprintf("%0.2f%%", x))) + coord_flip()
+    g <- ggplot(df.union, aes(x = reorder(y, x), y = x, label = sprintf(placeholder, x))) + coord_flip()
+    
     if (frames == 1) {
-      g <- g + geom_text(hjust = -0.15, size = 3)
+      # single sample -> blue colour plot
+      g <- g + geom_text(hjust = -0.15, size = 3) + 
+        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+    } else {
+      # multiple samples -> multi-coloured plot
+      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
+    
   } else {
-    g <- ggplot(df.union, aes(x, y, label = sprintf("%0.2f%%", y)))
+    g <- ggplot(df.union, aes(x = reorder(x, -y), y = y, label = sprintf(placeholder, y)))
+    
     if (frames == 1) {
-      g <- g + geom_text(vjust = -0.5, size = 3)
-    }
-    if (is.numeric(df.union$x)) {
-      g <- g + scale_x_continuous(breaks = df.union$x, labels = df.union$x)
+      # single sample -> blue colour plot
+      g <- g + geom_text(vjust = -0.5, size = 3) + 
+        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+    } else {
+      # multiple samples -> multi-coloured plot
+      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
   }
-  g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge') +
-    #theme(text = element_text(size = 10), axis.text.x = element_text(angle = 74, vjust = 0.4)) +
-    theme(text = element_text(size = 10)) +
+  
+  g <- g + theme(text = element_text(size = 10)) +
     labs(title = plotTitle,
          x = xlabel,
          y = ylabel,

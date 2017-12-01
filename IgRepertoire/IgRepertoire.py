@@ -12,15 +12,14 @@ import sys
 from Bio import SeqIO
 from Bio.Seq import Seq
 from pandas.io.parsers import read_csv
-from IgRepAuxiliary.SeqUtils import generateMotifs
 from numpy import Inf, random, isnan, logical_not
-from igRepUtils import  writeCountsCategoriesToFile
+from igRepUtils import writeCountsCategoriesToFile
 import gc
-from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta 
+from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
 from Bio.SeqRecord import SeqRecord
 from igRepUtils import compressCountsGeneLevel
 from igRepUtils import gunzip
-from config import  FASTQC
+from config import FASTQC
 from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
 from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
 from pandas.io.pytables import read_hdf
@@ -34,7 +33,11 @@ from igRepUtils import writeParams
 from IgRepAuxiliary.restrictionAuxiliary import findHits,\
     findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
 from IgRepReporting.restrictionReport import generateOverlapFigures
-from fileinput import filename
+
+# the following are conditionally imported in functions that require them to reduce abseq's dependency list
+# It's here for a simple glance of required dependencies (generateMotifs uses TAMO)
+# from IgRepAuxiliary.SeqUtils import generateMotifs
+
 
 class IgRepertoire:
     def __init__(self, args):        
@@ -53,16 +56,16 @@ class IgRepertoire:
         self.format = args.fmt
         self.chain = args.chain
         self.name = args.name
-        if (args.task in ['secretion', '5utr']):
+        if args.task in ['secretion', '5utr']:
             self.upstream = args.upstream
-        if (args.task in ['rsa', 'rsasimple']):
+        if args.task in ['rsa', 'rsasimple']:
             self.sitesFile = args.sites
-        if (args.task in ['productivity', 'diversity', 'all']):
+        if args.task in ['productivity', 'diversity', 'all']:
             self.actualQstart = args.actualqstart
             self.fr4cut = args.fr4cut
         self.trim5End = args.trim5
         self.trim3End = args.trim3
-        if (args.task == 'primer'):
+        if args.task == 'primer':
             self.end5 = args.primer5end
             self.end3 = args.primer3end
             self.end5offset = args.primer5endoffset
@@ -72,7 +75,7 @@ class IgRepertoire:
         self.merger = args.merger
         self.merge = 'no' if self.merger is None else 'yes'
 
-        self.seqsPerFile = int(10.0 ** 5  / 2)
+        self.seqsPerFile = int(10.0 ** 5 / 2)
         self.cloneAnnot = None
         self.readFile = None
         
@@ -108,11 +111,16 @@ class IgRepertoire:
             self.readFile = mergedFastq
         if outDir is not None:
             # generate plot of clone sequence length distribution
-            outputFile =  outDir + self.name + '_all_clones_len_dist.png'   
+            outputFile = outDir + self.name + '_all_clones_len_dist.png'
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
-                               maxbins=40, histtype = 'bar', removeOutliers=False,
-                               normed = True)
-    
+                           maxbins=40, histtype='bar', removeOutliers=False,
+                           normed=True)
+            # generate plot of clone sequence length distribution with outliers removed
+            outputFile = outDir + self.name + '_all_clones_len_dist_no_outliers.png'
+            plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
+                           maxbins=40, histtype='bar', removeOutliers=True,
+                           normed=True)
+
     def annotateClones(self, outDirFilter= None, all = False):    
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):
@@ -558,6 +566,7 @@ class IgRepertoire:
         
     def analyzeSequences(self, sampleName, expectLength, startCodon=True,
                          type='secsig', clusterMotifs=False):
+        from IgRepAuxiliary.SeqUtils import generateMotifs
         lastFile = self.outputDir + sampleName + '_%s%d%d_dna_family' % (type, expectLength[0], expectLength[1])
         lastFile += '_consensus.txt'
         if (exists(lastFile)):

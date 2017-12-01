@@ -35,6 +35,9 @@ plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratyp
     df.union <- dataframes[[1]]
   }
   
+  # title logic
+  # if reion is not missing, it's a spectratype for FR/CDRs
+  # else, it's a 'general' spectratype plot - can be reused for other length distributions E.G.: whole seq length
   if (!missing(region)) {
     plotTitle <- paste(region, "amino acid spectratype")
     plotSubTitle <- paste("Distribution of", region, "amino acid lengths")
@@ -42,16 +45,20 @@ plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratyp
     plotTitle <- title
     plotSubTitle <- subtitle
   }
+  # Always name your sample(s)!
+  plotTitle <- paste(plotTitle, "in", paste(sampleNames, collapse = ", "))
   
-  g <- ggplot(df.union, aes(length, percent)) +
-    geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge") +
+  g <- ggplot(df.union, aes(length, percent))
+  
+  if (nsample == 1) {
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge", show.legend = FALSE, fill = BLUEHEX)
+  } else {
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge")
+  }
+  g <- g + labs(title = plotTitle, subtitle = plotSubTitle, x = xlabel, y = ylabel)
     #geom_smooth(aes(colour=round), se=F, method="glm", formula=y~ns(x, 3), lwd=0.7)+
     #geom_text_repel(aes(label = count), size = 3) +
     #geom_text(aes(label = count), vjust=-1, size = 3) +
-    labs(title = plotTitle,
-         subtitle = plotSubTitle,
-         x = xlabel,
-         y = ylabel)
   return (g)
 }
 

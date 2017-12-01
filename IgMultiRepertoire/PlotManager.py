@@ -1,3 +1,4 @@
+from config import RSCRIPT_SAMPLE_SEPARATOR
 import os
 import subprocess
 import sys
@@ -55,11 +56,16 @@ class PlotManager:
 
     @staticmethod
     def rscriptsIsConf(arg):
-        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) == 1
+        return PlotManager.rscriptsHasArgs(arg) and \
+               len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) == 1 and \
+               not PlotManager.rscriptsOff(arg)
 
     @staticmethod
     def rscriptsIsPairedStrings(arg):
-        return PlotManager.rscriptsHasArgs(arg) and len(str(arg).split(",")) > 1
+        return PlotManager.rscriptsHasArgs(arg) and \
+               len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) > 1 and \
+               not PlotManager.rscriptsOff(arg)
+
 
     @staticmethod
     def pythonPlotOn():
@@ -81,10 +87,15 @@ class PlotManager:
         self.metadata.append(sample)
 
     def plot(self):
-        abSeqRoot = sys.path[0]
-        self._flushMetadata(abSeqRoot)
-        subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
-        #os.remove(PlotManager._tmpFile)        TODO: necessary?
+        """
+        plots csv files. If python plotting was on, then this function will have no effect
+        :return: None. Side effects: plots in R if specified as such
+        """
+        if not PlotManager._pythonPlotting:
+            abSeqRoot = sys.path[0]
+            self._flushMetadata(abSeqRoot)
+            subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
+            # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def _flushMetadata(self, abSeqRootDir):
         """
@@ -113,12 +124,12 @@ class PlotManager:
             if self.rscriptArgs:
                 for pairings in self.rscriptArgs:
                     writeBuffer.append([self.__findBestMatch(sampleName) for sampleName in pairings])
-                # at this point, writeBuffer is a list of list as such:
-                # writeBuffer = [
-                #           [ (/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001), (/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
-                #           [ (/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001), (/PCR5_....., PCR5_L001), ... ]
-                #           [ ... ]
-                # ] - each inner list is a set of pairing
+                    # at this point, writeBuffer is a list of list as such:
+                    # writeBuffer = [
+                    #           [ (/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001), (/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
+                    #           [ (/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001), (/PCR5_....., PCR5_L001), ... ]
+                    #           [ ... ]
+                    # ] - each inner list is a set of pairing
 
             # the individual samples has to be plotted too!
             writeBuffer += map(lambda x: [x], self.metadata)
@@ -132,16 +143,16 @@ class PlotManager:
                                           pairing)) + "?")
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
-            # final result, rscripts_meta.tmp looks like:
+                    # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
-            # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001/, self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, ...
-            # self.outdir/PCR4_BZ123_ACGG_ACGG_L001/, self.outdir/PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
-            # .
-            # .
-            # .
+                    # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001/, self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, ...
+                    # self.outdir/PCR4_BZ123_ACGG_ACGG_L001/, self.outdir/PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
+                    # .
+                    # .
+                    # .
                     # (then single samples)
-            # self.outdir/PCR1_BZ123_..._L001/, PCR1_L001
-            # self.outdir/PCR2_BZ123_..._L001/, PCR2_L001
+                    # self.outdir/PCR1_BZ123_..._L001/, PCR1_L001
+                    # self.outdir/PCR2_BZ123_..._L001/, PCR2_L001
 
     def __findBestMatch(self, sampleName):
         v = float('-inf')

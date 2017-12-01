@@ -11,7 +11,7 @@ plotCirclize <- function(sampleName, path) {
   # Returns: Nothing. Saves a png named <sampleName>_vjassoc.csv in the same directory as path
   
   # open and read csv
-  file <- paste(path, sampleName, "_vjassoc.csv", sep = "")
+  file <- paste0(path, sampleName, "_vjassoc.csv")
   df <- read.csv(file)
   
   # output file

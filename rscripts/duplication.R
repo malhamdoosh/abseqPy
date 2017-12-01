@@ -46,13 +46,19 @@ plotDuplication <- function(files, sampleNames, regions = c("CDR3", "V")) {
     df.union <- dataframes[[1]]
   }
   
-  g <- ggplot(df.union, aes(x = x, y = y)) + 
-    geom_line(aes(linetype = region, color = sample)) + 
-    scale_x_continuous(breaks = xticks, labels = xlabels) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = paste("Sequence duplication levels of", paste(regions, collapse = ", ")),
-         x = "Duplication level",
-         y = "Proportion of duplicated sequences")
+  g <- ggplot(df.union, aes(x = x, y = y))
+  
+  if (nsamples == 1) {
+    g <- g + geom_line(aes(linetype = region, color = sample), color = BLUEHEX) + guides(color = FALSE)
+  } else {
+    g <- g + geom_line(aes(linetype = region, color = sample))
+  }
+  
+  g <- g + scale_x_continuous(breaks = xticks, labels = xlabels) +
+       theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+       labs(title = paste("Sequence duplication levels of", paste(regions, collapse = ", "), "in", paste(sampleNames, collapse = ", ")),
+            x = "Duplication level",
+            y = "Proportion of duplicated sequences")
   return (g)
 }
 

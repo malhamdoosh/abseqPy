@@ -1,7 +1,7 @@
 library(ggplot2)
 
 abundancePlot <- function(fs, sampleNames, outputDir) {
-  # Plots 6 abundance plots
+  # Plots 6 abundance plots (V, D) => gene, family, (J) => variant, family
   # Args:
   #     fs: A List() type. List of files with VDJ distributions (under _ig[VDJ]_dist_[family|variant|gene]_level.csv)
   #     sampleNames: Vector type. Vector of strings, each representing sample name (1-1 with fs)
@@ -12,13 +12,20 @@ abundancePlot <- function(fs, sampleNames, outputDir) {
       if (gene == 'j' && expression == 'gene') {
         expression <- 'variant'
       }
-      reg <- paste(".*_ig", gene, "_dist_", expression, "_level\\.csv(\\.gz)?$", sep = "")
+      reg <- paste0(".*_ig", gene, "_dist_", expression, "_level\\.csv(\\.gz)?$")
       selectedFiles <- fs[grepl(reg, fs)]
       vert <- checkVert(selectedFiles[1])
+      if (vert) {
+        width <- V_WIDTH
+        height <- V_HEIGHT
+      } else {
+        width <- H_WIDTH
+        height <- H_HEIGHT
+      }
       mashedName <- paste(sampleNames, collapse = ", ")
       dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE, skip = 1)
-      p <- plotDist(dataframes, sampleNames, paste("IG", toupper(gene), " abundance in ", mashedName, sep = ""), vert)
-      ggsave(paste(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png", sep=""), plot = p)
+      p <- plotDist(dataframes, sampleNames, paste0("IG", toupper(gene), " abundance in ", mashedName), vert)
+      ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p, width = width, height = height)
     }
   }
 }
