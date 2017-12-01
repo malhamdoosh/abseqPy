@@ -41,7 +41,7 @@ scatterClones <- function(dataframes, sampleNames, outputPath, cloneClass) {
     df1 <- dataframes[[i]][colnames]
     df2 <- dataframes[[i+1]][colnames]
     p <- scatterPlot(df1, df2, sampleNames[i], sampleNames[i+1], cloneClass)
-    ggsave(paste(outputPath, sampleNames[i], "_vs_", sampleNames[i+1], "_clone_scatter.png", sep = ""), plot = p)
+    ggsave(paste0(outputPath, sampleNames[i], "_vs_", sampleNames[i+1], "_clone_scatter.png"), plot = p)
   }
 }
 

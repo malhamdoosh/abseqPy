@@ -56,7 +56,7 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
     geom_bar(stat='identity', aes(fill=Clonotype)) +
     theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=5)) +
     labs(title=paste("Top", top, "clonotype across each sample"),
-         subtitle=paste("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall.", sep = ""),
+         subtitle=paste0("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall."),
          x="round",
          y="Distribution")  +
     scale_fill_manual(values=c30)

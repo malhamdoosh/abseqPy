@@ -7,7 +7,7 @@ regionAnalysis <- function(path, sampleName, top = 15) {
   #       path: Path to diversity folder (where <sampleName>_clonotype_diversity_region_analysis.csv.gz is located)
   #       sampleName: name of this sample
   #       top: Top N number of clones to consider in the plot (top N AFTER filtering out those that have similar clones when all regions are considered)
-  df <- read.csv(paste(path, sampleName, "_clonotype_diversity_region_analysis.csv.gz", sep = ""), stringsAsFactors = FALSE)
+  df <- read.csv(paste0(path, sampleName, "_clonotype_diversity_region_analysis.csv.gz"), stringsAsFactors = FALSE)
   
   headers <- c("fr1", "cdr1", "fr2", "cdr2", "fr3", "fr4")
   # sort the df with decreasing counts of CDR3 occurance
