@@ -7,7 +7,7 @@
 
 import os
 from collections import Counter, defaultdict
-from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap
+from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
 from IgRepertoire.igRepUtils import compressCountsGeneLevel,\
     compressCountsFamilyLevel
 
@@ -16,7 +16,13 @@ def writeVAbundanceToFiles(stats, sampleName, outDir):
     igvDist = Counter(stats["vgene"].tolist())
     if (len(igvDist) == 0):
         print("WARNING: No IGV hits were detected.")
-        return        
+        return
+
+    # Write the counts of all IGVs into a text file - variant_level isn't plotted by default.
+    classes = sorted(igvDist, key=igvDist.get, reverse=True)
+    total = sum(igvDist.values()) * 1.0
+    writeCSV(outDir + sampleName + '_igv_dist_variant_level.csv', "x,y\n", "{},{}\n",
+             [(x,y) for x, y in zip(classes, map(lambda k: (igvDist[k] / total * 100), classes))])
     
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igvDistSub = compressCountsGeneLevel(igvDist)
@@ -94,8 +100,15 @@ def writeDAbundanceToFiles(stats, sampleName, outDir):
     igdDist = Counter({str(k) : igdDist[k] for k in igdDist})
     if (len(igdDist) == 0):
         print("WARNING: No IGD hits were detected.")
-        return        
-    
+        return
+
+    # Write the counts of all IGVs into a text file
+    # This isn't plotted by default, but we still write the csv file for it
+    classes = sorted(igdDist, key=igdDist.get, reverse=True)
+    total = sum(igdDist.values()) * 1.0
+    writeCSV(outDir + sampleName + '_igd_dist_variant_level.csv', "x,y\n", "{},{}\n",
+             [(x,y) for x, y in zip(classes, map(lambda k: (igdDist[k] / total * 100), classes))])
+
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igdDistSub = compressCountsGeneLevel(igdDist)
     plotDist(igdDistSub, sampleName, outDir + sampleName +
