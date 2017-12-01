@@ -3,12 +3,14 @@
     * [AbSeq](#abseq)
     * [About](#about)
     * [Wiki](#wiki)
+* [Dependencies](#dependencies)
+    * [Binary dependencies](#binary-dependencies)
+      * [Mandatory dependencies](#mandatory-dependencies)
+      * [Optional dependencies](#optional-dependencies)
+    * [R library dependencies](#r-library-dependencies)
 * [Setup](#setup)
     * [Download](#download)
     * [Installation and configuration](#installation-and-configuration)
-* [Dependencies](#dependencies)
-    * [Binary dependencies](#binary-dependencies)
-    * [R library dependencies](#r-library-dependencies)
     * [Exporting variables](#exporting-variables)
     * [Exporting environment variables](#exporting-environment-variables)
 * [Usage](#usage)
@@ -18,30 +20,80 @@
         * [Single sample](#single-sample)
             * [Python-only plot](#python-only-plot)
 
-## Introduction
-### AbSeq
+# Introduction
+## AbSeq
 **AbSeq** is a quality control pipeline for the construction of antibody libraries, currently running on version 0.99.0.
 
-### About
+## About
 * **AbSeq** is developed by Monther Alhamdoosh and JiaHong Fong
 * For comments and suggestions, email m.hamdoosh \<at\> gmail \<dot\> com
 
-### Wiki
+## Wiki
 <!-- TODO -->
 
-
-There will be more information on contribution guidelines in the [wikipage](link wiki here).
+There will be more information on contribution guidelines in the wikipage.
 
 * Writing tests
 * Code review
 * Other guidelines
 * How to run tests
 
-## Setup
-### Download
+# Dependencies
+
+## Binary dependencies
+AbSeq requires a few external packages available in your system, namely:
+
+  * ### Mandatory dependencies
+
+    * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
+        - Download and extract the tarball or install the pre-compiled binaries
+        - Follow the installation guide [here](http://www.clustal.org/omega/INSTALL)
+    * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
+        - Download and extract
+        - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
+    * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11
+        - This is (currently) the default merger used by AbSeq. Only one of `FLAsH`, [`leeHom`, and `PEAR`](#optional-dependencies) is required.
+        - Download and extract
+        - Execute `make` in root directory of FLASh
+    * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
+        - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
+        - Make sure to follow **_every_** step detailed in the guide
+        - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
+         See [here](#exporting-environment-variables)
+    * [WebLogo](https://github.com/WebLogo/weblogo/releases/tag/3.4.1) v3.4.1
+        - Download (also get [ghostscript](https://www.ghostscript.com/) if you haven't - WebLogo requires it)
+        - Simply run `./build.sh`
+      
+  * ### Optional dependencies
+  
+    * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
+        - Click on "Download the package", extract the tarball
+        - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
+        - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
+    * [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
+        - Follow the installation guide in their README
+    * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
+        - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
+    
+> Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). Pay special
+attention to the versions - these versions were used during the development and testing process of AbSeq.
+
+
+## R library dependencies
+
+The plotting facilities provided by AbSeq uses a few R libraries. You can avoid R and all its dependencies entirely
+if you explicitly tell AbSeq to [plot in python only](#python-only-plot). Otherwise, you will require `ggplot2`,
+`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`. 
+
+These packages will be _automatically installed_ if they can't be located in your system.
+
+Pat yourself on the back - all the dependencies are installed - you're almost there!
+
+# Setup
+## Download
 `git clone` this repository or manually download this repository.
 
-### Installation and configuration
+## Installation and configuration
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
 installed and ready to go. You will require python v2.7 in your system with the following
 python libraries installed (any version will do):
@@ -53,50 +105,7 @@ Additionally, you will also need R installed in your machine [unless you choose 
 
 > macOS users will also require the psutil library.
 
-## Dependencies
-
-### Binary dependencies
-AbSeq requires a few external packages available in your system, namely:
-
-> Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). Pay special
-attention to the versions - these versions are used during the development and testing process of AbSeq.
-
-
-* [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
-    - Download and extract the tarball or install the pre-compiled binaries
-    - Follow the installation guide [here](http://www.clustal.org/omega/INSTALL)
-* [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
-    - Download and extract
-    - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
-* [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11
-    - Download and extract
-    - Execute `make` in root directory of FLASh
-* [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
-    - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
-    - Make sure to follow **_every_** step detailed in the guide
-    - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
-     See [here](#exporting-environment-variables)
-* [leeHom](https://github.com/grenaud/leeHom) any version
-    - Follow the installation guide in their README
-* [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0
-    - Click on "Download the package", extract the tarball
-    - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
-    - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
-* [adefazio/sampler](https://github.com/adefazio/sampler) any version
-    - Download and compile the sources.
-    - Copy the shared object file into python's `lib/python2.7/site-packages/` directory
-* [WebLogo](https://github.com/WebLogo/weblogo/releases/tag/3.4.1) v3.4.1
-    - Download (also get [ghostscript](https://www.ghostscript.com/) if you haven't - WebLogo requires it)
-    - Simply run `./build.sh`
-    
-### R library dependencies
-
-The plotting facilities provided by AbSeq uses a few R libraries. You can avoid R and all its dependencies entirely
-if you explicitly tell AbSeq to [plot in python only](#python-only-plot). Otherwise, you will require `ggplot2`,
-`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`. These packages will be automatically installed
-if they can't be located in your system.
-
-### Exporting variables
+## Exporting variables
 To make these programs available in your `$PATH` variable:
 ```bash
 export PATH="/path/to/fastqc:/path/to/leehom/:$PATH"
@@ -107,7 +116,7 @@ in your `.bashrc` or equivalent.
 each separated by colons. Repeat this for every dependency. Alternatively, move all binaries into one
 folder (eg, `/Users/john/bin/`) and `export PATH="/Users/john/bin/:$PATH"`
 
-### Exporting environment variables
+## Exporting environment variables
 Make sure `$IGBLASTDB` and `$IGDATA` are exported.
 ```bash
 export IGBLASTDB="/path/to/data/igblastDB/databases/"
@@ -116,10 +125,9 @@ export IGDATA="/path/to/data/igblastDB/data/"
 Again, `/path/to/data/` is the absolute path to the directory where `/igblastDB/ ... /` lives.
 
 
-Pat yourself on the back - all the dependencies are installed - you're almost there!
 
-## Usage
-### Parameter definitions
+# Usage
+## Parameter definitions
 | Parameters                 	| Arguments                                                                                                                                                      	| Help                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|
 |----------------------------	|----------------------------------------------------------------------------------------------------------------------------------------------------------------	|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	|
 | `-f1, --file1`               	| /path/to/file_one.fast[aq] or /path/to/directory_of_samples/                                                  	                                                | Path to the first input (FASTQ or FASTA) file. Alternatively, this parameter also accepts a directory of samples. When a directory of samples is provided, all the samples will be analyzed simultaneously. <coming soon - sample comparison>                                                                                                                                                                                                                                                                                         	|
@@ -152,9 +160,9 @@ Pat yourself on the back - all the dependencies are installed - you're almost th
 | `-h, --help`                 	| no arguments                                                                                                                                                   	| Prints this help message and exits                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    	|
 
 
-### Use cases
+# Use cases
 
-#### Directory of samples
+## Directory of samples
 Let `/Users/john/sequences/` be a directory as such:
 ```bash
 $ ls /Users/john/sequences/
@@ -202,7 +210,7 @@ SRR1_L001 | SRR2 | SRR3
 > Tip 3: `-rs pairing_config.txt` would've worked exactly the same as above
 
 
-#### Single sample
+## Single sample
 Running AbSeq on one sample:
 ```bash
 $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
@@ -212,7 +220,7 @@ $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \
 ```
 will produce analysis for `SRR2_L001` in `results/SRR2_BZ929_CAGGG-GGACT_L001/`.
 
-##### Python-only plot
+### Python-only plot
 To turn off R plots and use python's plotting engine instead:
 ```bash
 $ abseq -f1 SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz \

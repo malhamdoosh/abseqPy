@@ -5,31 +5,33 @@
     Changes log: check git commits. 
 ''' 
 
-import  IgRepertoire
-from Bio.Seq import  Seq
+import IgRepertoire
+from Bio.Seq import Seq
 from Bio.Alphabet.IUPAC import IUPACProtein
 from Bio.Alphabet import Alphabet
 from os.path import exists
 import os
 from Bio import SeqIO, motifs
-from Bio.SeqRecord  import SeqRecord
+from Bio.SeqRecord import SeqRecord
 from config import WEBLOGO
-from TAMO.Clustering.UPGMA import UPGMA
-from TAMO.Clustering.UPGMA import DFUNC
-from TAMO.Clustering.UPGMA import print_tree
-from TAMO.MotifTools import Motif
 import gc
-from TAMO.Clustering.UPGMA import print_tree_id
-from TAMO import MotifTools
 import sys
 import pickle
-from TAMO.Clustering.UPGMA import create_tree_phylip
 import random
 from collections import Sequence
 import bisect
 from numpy import dtype
 #from IgRepertoire.igRepUtils import alignListOfSeqs
 
+# the following are conditionally imported in functions that require them to reduce abseq's dependency list
+# It's here for a simple glance of required dependencies
+# from TAMO.Clustering.UPGMA import UPGMA
+# from TAMO.Clustering.UPGMA import DFUNC
+# from TAMO.Clustering.UPGMA import print_tree
+# from TAMO.Clustering.UPGMA import create_tree_phylip
+# from TAMO.Clustering.UPGMA import print_tree_id
+# from TAMO import MotifTools
+# from TAMO.MotifTools import Motif
 
 def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
     if (outDict is None):
@@ -66,9 +68,10 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
         raise e
     return outDict
 
+
 def generateMotif(sequences, name, alphabet, filename, 
                   align = False, transSeq = False, protein =False, weights = None, outDir=None):
-    if (exists(filename)):
+    if exists(filename):
         print("\t" + name + " motif logo was found" )
         return        
     # check whether sequences should be translated                 
@@ -125,7 +128,8 @@ def createAlphabet(align = False, transSeq=False,
     return alphabet
 
 def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
-                        extendAlphabet=False, clusterMotifs=False, protein=False):  
+                        extendAlphabet=False, clusterMotifs=False, protein=False):
+    from TAMO.MotifTools import Motif
     ighvMotifs = []
     if (clusterMotifs and 'gene' in outputPrefix):
         findMotifClusters(ighvMotifs, outputPrefix)                
@@ -180,7 +184,13 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
         
         
 def findMotifClusters(ighvMotifs, outputPrefix):
-    # cluster using a variant of the UPGMA algorithm implemented in the TAMO package 
+    from TAMO.Clustering.UPGMA import UPGMA
+    from TAMO.Clustering.UPGMA import DFUNC
+    from TAMO.Clustering.UPGMA import print_tree
+    from TAMO.Clustering.UPGMA import create_tree_phylip
+    from TAMO.Clustering.UPGMA import print_tree_id
+    from TAMO import MotifTools
+    # cluster using a variant of the UPGMA algorithm implemented in the TAMO package
     
     motifsFile = os.path.abspath(outputPrefix + '_motifs.tamo')
     if (not exists(motifsFile)):
@@ -218,6 +228,7 @@ def findMotifClusters(ighvMotifs, outputPrefix):
             print("Motifs couldn't be clustered!")
 #             raise
 
+
 def generateMotifLogo(m, filename, outdir, dna=True):
     instances = m.instances
     records = []
@@ -238,25 +249,30 @@ def generateMotifLogo(m, filename, outdir, dna=True):
 def maxlen(x):
     return max(map(len, x))
 
-#TODO: Look for faster and ACCURATE weighted sampling approach 
-def weightedSampleFast(population, weights, k):
-    if (weights is not None):
-        from fast_sampler import FastSampler
-        from numpy import array
-        weights = array(weights, dtype='d')        
-        h = FastSampler(len(population), max(weights), min(weights))
-        for i in range(len(population)):
-            h.add(i, weights[i])
-        s = map(lambda x : population[h.sample()], range(k))        
-        return s
-    else:
-        return random.sample(population, k)
-    
+
+# XXX: Author: JIAHONG FONG: @depreciated. - removing adefazio/sampler dependency
+#TODO: Look for faster and ACCURATE weighted sampling approach
+#def weightedSampleFast(population, weights, k):
+#    if (weights is not None):
+#        from fast_sampler import FastSampler
+#        from numpy import array
+#        weights = array(weights, dtype='d')
+#        h = FastSampler(len(population), max(weights), min(weights))
+#        for i in range(len(population)):
+#            h.add(i, weights[i])
+#        s = map(lambda x : population[h.sample()], range(k))
+#        return s
+#    else:
+#        return random.sample(population, k)
+
+
 def weightedSample(population, weights, k):
     if (weights is not None):
         return random.sample(WeightedPopulation(population, weights), k)
     else:
         return random.sample(population, k)
+
+
 # from http://stackoverflow.com/questions/13047806/weighted-random-sample-in-python
 class WeightedPopulation(Sequence):
     def __init__(self, population, weights):
@@ -266,9 +282,11 @@ class WeightedPopulation(Sequence):
         cumsum = 0 # compute cumulative weight
         for w in weights:
             cumsum += w   
-            self.cumweights.append(cumsum)  
+            self.cumweights.append(cumsum)
+
     def __len__(self):
         return self.cumweights[-1]
+
     def __getitem__(self, i):
         if not 0 <= i < len(self):
             raise IndexError(i)

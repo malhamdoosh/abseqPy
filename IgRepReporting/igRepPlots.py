@@ -18,8 +18,7 @@ import IgRepertoire.igRepUtils
 import random
 from matplotlib import cm
 from collections import Counter
-from IgRepAuxiliary.SeqUtils import maxlen, weightedSample, weightedSampleFast, \
-    WeightedPopulation
+from IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from IgMultiRepertoire.PlotManager import PlotManager
 from os.path import exists
 from Bio import SeqIO
