@@ -54,7 +54,7 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
   
   g <- ggplot(df.union, aes(x=round, y=Count)) +
     geom_bar(stat='identity', aes(fill=Clonotype)) +
-    theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=5)) +
+    theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=7)) +
     labs(title=paste("Top", top, "clonotype across each sample"),
          subtitle=paste0("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall."),
          x="round",

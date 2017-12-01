@@ -8,8 +8,8 @@ H_WIDTH <- 5
 H_HEIGHT <- 8
 VENN_WIDTH <- 8
 VENN_HEIGHT <- 8
-V_WIDTH_L <- 16
-V_HEIGHT_L <- 10
+V_WIDTH_L <- 12
+V_HEIGHT_L <- 7.5
 
 
 
