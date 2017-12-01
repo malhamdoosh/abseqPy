@@ -101,7 +101,7 @@ python libraries installed (any version will do):
 1. [pandas](http://pandas.pydata.org/)
 2. [BioPython](http://biopython.org/)
 
-Additionally, you will also need R installed in your machine [unless you choose not to](#r-library-dependencies).
+Additionally, you will also need R installed on your machine [unless you choose not to](#r-library-dependencies).
 
 > macOS users will also require the psutil library.
 
