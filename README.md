@@ -40,7 +40,6 @@ There will be more information on contribution guidelines in the wikipage.
 * How to run tests
 
 # Dependencies
-
 ## Binary dependencies
 AbSeq requires a few external packages available in your system, namely:
 
@@ -61,10 +60,7 @@ AbSeq requires a few external packages available in your system, namely:
         - Make sure to follow **_every_** step detailed in the guide
         - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
          See [here](#exporting-environment-variables)
-    * [WebLogo](https://github.com/WebLogo/weblogo/releases/tag/3.4.1) v3.4.1
-        - Download (also get [ghostscript](https://www.ghostscript.com/) if you haven't - WebLogo requires it)
-        - Simply run `./build.sh`
-      
+         
   * ### Optional dependencies
   
     * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
@@ -81,33 +77,47 @@ attention to the versions - these versions were used during the development and 
 
 
 ## R library dependencies
+The plotting facilities provided by AbSeq uses a few R libraries. You will require `ggplot2`,
+`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`.
 
-The plotting facilities provided by AbSeq uses a few R libraries. You can avoid R and all its dependencies entirely
-if you explicitly tell AbSeq to [plot in python only](#python-only-plot). Otherwise, you will require `ggplot2`,
-`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`. 
+**These packages will be _automatically installed_ if they can't be located in your system.**
 
-These packages will be _automatically installed_ if they can't be located in your system.
+> Alternatively, you can **avoid R and all its dependencies entirely** if you explicitly tell AbSeq to [plot in python only](#python-only-plot). 
+See [R vs Python plots](#r-vs-python-plots).
 
 Pat yourself on the back - all the dependencies are installed - you're almost there!
 
 # Setup
+Setting up AbSeq is simple as pie:
+
+  1. Download AbSeq
+  2. Install
+  3. Exporting path variables to locate the binaries you installed [earlier](#binary-dependencies)
+  
 ## Download
 `git clone` this repository or manually download this repository.
 
 ## Installation and configuration
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
-installed and ready to go. You will require python v2.7 in your system with the following
-python libraries installed (any version will do):
+installed and ready to go. You will require Python v2.7 on your system with [setuptools](https://setuptools.readthedocs.io/en/latest/) installed.
 
-1. [pandas](http://pandas.pydata.org/)
-2. [BioPython](http://biopython.org/)
+Additionally, you will also need R installed on your machine unless you disable R plotting. See [above](#r-library-dependencies).
 
-Additionally, you will also need R installed on your machine [unless you choose not to](#r-library-dependencies).
+AbSeq depends on several python packages, namely:
 
-> macOS users will also require the psutil library.
+  1. [Biopython](http://biopython.org/)
+  2. [pandas](https://pandas.pydata.org/)
+  3. [numpy](http://www.numpy.org/)
+  4. [Weblogo](https://github.com/WebLogo/weblogo) 
+
+To setup AbSeq and automatically install the above packages, run:
+```bash
+$ python setup.py install && python setup.py clean
+```
+in AbSeq's root directory (where setup.py lives).
 
 ## Exporting variables
-To make these programs available in your `$PATH` variable:
+To make the [installed binaries](#binary-dependencies) available in your `$PATH` variable:
 ```bash
 export PATH="/path/to/fastqc:/path/to/leehom/:$PATH"
 ```
