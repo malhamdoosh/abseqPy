@@ -15,10 +15,17 @@ abundancePlot <- function(fs, sampleNames, outputDir) {
       reg <- paste0(".*_ig", gene, "_dist_", expression, "_level\\.csv(\\.gz)?$")
       selectedFiles <- fs[grepl(reg, fs)]
       vert <- checkVert(selectedFiles[1])
+      if (vert) {
+        width <- V_WIDTH
+        height <- V_HEIGHT
+      } else {
+        width <- H_WIDTH
+        height <- H_HEIGHT
+      }
       mashedName <- paste(sampleNames, collapse = ", ")
       dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE, skip = 1)
       p <- plotDist(dataframes, sampleNames, paste0("IG", toupper(gene), " abundance in ", mashedName), vert)
-      ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p)
+      ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p, width = width, height = height)
     }
   }
 }

@@ -1,6 +1,15 @@
 # single plot uses blue
 BLUEHEX <- "#56B4E9"
 
+# plot sizes
+V_WIDTH <- 8
+V_HEIGHT <- 5
+H_WIDTH <- 5
+H_HEIGHT <- 8
+
+V_WIDTH_L <- 16
+V_HEIGHT_L <- 10
+
 
 
 checkVert <- function(filename) {
