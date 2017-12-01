@@ -93,13 +93,8 @@ attention to the versions - these versions are used during the development and t
 
 The plotting facilities provided by AbSeq uses a few R libraries. You can avoid R and all its dependencies entirely
 if you explicitly tell AbSeq to [plot in python only](#python-only-plot). Otherwise, you will require `ggplot2`,
-`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`.
-
-To make your life easier, you can simply execute
-```bash
-$ Rscript rscripts/installer.R
-```
-to install all of the above libraries. It will check if it's installed in your system before installing them.
+`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`. These packages will be automatically installed
+if they can't be located in your system.
 
 ### Exporting variables
 To make these programs available in your `$PATH` variable:
