@@ -99,7 +99,7 @@ Setting up AbSeq is simple as pie:
 
 ## Installation and configuration
 Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
-installed and ready to go. You will require Python v2.7 on your system with [setuptools](https://setuptools.readthedocs.io/en/latest/) installed.
+installed and ready to go. You will require Python v2.7 on your system with [pip](https://pip.pypa.io/en/stable/installing/) installed.
 
 Additionally, you will also need R installed on your machine unless you disable R plotting. See [above](#r-library-dependencies).
 
@@ -110,11 +110,11 @@ AbSeq depends on several python packages, namely:
   3. [numpy](http://www.numpy.org/)
   4. [Weblogo](https://github.com/WebLogo/weblogo) 
 
-To setup AbSeq and automatically install the above packages, run:
+To automatically install the above packages, run:
 ```bash
-$ python setup.py install && python setup.py clean
+$ pip install -r requirements.txt
 ```
-in AbSeq's root directory (where setup.py lives).
+in AbSeq's root directory (where requirements.txt lives).
 
 ## Exporting variables
 To make the [installed binaries](#binary-dependencies) available in your `$PATH` variable:
