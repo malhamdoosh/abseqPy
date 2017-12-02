@@ -72,7 +72,7 @@ AbSeq requires a few external packages available in your system, namely:
     * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
         - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
     
-> Make sure the following programs are available in your [`$PATH` variable](#exporting-variables). Pay special
+> Make sure the above programs are available in your [`$PATH` variable](#exporting-variables). Pay special
 attention to the versions - these versions were used during the development and testing process of AbSeq.
 
 
