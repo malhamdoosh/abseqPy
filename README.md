@@ -208,17 +208,17 @@ sample comparison analysis for:
 **Note** that `;` in `-rs` separates different _sample pairings_ while `|` _separates samples_ **within** the same pairing.
 
 > Tip 1: `-rs` uses fuzzy string search. Therefore, providing either the full sample file name or truncated name will work
-fine. Note the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` and `SRR2_L001_BZ929_CAGGG-GGACT_L001_R1.fastq.gz` works just fine too.
+fine. Observe in the example, the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` and `SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz` works just fine too.
 
 > Tip 2: `-rs` ignores whitespaces. Feel free to put spaces between `|`s and `;`s.
 
-Assuming 
+Assuming
 ```bash
 $ cat pairing_config.txt
 SRR1 | SRR2
 SRR1_L001 | SRR2 | SRR3
 ```
-> Tip 3: `-rs pairing_config.txt` would've worked exactly the same as above
+> Tip 3: Then `-rs pairing_config.txt` would've worked exactly the same as `-rs "SRR1 | SRR2; SRR1|SRR2_BZ929_L001|SRR3"`. This is especially useful when there are long or complicated pairings!
 
 
 ### Single sample
