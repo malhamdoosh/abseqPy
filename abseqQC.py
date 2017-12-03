@@ -73,7 +73,7 @@ def main():
             igRepertoire.analyzeDiversity()
         elif (argsVals.task == 'secretion'):
             #analyze the sequences upstream of the IGV genes
-            printFormattedTitle("Secretion signal Alanysis")
+            printFormattedTitle("Secretion signal Analysis")
             igRepertoire.analyzeSecretionSignal()
         elif (argsVals.task == '5utr'):
             printFormattedTitle("5'UTR analysis")

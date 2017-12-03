@@ -1,3 +1,4 @@
+from PlotManager import PlotManager
 from IgRepertoire.IgRepertoire import IgRepertoire
 from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 from multiprocessing import Queue
@@ -12,12 +13,14 @@ class IgMultiRepertoire:
     def __init__(self, args):
         self.queue = Queue()
         self.result = Queue()
+        self.buffer = []
         self.sampleCount = 0
         self.resource = args.threads
+        self.plotManager = PlotManager(args)
         if os.path.isdir(args.f1):
             clusterFiles = self.__pairFiles(args.f1, args)
             self.sampleCount = len(clusterFiles)
-            avgResource = int(floor(self.resource/self.sampleCount))
+            avgResource = int(floor(self.resource / self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
             for sample in clusterFiles:
                 modifiedArgs = deepcopy(args)
@@ -32,7 +35,8 @@ class IgMultiRepertoire:
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
                     if f1Fmt != detectFileFormat(modifiedArgs.f2):
                         raise Exception("Detected mismatch in file extensions {} and {}!"
-                                        " Both should be either FASTA or FASTQ.".format(modifiedArgs.f1, modifiedArgs.f2))
+                                        " Both should be either FASTA or FASTQ.".format(modifiedArgs.f1,
+                                                                                        modifiedArgs.f2))
                     modifiedArgs.fmt = f1Fmt
                 else:
                     # single ended
@@ -46,56 +50,60 @@ class IgMultiRepertoire:
                 modifiedArgs.name = retval[1]
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
+                self.plotManager.addMetadata(retval)
                 if not os.path.exists(modifiedArgs.outdir):
                     os.makedirs(modifiedArgs.outdir)
-                self.queue.put(IgRepertoire(modifiedArgs))
+                self.buffer.append(IgRepertoire(modifiedArgs))
         else:
+            self.plotManager.addMetadata(
+                (inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')[0], args.name))
             self.sampleCount += 1
-            self.queue.put(IgRepertoire(args))
+            self.buffer.append(IgRepertoire(args))
 
     def analyzeAbundance(self, all=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.ABUN,  all=all)
+        self.__beginWork(GeneralWorker.ABUN, all=all)
 
     def runFastqc(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.FASTQC)
+        self.__beginWork(GeneralWorker.FASTQC)
 
     def analyzeDiversity(self, all=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.DIVER, all=all)
+        self.__beginWork(GeneralWorker.DIVER, all=all)
 
     def analyzeProductivity(self, generateReport=True, all=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.PROD, generateReport=generateReport, all=all)
+        self.__beginWork(GeneralWorker.PROD, generateReport=generateReport, all=all)
 
     def annotateClones(self, outDirFilter=None, all=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
+        self.__beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
 
     def analyzeRestrictionSites(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.RSA)
+        self.__beginWork(GeneralWorker.RSA)
 
     def analyzePrimerSpecificity(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.PRIM)
+        self.__beginWork(GeneralWorker.PRIM)
 
     def analyze5UTR(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.UTR5)
+        self.__beginWork(GeneralWorker.UTR5)
 
     def analyzeRestrictionSitesSimple(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.RSAS)
+        self.__beginWork(GeneralWorker.RSAS)
 
     def analyzeSecretionSignal(self):
-        self.__beginWork(self.queue, self.result, GeneralWorker.SECR)
+        self.__beginWork(GeneralWorker.SECR)
 
     def analyzeSeqLen(self, klass=False):
-        self.__beginWork(self.queue, self.result, GeneralWorker.SEQLEN, klass=klass)
+        self.__beginWork(GeneralWorker.SEQLEN, klass=klass)
 
     def finish(self):
         """
-        Queue might still be buffered, finish off cleanup here
+        Queue might still be buffered, finish off cleanup here.
+        Then, delegate to plot manager to decide if there's further plotting required.
         :return: None
         """
-        # pop all items
-        while not self.queue.empty():
-            self.queue.get()
-        while not self.result.empty():
-            self.result.get()
+        self.queue.close()
+        self.queue.join_thread()
+        self.result.close()
+        self.result.join_thread()
+        self.plotManager.plot()
 
     def __pairFiles(self, folder, args):
         """
@@ -150,20 +158,26 @@ class IgMultiRepertoire:
                 partner = findPartner(f)
                 if partner is None:
                     raise Exception("Failed to find opposite read for file {}".format(f))
-                res.append(reorderRead(os.path.abspath(folder+"/"+f), os.path.abspath(folder+"/"+partner)))
+                res.append(reorderRead(os.path.abspath(folder + "/" + f), os.path.abspath(folder + "/" + partner)))
                 paired.add(partner)
             else:
                 # single file
-                res.append(os.path.abspath(folder+'/'+f))
+                res.append(os.path.abspath(folder + '/' + f))
 
         return distinct(res)
 
-    def __beginWork(self, queue, result, jobdesc, refill=True, *args, **kwargs):
-        workers = []
-        collectedResult = []
+    def __beginWork(self, jobdesc, *args, **kwargs):
+
+        # fill self.queue with data from self.buffer
+        assert self.queue.empty()
+        assert len(self.buffer) == self.sampleCount
+        for _ in xrange(len(self.buffer)):
+            self.queue.put(self.buffer.pop())
+        assert len(self.buffer) == 0
+
         # initialize workers
-        for _ in range(min(self.sampleCount, self.resource)):
-            workers.append(GeneralWorker(queue, result, jobdesc, *args, **kwargs))
+        workers = [GeneralWorker(self.queue, self.result, jobdesc, *args, **kwargs) for _ in
+                   xrange(min(self.sampleCount, self.resource))]
 
         # since macOSX doesn't support .qsize(). also, .empty() and .qsize() are
         # unreliable ==> we use poison pills
@@ -178,33 +192,29 @@ class IgMultiRepertoire:
             for i in xrange(self.sampleCount):
                 res = self.result.get()
                 if type(res) == tuple:
-                    raise GeneralWorkerException(res[0], res[1])
-                if refill:
-                    collectedResult.append(res)
+                    # XXX: encountered an exception! - here, decide to raise it immediately.
+                    # all accompanying processes will halt immediately due to this raise.
+                    raise GeneralWorkerException(*res)
+                self.buffer.append(res)
 
             for w in workers:
                 w.join()
             # done
 
-            # refill if needed
-            if refill:
-                # empty out original queue from Nones
-                while not self.queue.empty():
-                    res = self.queue.get()
-                    assert res is None
+            # empty out original queue from Nones
+            while not self.queue.empty():
+                res = self.queue.get()
+                assert res is None
 
-                itemsAdded = 0      # sanity check
-                for i in collectedResult:
-                    self.queue.put(i)
-                    itemsAdded += 1
-
-                assert itemsAdded == self.sampleCount
         except GeneralWorkerException as e:
-            print("Something went horribly wrong while trying to run AbSeq!")
-            print("=== GeneralWorker error log ===")
-            print(e.errors)
-            print("=== ======================= ===")
+            print("\n\nSomething went horribly wrong while trying to run AbSeq!")
+            print("GeneralWorker stacktrace:")
+            print("-" * 120)
+            print(e.tracebackMsg)
+            print("-" * 120)
+            # re-raise exception
             raise e
+        # catch-all exception
         except Exception as e:
             raise e
         finally:
@@ -214,4 +224,3 @@ class IgMultiRepertoire:
     def __fillPoisonPill(self, n, queue, pill=None):
         for _ in range(n):
             queue.put(pill)
-

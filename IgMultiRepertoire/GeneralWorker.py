@@ -1,4 +1,6 @@
 from multiprocessing import Process, current_process
+import traceback
+import sys
 
 
 class GeneralWorker(Process):
@@ -36,10 +38,13 @@ class GeneralWorker(Process):
                 else:
                     getattr(job, self.jobDescription)(*self.args, **self.kwargs)
             except Exception as e:
-                fmtMsg = (str(job.name) + ":: An error occurred while processing " + str(self.jobDescription))
+                exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
+                fmtMsg = ("Job name: " + str(job.name) + " :: An error occurred while processing " +
+                          str(self.jobDescription))
                 newE = e.message
                 if self.resultQueue is not None:
-                    self.resultQueue.put((newE, fmtMsg))
+                    self.resultQueue.put((newE, fmtMsg, traceback.format_exception(exceptionType, exceptionValue,
+                                                                                   exceptionTraceback)))
                 continue
             # job done
             if self.resultQueue is not None:
@@ -48,6 +53,7 @@ class GeneralWorker(Process):
 
 
 class GeneralWorkerException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors, tracebackMsg):
         super(GeneralWorkerException, self).__init__(message)
         self.errors = errors
+        self.tracebackMsg = ''.join(tracebackMsg)
