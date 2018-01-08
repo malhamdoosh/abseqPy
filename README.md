@@ -41,6 +41,9 @@ There will be more information on contribution guidelines in the wikipage.
 
 # Dependencies
 ## Binary dependencies
+In this section, we assume Unix's `make` build tool is readily available.
+If you're (optionally) building for `leeHom` paired-end merger, you will require [`CMake`](https://cmake.org/download/) too.
+
 AbSeq requires a few external packages available in your system, namely:
 
   * ### Mandatory dependencies
@@ -60,6 +63,8 @@ AbSeq requires a few external packages available in your system, namely:
         - Make sure to follow **_every_** step detailed in the guide
         - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
          See [here](#exporting-environment-variables)
+    * [Ghostscript](https://www.ghostscript.com/download/) v9.22
+        - Download and follow the instructions to install [here](https://www.ghostscript.com/doc/9.22/Install.htm)
          
   * ### Optional dependencies
   
@@ -69,6 +74,7 @@ AbSeq requires a few external packages available in your system, namely:
         - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
     * [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
         - Follow the installation guide in their README
+        - As mentioned earlier, leeHom uses `CMake` and `make` as their build tool.
     * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
         - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
     
