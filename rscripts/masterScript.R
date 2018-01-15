@@ -132,22 +132,26 @@ for (i in 1:length(pairings)) {
   # plot igv mismatches distribution
   abunIgvMismatchFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_mismatches_dist\\.csv(\\.gz)?$")
   if (length(abunIgvMismatchFiles) > 0) {
+      subtitle <- paste("Total is", paste(lapply(abunIgvMismatchFiles, getTotal), collapse = ","))
       abunIgvMismatches <- plotDist(
         lapply(abunIgvMismatchFiles, read.csv, skip = 1),
         sampleNames,
         paste("Number of mismatches in V gene in", combinedNames),
-        checkVert(abunIgvMismatchFiles[[1]])
+        checkVert(abunIgvMismatchFiles[[1]]),
+        subs = subtitle
       )
       ggsave(paste0(abunOut, mashedNames, "_igv_mismatches_dist.png"), plot = abunIgvMismatches, width = V_WIDTH, height = V_HEIGHT)
   }
   # plot igv gaps distribution
   abunIgvGapsFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_gaps_dist\\.csv(\\.gz)?$")
   if (length(abunIgvGapsFiles) > 0) {
+      subtitle <- paste("Total is", paste(lapply(abunIgvGapsFiles, getTotal), collapse = ","))
       abunIgvGaps <- plotDist(
         lapply(abunIgvGapsFiles, read.csv, skip = 1),
         sampleNames,
         paste("Number of gaps in V gene in ", combinedNames),
-        checkVert(abunIgvGapsFiles[[1]])
+        checkVert(abunIgvGapsFiles[[1]]),
+        subs = subtitle
       )
       ggsave(paste0(abunOut, mashedNames, "_igv_gaps_dist.png"), plot = abunIgvGaps, width = V_WIDTH, height = V_HEIGHT)
   }
@@ -178,86 +182,58 @@ for (i in 1:length(pairings)) {
   regions <- c("cdr1", "cdr2", "cdr3", "fr1", "fr2", "fr3", "igv", "igd", "igj")
   
   # gaps_dist plots only
-  gapPlots <- prodDistPlot(productivityDirectories, sampleNames, "Gaps in" ,"_gaps_dist\\.csv(\\.gz)?$", regions)
-  i <- 1
-  for (region in regions) {
-    plt <- gapPlots[[i]]
-    if (!is.null(plt)) {
-        ggsave(paste0(prodOut, mashedNames, "_", region, "_gaps_dist.png"), plot = plt, width = V_WIDTH, height = V_HEIGHT)
-    }
-    i <- i + 1
-  }
-  
+  gapPlots <- prodDistPlot(productivityDirectories,
+                            sampleNames,
+                            "Gaps in",
+                            "_gaps_dist\\.csv(\\.gz)?$",
+                            unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_gaps_dist.png") })),
+                            regions)
   # gaps_out_of_frame plots only (no igv, igd, ihj plots for this)
   subregions <- head(regions, n = 6)
   gapOutFramePlots <- prodDistPlot(productivityDirectories,
                                    sampleNames,
                                    "Gaps in",
                                    "_gaps_dist_out_of_frame\\.csv(\\.gz)?$",
+                                   unlist(lapply(subregions, function(region) {paste0(prodOut, mashedNames, "_", region, "_gaps_dist_out_of_frame.png") })),
                                    subregions)
-  i <- 1
-  for (region in subregions) {
-    plt <- gapOutFramePlots[[i]]
-    if (!is.null(plt)) {
-        ggsave(paste0(prodOut, mashedNames, "_", region, "_gaps_dist_out_of_frame.png"), plot = plt, width = V_WIDTH, height = V_HEIGHT)
-    }
-    i <- i + 1
-  }
-  
   # mismatch dist only
-  mismatchPlots <- prodDistPlot(productivityDirectories, sampleNames, "Mismatches in", "_mismatches_dist\\.csv(\\.gz)?$", regions)
-  i <- 1
-  for (region in regions) {
-    plt <- mismatchPlots[[i]]
-    if (!is.null(plt)) {
-        ggsave(paste0(prodOut, mashedNames, "_", region, "_mismatches_dist.png"), plot = plt, width = V_WIDTH, height = V_HEIGHT)
-    }
-    i <- i + 1
-  }
-  
+  mismatchPlots <- prodDistPlot(productivityDirectories,
+                                sampleNames,
+                                "Mismatches in",
+                                "_mismatches_dist\\.csv(\\.gz)?$",
+                                unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_mismatches_dist.png")})),
+                                regions)
   # stop codon dist plot
   stopCodonPlot <- prodDistPlot(productivityDirectories, sampleNames,
                             "Stop codon in In-frame Clones",
                             "_stopcodon_dist_in_frame\\.csv(\\.gz)?$",
+                            c(paste0(prodOut, mashedNames, "_stopcodon_dist_in_frame.png")),
                             c("")) # no regions
-  if (!is.null(stopCodonPlot[[1]])) {
-      ggsave(paste0(prodOut, mashedNames, "_stopcodon_dist_in_frame.png"), plot = stopCodonPlot[[1]], width = V_WIDTH, height = V_HEIGHT)
-  }
-  
   # vjframe plot
   vjframePlot <- prodDistPlot(productivityDirectories, sampleNames,
                               "V-D-J Rearrangement",
                               "_vjframe_dist\\.csv(\\.gz)?$",
+                              c(paste0(prodOut, mashedNames, "_vjframe_dist.png")),
                               c("")) # no regions
-  if (!is.null(vjframePlot[[1]])) {  
-      ggsave(paste0(prodOut, mashedNames, "_vjframe_dist.png"), plot = vjframePlot[[1]], width = V_WIDTH, height = V_HEIGHT)
-  }
-  
   # 3 special cases for IGV region
   # igv - inframe_unproductive, out of frame, productive
   igvInframeUnProductive <- prodDistPlot(productivityDirectories, sampleNames,
                                       "Abundance of In-frame Unproductive Clones in",
                                       "_dist_inframe_unproductive\\.csv(\\.gz)?$",
+                                      c(paste0(prodOut, mashedNames, "_igv_dist_inframe_unproductive.png")),
                                       c("igv"))
-  if (!is.null(igvInframeUnProductive[[1]])) {
-      ggsave(paste0(prodOut, mashedNames, "_igv_dist_inframe_unproductive.png"), plot = igvInframeUnProductive[[1]], width = V_WIDTH, height = V_HEIGHT)
-  }
   
   igvOutOfFrame <- prodDistPlot(productivityDirectories, sampleNames,
                                 "Abundance of Out-Of-Frame Clones in",
                                 "_dist_out_of_frame\\.csv(\\.gz)?$",
+                                c(paste0(prodOut, mashedNames, "_igv_dist_out_of_frame.png")),
                                 c("igv"))
-  if (!is.null(igvOutOfFrame[[1]])) {
-      ggsave(paste0(prodOut, mashedNames, "_igv_dist_out_of_frame.png"), plot = igvOutOfFrame[[1]], width = V_WIDTH, height = V_HEIGHT)
-  }
   
   igvProductivity <- prodDistPlot(productivityDirectories, sampleNames,
                                   "Abundance of Productive Clones in",
                                   "_dist_productive\\.csv(\\.gz)?$",
+                                  c(paste0(prodOut, mashedNames, "_igv_dist_productive.png")),
                                   c("igv"))
-  if (!is.null(igvProductivity[[1]])) {
-      ggsave(paste0(prodOut, mashedNames, "_igv_dist_productive.png"), plot = igvProductivity[[1]], width = V_WIDTH, height = V_HEIGHT)
-  }
   
   ##################################################
   #                                                #
