@@ -48,15 +48,20 @@ class IgMultiRepertoire:
                     modifiedArgs.fmt = detectFileFormat(f1name)
                 modifiedArgs.outdir += retval[0]
                 modifiedArgs.name = retval[1]
+                self.plotManager.addMetadata((modifiedArgs.outdir, modifiedArgs.name))
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                self.plotManager.addMetadata(retval)
+                # silently ignore creation of out directory if already exists
                 if not os.path.exists(modifiedArgs.outdir):
                     os.makedirs(modifiedArgs.outdir)
                 self.buffer.append(IgRepertoire(modifiedArgs))
         else:
-            self.plotManager.addMetadata(
-                (inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')[0], args.name))
+            self.plotManager.addMetadata((args.outdir, args.name))
+            args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
+            # silently ignore creation of out directory if already exists
+            if not os.path.exists(args.outdir):
+                os.makedirs(args.outdir)
+            args.log = args.outdir + args.name + ".log"
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
 
