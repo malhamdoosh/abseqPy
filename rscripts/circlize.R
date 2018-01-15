@@ -11,32 +11,34 @@ plotCirclize <- function(sampleName, path) {
   # Returns: Nothing. Saves a png named <sampleName>_vjassoc.csv in the same directory as path
   
   # open and read csv
-  file <- paste0(path, sampleName, "_vjassoc.csv")
-  df <- read.csv(file)
-  
-  # output file
-  png(gsub(".csv", ".png", file))
-  
-  # circos theme setup
-  circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
-                           rep(5, length(unique(df[[2]]))-1), 15))
-  
-  row = rep(brewer.pal(12, "Paired"), nrow(df))[1:length(unique(df[[1]]))]
-  col = rep(rev(brewer.pal(12, "Paired")), nrow(df))[1:length(unique(df[[2]]))]
-  
-  # plot!
-  chordDiagram(df, annotationTrack="grid", preAllocateTracks = list(track.height=0.2), grid.col=c(row,col))
-  title(sampleName, cex=0.8)
-  circos.trackPlotRegion(track.index = 1, bg.border = NA,
-                         panel.fun = function(x, y) {
-                           sector.name = get.cell.meta.data("sector.index")
-                           xlim = get.cell.meta.data("xlim")
-                           ylim = get.cell.meta.data("ylim")
-                           circos.text(mean(xlim), ylim[1], sector.name, facing = "clockwise", adj = c(0, 1.5))
-                         }
-  )
-  circos.clear()
-  dev.off()
+  filename <- paste0(path, sampleName, "_vjassoc.csv")
+  if (file.exists(filename)) {
+      df <- read.csv(filename)
+      
+      # output file
+      png(gsub(".csv", ".png", filename))
+      
+      # circos theme setup
+      circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
+                               rep(5, length(unique(df[[2]]))-1), 15))
+      
+      row = rep(brewer.pal(12, "Paired"), nrow(df))[1:length(unique(df[[1]]))]
+      col = rep(rev(brewer.pal(12, "Paired")), nrow(df))[1:length(unique(df[[2]]))]
+      
+      # plot!
+      chordDiagram(df, annotationTrack="grid", preAllocateTracks = list(track.height=0.2), grid.col=c(row,col))
+      title(sampleName, cex=0.8)
+      circos.trackPlotRegion(track.index = 1, bg.border = NA,
+                             panel.fun = function(x, y) {
+                               sector.name = get.cell.meta.data("sector.index")
+                               xlim = get.cell.meta.data("xlim")
+                               ylim = get.cell.meta.data("ylim")
+                               circos.text(mean(xlim), ylim[1], sector.name, facing = "clockwise", adj = c(0, 1.5))
+                             }
+      )
+      circos.clear()
+      dev.off()
+  }
 }
 
 #plotCirclize("PCR3_L001", "./PCR3_BH5C6_AGGCAGAA-TACAGC_L001/abundance/")

@@ -63,9 +63,14 @@ prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
   i = 1
   for (region in regions) {
     fs <- listFilesInOrder(path = productivityDirectories, pattern = paste0(".*", region, reg))
-    dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
-    plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
-    plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
+    if (length(fs) > 0) {
+        dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
+        plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
+        plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
+    } else {
+        # region file missing
+        plots[[i]] <- NULL
+    }
     i <- i + 1
   }
   return (plots)

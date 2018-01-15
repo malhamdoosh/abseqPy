@@ -14,18 +14,26 @@ abundancePlot <- function(fs, sampleNames, outputDir) {
       }
       reg <- paste0(".*_ig", gene, "_dist_", expression, "_level\\.csv(\\.gz)?$")
       selectedFiles <- fs[grepl(reg, fs)]
-      vert <- checkVert(selectedFiles[1])
-      if (vert) {
-        width <- V_WIDTH
-        height <- V_HEIGHT
-      } else {
-        width <- H_WIDTH
-        height <- H_HEIGHT
+      if (length(selectedFiles) > 0) {
+          vert <- checkVert(selectedFiles[1])
+          if (vert) {
+            width <- V_WIDTH
+            height <- V_HEIGHT
+          } else {
+            width <- H_WIDTH
+            height <- H_HEIGHT
+          }
+          mashedName <- paste(sampleNames, collapse = ", ")
+          dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE, skip = 1)
+          subs <- "Total is"
+          frames <- length(dataframes)
+          for (i in 1:frames) {
+            df <- dataframes[[i]]
+            subs <- paste0(subs, " ", getTotal(selectedFiles[i]), if (i != frames) "," else "")
+          }
+          p <- plotDist(dataframes, sampleNames, paste0("IG", toupper(gene), " abundance in ", mashedName), vert, subs=subs)
+          ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p, width = width, height = height)
       }
-      mashedName <- paste(sampleNames, collapse = ", ")
-      dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE, skip = 1)
-      p <- plotDist(dataframes, sampleNames, paste0("IG", toupper(gene), " abundance in ", mashedName), vert)
-      ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p, width = width, height = height)
     }
   }
 }
