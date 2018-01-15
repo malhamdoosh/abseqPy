@@ -40,6 +40,7 @@ def parseArgs():
     elif args.f2 is not None:
         args.f2 = abspath(args.f2)
 
+    # parse arguments if args.f1 is a file, if it's a directory, allow IgMultiRepertoire to handle file pairings
     if os.path.isfile(args.f1):
         # detect file format (either fastq or fasta); both should be the same type
         fmt = detectFileFormat(args.f1)
@@ -61,13 +62,6 @@ def parseArgs():
             retval = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
             args.outdir += retval[0]
             args.name = retval[1]
-        args.outdir = (abspath(args.outdir) + "/").replace("//", "/")
-
-        # silently ignore creation of out directory if already exists
-        if not os.path.exists(args.outdir):
-            os.makedirs(args.outdir)
-
-        args.log = args.outdir + args.name + ".log"
 
         # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
         if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):
