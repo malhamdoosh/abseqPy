@@ -19,8 +19,10 @@ plotCirclize <- function(sampleName, path) {
       png(gsub(".csv", ".png", filename))
       
       # circos theme setup
-      circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
-                               rep(5, length(unique(df[[2]]))-1), 15))
+      if (length(unique(df[[1]]))-1 < 30 && length(unique(df[[2]]))-1 < 30)  {
+          circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
+                                   rep(5, length(unique(df[[2]]))-1), 15))
+      }
       
       row = rep(brewer.pal(12, "Paired"), nrow(df))[1:length(unique(df[[1]]))]
       col = rep(rev(brewer.pal(12, "Paired")), nrow(df))[1:length(unique(df[[2]]))]
