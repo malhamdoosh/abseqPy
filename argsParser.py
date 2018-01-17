@@ -186,14 +186,14 @@ def parseCommandLineArguments():
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                    " Bitscore range (inclusive) to apply on V gene."
                                                    " V genes with bitscores that do not fall within this range"
-                                                   " will cause the whole sequence to be filtered out."
+                                                   " will be filtered out."
                                                    " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    optional.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
-                                                  " Sequences (after alignment to reference) with V"
-                                                  " gene that do not fall within this start range (inclusive)"
-                                                  " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
+    optional.add_argument('-ss', '--sstart', help="Filtering criterion (Subject V gene start index):"
+                                                  " Filters out sequences with subject start index (of the V gene)"
+                                                  " that do not fall within this start range (inclusive)."
+                                                  " Accepted format: num1-num2 [default=[1, inf)]",
                           default=None)
-    optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
+    optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence alignment length):"
                                                     " Sequences that do not fall within this alignment length range"
                                                     " (inclusive) are filtered."
                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
@@ -224,7 +224,7 @@ def parseCommandLineArguments():
                                "sample 1, 2 and 3, ".format(RSCRIPT_SAMPLE_SEPARATOR) +
                                "then samples 1 and 2 respectively. When arg = <filename>, it expects filename to have "
                                "pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR + "'. This is"
-                               " particularly useful if pairings are complicated and long. Note that these pairing "
+                               " particularly useful if pairings are long and complicated. Note that these pairing "
                                "options are only available when -f1 is supplied with a directory."
                                " Specifying -rs without any arguments is similar to not specifying -rs at all."
                                " The default behaviour is to plot in R (and python plots off) with no"
