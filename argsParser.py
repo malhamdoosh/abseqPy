@@ -109,6 +109,7 @@ def parseArgs():
         args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
 
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
+    args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
     args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
@@ -193,11 +194,16 @@ def parseCommandLineArguments():
                                                   " that do not fall within this start range (inclusive)."
                                                   " Accepted format: num1-num2 [default=[1, inf)]",
                           default=None)
+    optional.add_argument('-qs', '--qstart', help="Filtering criterion (Query V gene start index):"
+                                                  " Filters out sequences with query start index (of the V gene)"
+                                                  " that do not fall within this start range (inclusive)."
+                                                  " Accepted format: num1-num2 [default=[1, inf)]",
+                          default=None)
     optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence alignment length):"
                                                     " Sequences that do not fall within this alignment length range"
                                                     " (inclusive) are filtered."
                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    optional.add_argument('-qs', '--qstart', dest="actualqstart",
+    optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="Query sequence's starting index (1-based indexing). Subsequence before specified "
                                "index is ignored during analysis. [default=1]", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
@@ -255,7 +261,7 @@ def extractRanges(strRanges, expNoRanges=2):
     numRanges = []
     ranges = strRanges.split(',')
     if (len(ranges) > expNoRanges):
-        raise Exception("Number of bitScore, alignLen and sstart ranges should match the number of files")
+        raise Exception("Number of bitScore, alignLen, sstart, and qstart ranges should match the number of files")
 
     for i in range(len(ranges)):
         scores = ranges[i].split('-')
