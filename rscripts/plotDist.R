@@ -1,4 +1,4 @@
-plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE) {
+plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE, subs = "") {
   # Plots a dodging histogram for all sample in dataframes. If length(sampleNames) == 1, then the bars will
   # also have y-values (or x if horizontal plot) labels on them. Use 'perc' to control if the values are percentages.
   # Args:
@@ -10,6 +10,7 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   #   ylabel: A string type.
   #   perc: Boolean type. True if data's axis is a % proportion (instead of 0-1)
   #         only meaningful if length(sampleNames) == 1
+  #   subs: subtitle. defaults to empty
   # Returns:
   #   ggplot().
   
@@ -27,6 +28,8 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   } else {
     placeholder <- "%0.2f"
   }
+
+
   
   # ------------  cleaning & transforming data   ----------- #
   
@@ -103,9 +106,9 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
       g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
   }
-  
   g <- g + theme(text = element_text(size = 10)) +
     labs(title = plotTitle,
+         subtitle = subs,
          x = xlabel,
          y = ylabel,
          caption = caps)

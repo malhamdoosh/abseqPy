@@ -466,8 +466,9 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         topvalFormat = '{:,}'
     # Create the bar plot and format it      
     if vertical:
-        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(classes, stats)],
-                 metadata="vert\n")
+        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+                 [(x, y, ighvDistfam[x]) for x, y in zip(classes, stats)],
+                 metadata="vert,total=" + str(total) + "\n")
         rects = ax.bar(ind, stats, width)
         ax.set_xticks(ind + width / 2)
         ax.set_ylim(top=max(stats) * 1.1)
@@ -488,8 +489,9 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
                         (topvalFormat.format(height)),
                         ha='center', va='bottom', size=10, color='red')
     else:
-        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(stats, classes)],
-                 metadata="hori\n")
+        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+                 [(x, y, ighvDistfam[y]) for x, y in zip(stats, classes)],
+                 metadata="hori,total=" + str(total) + "\n")
         rects = ax.barh(ind, stats, width)
         ax.set_yticks(ind + width / 2)
         ax.set_xlim(right=max(stats) * 1.1)

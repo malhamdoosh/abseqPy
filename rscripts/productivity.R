@@ -48,7 +48,7 @@ productivityPlot <- function(dataframes, sampleNames) {
   return (g)
 }
 
-prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
+prodDistPlot <- function(productivityDirectories, sampleNames, title, reg, saveNames,
                          regions = c("cdr1", "cdr2", "cdr3", "fr1", "fr2", "fr3", "igv", "igd", "igj")) {
   # Plots a distribution plot for different productivity analysis files
   # Args:
@@ -59,16 +59,19 @@ prodDistPlot <- function(productivityDirectories, sampleNames, title, reg,
   #     regions: Most of the dist plots are regional based. use c("") if no regions are involved
   # Returns:
   #     a list of ggplot()s.
-  plots <- list()
+  stopifnot(length(regions) == length(saveNames))
   i = 1
   for (region in regions) {
     fs <- listFilesInOrder(path = productivityDirectories, pattern = paste0(".*", region, reg))
-    dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
-    plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
-    plots[[i]] <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]))
+    if (length(fs) > 0) {
+        dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
+        plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
+        subtitle <- paste("Total is" , paste(lapply(fs, getTotal), collapse = ","))
+        g <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]), subs = subtitle)
+        ggsave(saveNames[i], plot = g, width = V_WIDTH, height = V_HEIGHT)
+    }
     i <- i + 1
   }
-  return (plots)
 }
 
 #files <- list.files(pattern = "PCR[123].*_productivity.csv$", full.names = TRUE, recursive = TRUE)
