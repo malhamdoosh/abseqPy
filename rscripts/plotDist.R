@@ -49,10 +49,11 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     }
   }
   
-  
+  originals <- list()
   # make sure only the top CUTOFF is considered
   for (i in 1:frames) {
     df <- dataframes[[i]]
+    originals[[i]] <- cbind(df)
     if (nrow(df) > CUTOFF) {
       caps <- "Cutoff at top 15"
       dataframes[[i]] <- head(df, CUTOFF)
@@ -73,6 +74,37 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     }
   } else {
     df.union <- dataframes[[1]]
+  }
+
+  # -- complete merging -- #
+
+  # need to compensate for topN in each dataframe
+  # 1. gather unique x/y
+  # 2. if x/y is in original table but not in top N table, append row to df.union
+  # 3. otherwise, do nothing
+    
+  if (frames > 1) {
+    if (vert) {
+        topNx <- unique(df.union$x)
+        for (x_ in topNx) {
+            for (i in 1:frames) {
+                if (x_ %in% originals[[i]]$x && !(x_ %in% dataframes[[i]]$x)) {
+                    newRow <- originals[[i]][originals[[i]]$x == x_, ]
+                    df.union <- rbind(df.union, newRow)
+                }
+            }
+        }
+    } else {
+        topNy <- unique(df.union$y)
+        for (y_ in topNy) {
+            for (i in 1:frames) {
+                if (y_ %in% originals[[i]]$y && !(y_ %in% dataframes[[i]]$y)) {
+                    newRow <- originals[[i]][originals[[i]]$y == y_, ]
+                    df.union <- rbind(df.union, newRow)
+                }
+            }
+        }
+    }
   }
   
   if (missing(ylabel)) {
