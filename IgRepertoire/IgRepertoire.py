@@ -183,7 +183,8 @@ class IgRepertoire:
             print("Clones are being filtered based on the following criteria: ")
             print("\tBit score: " + `self.bitScore` )
             print("\tAlignment length: " + `self.alignLen` )
-            print("\tV gene start: " + `self.sStart`)
+            print("\tSubject V gene start: " + `self.sStart`)
+            print("\tQuery V gene start: " + `self.qStart`)
             selectedRows = (
                     (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
                     (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
