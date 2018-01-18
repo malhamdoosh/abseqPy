@@ -52,6 +52,7 @@ class IgRepertoire:
         self.clonelimit = args.clonelimit
         self.alignLen = args.alignlen
         self.sStart = args.sstart
+        self.qStart = args.qstart
         self.seqType = args.seqtype
         self.format = args.fmt
         self.chain = args.chain
@@ -183,15 +184,19 @@ class IgRepertoire:
             print("\tBit score: " + `self.bitScore` )
             print("\tAlignment length: " + `self.alignLen` )
             print("\tV gene start: " + `self.sStart`)
-            selectedRows = ((self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
+            selectedRows = (
+                    (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
                     (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
-                    (self.cloneAnnot['alignlen'] >= self.alignLen[0]) & # check alignment length
+                    (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &  # check alignment length
                     (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
-                    (self.cloneAnnot['vstart'] >= self.sStart[0]) & # check subject (V gene) start position
-                    (self.cloneAnnot['vstart'] <= self.sStart[1]))
+                    (self.cloneAnnot['vstart'] >= self.sStart[0]) &      # check subject (V gene) start position
+                    (self.cloneAnnot['vstart'] <= self.sStart[1]) &
+                    (self.cloneAnnot['vqstart'] >= self.qStart[0]) &     # check query (V gene) start position
+                    (self.cloneAnnot['vqstart'] <= self.qStart[1])
+            )
             filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
             if len(filteredIDs) > 0:
-                filteredIDs = filteredIDs[['vgene', 'vstart', 'bitscore', 'alignlen']]
+                filteredIDs = filteredIDs[['vgene', 'vstart', 'vqstart', 'bitscore', 'alignlen']]
                 filteredIDs.to_csv(outDirFilter + self.name + "_filtered_out_clones.txt",
                                    sep="\t", header=True, index=True)
             retained = len(selectedRows) - len(filteredIDs)
