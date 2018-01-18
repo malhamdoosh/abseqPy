@@ -90,7 +90,10 @@ def extractCDRInfo(blastOutput, chain):
                 cloneRecord['strand'] = 'forward' if line[-1] == '+' else 'reversed'
 #                 print line, cloneRecord['strand']
 #                 sys.exit()
-                if (chain == 'hv'):
+
+                # XXX: the or len(line) == 8 may happen to light chains too, when there is
+                # a rogue D-gene that was a hit. It then follows heavy chain's indexing
+                if (chain == 'hv') or len(line) == 8:
                     cloneRecord['stopcodon'] = line[4]
                     cloneRecord['v-jframe'] = line[5]
                     cloneRecord['vgene'] = line[0].split(',')[0]
@@ -99,7 +102,7 @@ def extractCDRInfo(blastOutput, chain):
                 else:
                     cloneRecord['stopcodon'] = line[3]
                     cloneRecord['v-jframe'] = line[4]
-                    cloneRecord['vgene'] = line[0].split(',')[0]                    
+                    cloneRecord['vgene'] = line[0].split(',')[0]
                     cloneRecord['jgene'] = line[1].split(',')[0]
                 # parse Alignment Summary between query and top germline V gene
                 line = ' '.join(line)
