@@ -27,7 +27,7 @@ abundancePlot <- function(fs, sampleNames, outputDir) {
           dataframes <- lapply(selectedFiles, read.csv, stringsAsFactors=FALSE, skip = 1)
           subs <- "Total is"
           frames <- length(dataframes)
-          subs <- paste(subs, paste(lapply(selectedFiles, getTotal), collapse = ", "))
+          subs <- paste(subs, paste(lapply(selectedFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
           p <- plotDist(dataframes, sampleNames, paste0("IG", toupper(gene), " abundance in ", mashedName), vert, subs = subs)
           ggsave(paste0(outputDir, paste(sampleNames, collapse = "_"), "_ig", gene, "_dist_", expression, "_level.png"), plot = p, width = width, height = height)
       }
