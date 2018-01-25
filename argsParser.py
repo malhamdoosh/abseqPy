@@ -109,6 +109,7 @@ def parseArgs():
         args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
 
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
+    args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
     args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
@@ -186,18 +187,23 @@ def parseCommandLineArguments():
     optional.add_argument('-b', '--bitscore', help="Filtering criterion (V gene bitscore):"
                                                    " Bitscore range (inclusive) to apply on V gene."
                                                    " V genes with bitscores that do not fall within this range"
-                                                   " will cause the whole sequence to be filtered out."
+                                                   " will be filtered out."
                                                    " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    optional.add_argument('-ss', '--sstart', help="Filtering criterion (Sequence V gene start index):"
-                                                  " Sequences (after alignment to reference) with V"
-                                                  " gene that do not fall within this start range (inclusive)"
-                                                  " are filtered. Accepted format: num1-num2 [default=[1, inf)]",
+    optional.add_argument('-ss', '--sstart', help="Filtering criterion (Subject V gene start index):"
+                                                  " Filters out sequences with subject start index (of the V gene)"
+                                                  " that do not fall within this start range (inclusive)."
+                                                  " Accepted format: num1-num2 [default=[1, inf)]",
                           default=None)
-    optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence length):"
+    optional.add_argument('-qs', '--qstart', help="Filtering criterion (Query V gene start index):"
+                                                  " Filters out sequences with query start index (of the V gene)"
+                                                  " that do not fall within this start range (inclusive)."
+                                                  " Accepted format: num1-num2 [default=[1, inf)]",
+                          default=None)
+    optional.add_argument('-al', '--alignlen', help="Filtering criterion (Sequence alignment length):"
                                                     " Sequences that do not fall within this alignment length range"
                                                     " (inclusive) are filtered."
                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    optional.add_argument('-qs', '--qstart', dest="actualqstart",
+    optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="Query sequence's starting index (1-based indexing). Subsequence before specified "
                                "index is ignored during analysis. [default=1]", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
@@ -224,7 +230,7 @@ def parseCommandLineArguments():
                                "sample 1, 2 and 3, ".format(RSCRIPT_SAMPLE_SEPARATOR) +
                                "then samples 1 and 2 respectively. When arg = <filename>, it expects filename to have "
                                "pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR + "'. This is"
-                               " particularly useful if pairings are complicated and long. Note that these pairing "
+                               " particularly useful if pairings are long and complicated. Note that these pairing "
                                "options are only available when -f1 is supplied with a directory."
                                " Specifying -rs without any arguments is similar to not specifying -rs at all."
                                " The default behaviour is to plot in R (and python plots off) with no"
@@ -255,7 +261,7 @@ def extractRanges(strRanges, expNoRanges=2):
     numRanges = []
     ranges = strRanges.split(',')
     if (len(ranges) > expNoRanges):
-        raise Exception("Number of bitScore, alignLen and sstart ranges should match the number of files")
+        raise Exception("Number of bitScore, alignLen, sstart, and qstart ranges should match the number of files")
 
     for i in range(len(ranges)):
         scores = ranges[i].split('-')

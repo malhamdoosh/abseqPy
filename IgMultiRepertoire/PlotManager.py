@@ -84,7 +84,18 @@ class PlotManager:
         if not PlotManager._pythonPlotting:
             abSeqRoot = sys.path[0]
             self._flushMetadata(abSeqRoot)
-            subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
+            # todo: because main script overridden stdout to AbSeq.log
+            # todo: change this to per-sample basis when logging is implemented correctly.
+            # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
+            retval = subprocess.call(["Rscript",
+                            abSeqRoot + "/rscripts/masterScript.R"],
+                            stdout=sys.stdout,
+                            stderr=sys.stdout
+                            )
+            if retval != 0:
+                print("-" * 30)
+                print("Error detected in R plotting")
+                print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def _flushMetadata(self, abSeqRootDir):

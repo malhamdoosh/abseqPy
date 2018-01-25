@@ -38,12 +38,13 @@ plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratyp
   # title logic
   # if reion is not missing, it's a spectratype for FR/CDRs
   # else, it's a 'general' spectratype plot - can be reused for other length distributions E.G.: whole seq length
+  subtitle <- paste(subtitle, paste(unlist(lapply(dataframes, function (x) { sum(x$count) })), collapse = ", "), "sequences with")
   if (!missing(region)) {
     plotTitle <- paste(region, "amino acid spectratype")
-    plotSubTitle <- paste("Distribution of", region, "amino acid lengths")
+    plotSubTitle <- paste(subtitle ,"distribution of", region, "amino acid lengths", min(df.union$length), "to", max(df.union$length))
   } else {
     plotTitle <- title
-    plotSubTitle <- subtitle
+    plotSubTitle <- paste(subtitle, "lengths", min(df.union$length), "to", max(df.union$length))
   }
   # Always name your sample(s)!
   plotTitle <- paste(plotTitle, "in", paste(sampleNames, collapse = ", "))
