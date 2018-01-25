@@ -132,7 +132,7 @@ for (i in 1:length(pairings)) {
   # plot igv mismatches distribution
   abunIgvMismatchFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_mismatches_dist\\.csv(\\.gz)?$")
   if (length(abunIgvMismatchFiles) > 0) {
-      subtitle <- paste("Total is", paste(lapply(abunIgvMismatchFiles, getTotal), collapse = ", "))
+      subtitle <- paste("Total is", paste(lapply(abunIgvMismatchFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
       abunIgvMismatches <- plotDist(
         lapply(abunIgvMismatchFiles, read.csv, skip = 1),
         sampleNames,
@@ -145,7 +145,7 @@ for (i in 1:length(pairings)) {
   # plot igv gaps distribution
   abunIgvGapsFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_gaps_dist\\.csv(\\.gz)?$")
   if (length(abunIgvGapsFiles) > 0) {
-      subtitle <- paste("Total is", paste(lapply(abunIgvGapsFiles, getTotal), collapse = ", "))
+      subtitle <- paste("Total is", paste(lapply(abunIgvGapsFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
       abunIgvGaps <- plotDist(
         lapply(abunIgvGapsFiles, read.csv, skip = 1),
         sampleNames,

@@ -66,7 +66,7 @@ prodDistPlot <- function(productivityDirectories, sampleNames, title, reg, saveN
     if (length(fs) > 0) {
         dataframes <- lapply(fs, read.csv, stringsAsFactors = FALSE, skip = 1)
         plotTitle <- paste(title, toupper(region), "in", paste(sampleNames, collapse = ", "))
-        subtitle <- paste("Total is" , paste(lapply(fs, getTotal), collapse = ","))
+        subtitle <- paste("Total is" , paste(lapply(fs, function(x) { as.integer(getTotal(x)) } ), collapse = ", "))
         g <- plotDist(dataframes, sampleNames, plotTitle, checkVert(fs[[1]]), subs = subtitle)
         ggsave(saveNames[i], plot = g, width = V_WIDTH, height = V_HEIGHT)
     }
