@@ -30,16 +30,6 @@ class PlotManager:
         PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
         self.metadata = []
 
-        if os.path.isdir(args.f1):
-            # args.outdir is already relative
-            self.outdir = args.outdir
-        else:
-            # args.outdir is absolute - change to relative
-            # for example: /Users/harry/sandbox/small/foo/PCR1_BH5C6_CAACG-CGTGAT_L001/
-            # we want /Users/harry/sandbox/small/foo/ removed
-            path = args.outdir[:args.outdir.rstrip("/").rfind("/") + 1]
-            self.outdir = os.path.relpath(path)
-
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
     @staticmethod
@@ -94,7 +84,18 @@ class PlotManager:
         if not PlotManager._pythonPlotting:
             abSeqRoot = sys.path[0]
             self._flushMetadata(abSeqRoot)
-            subprocess.call(["Rscript", abSeqRoot + "/rscripts/masterScript.R"])
+            # todo: because main script overridden stdout to AbSeq.log
+            # todo: change this to per-sample basis when logging is implemented correctly.
+            # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
+            retval = subprocess.call(["Rscript",
+                            abSeqRoot + "/rscripts/masterScript.R"],
+                            stdout=sys.stdout,
+                            stderr=sys.stdout
+                            )
+            if retval != 0:
+                print("-" * 30)
+                print("Error detected in R plotting")
+                print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def _flushMetadata(self, abSeqRootDir):
@@ -123,11 +124,13 @@ class PlotManager:
             # as defined in AbSeq and the directory this sample lives in
             if self.rscriptArgs:
                 for pairings in self.rscriptArgs:
-                    writeBuffer.append([self.__findBestMatch(sampleName) for sampleName in pairings])
+                    writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
                     # at this point, writeBuffer is a list of list as such:
                     # writeBuffer = [
-                    #           [ (/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001), (/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
-                    #           [ (/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001), (/PCR5_....., PCR5_L001), ... ]
+                    #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
+                    #               (self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
+                    #           [ (self.outdir/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001),
+                    #               (self.outdir/PCR5_....., PCR5_L001), ... ]
                     #           [ ... ]
                     # ] - each inner list is a set of pairing
 
@@ -139,22 +142,21 @@ class PlotManager:
                 fp.write(abSeqRootDir + "\n")
                 for pairing in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: (self.outdir + "/" + x[0].lstrip("/")).replace("//", "/"),
-                                          pairing)) + "?")
+                    fp.write(','.join(map(lambda x: x[0].lstrip("/"), pairing)) + "?")
                     fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
 
                     # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
-                    # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001/, self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001/, ... ? PCR1_L001, ...
-                    # self.outdir/PCR4_BZ123_ACGG_ACGG_L001/, self.outdir/PCR5_.../, .. ? PCR4_L001, PCR5_L001, ...
+                    # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001,self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001,...?PCR1_L001,...
+                    # self.outdir/PCR4_BZ123_ACGG_ACGG_L001,self.outdir/PCR5_...,..?PCR4_L001,PCR5_L001,...
                     # .
                     # .
                     # .
                     # (then single samples)
-                    # self.outdir/PCR1_BZ123_..._L001/, PCR1_L001
-                    # self.outdir/PCR2_BZ123_..._L001/, PCR2_L001
+                    # self.outdir/PCR1_BZ123_..._L001,PCR1_L001
+                    # self.outdir/PCR2_BZ123_..._L001,PCR2_L001
 
-    def __findBestMatch(self, sampleName):
+    def _findBestMatch(self, sampleName):
         v = float('-inf')
         bestMatch = None
         for sampleDir, sampleCName in self.metadata:

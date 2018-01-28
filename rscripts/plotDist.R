@@ -1,4 +1,4 @@
-plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE) {
+plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE, subs = "") {
   # Plots a dodging histogram for all sample in dataframes. If length(sampleNames) == 1, then the bars will
   # also have y-values (or x if horizontal plot) labels on them. Use 'perc' to control if the values are percentages.
   # Args:
@@ -10,6 +10,7 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   #   ylabel: A string type.
   #   perc: Boolean type. True if data's axis is a % proportion (instead of 0-1)
   #         only meaningful if length(sampleNames) == 1
+  #   subs: subtitle. defaults to empty
   # Returns:
   #   ggplot().
   
@@ -27,6 +28,8 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   } else {
     placeholder <- "%0.2f"
   }
+
+
   
   # ------------  cleaning & transforming data   ----------- #
   
@@ -46,10 +49,11 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     }
   }
   
-  
+  originals <- list()
   # make sure only the top CUTOFF is considered
   for (i in 1:frames) {
     df <- dataframes[[i]]
+    originals[[i]] <- cbind(df)
     if (nrow(df) > CUTOFF) {
       caps <- "Cutoff at top 15"
       dataframes[[i]] <- head(df, CUTOFF)
@@ -70,6 +74,37 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     }
   } else {
     df.union <- dataframes[[1]]
+  }
+
+  # -- complete merging -- #
+
+  # need to compensate for topN in each dataframe
+  # 1. gather unique x/y
+  # 2. if x/y is in original table but not in top N table, append row to df.union
+  # 3. otherwise, do nothing
+    
+  if (frames > 1) {
+    if (vert) {
+        topNx <- unique(df.union$x)
+        for (x_ in topNx) {
+            for (i in 1:frames) {
+                if (x_ %in% originals[[i]]$x && !(x_ %in% dataframes[[i]]$x)) {
+                    newRow <- originals[[i]][originals[[i]]$x == x_, ]
+                    df.union <- rbind(df.union, newRow)
+                }
+            }
+        }
+    } else {
+        topNy <- unique(df.union$y)
+        for (y_ in topNy) {
+            for (i in 1:frames) {
+                if (y_ %in% originals[[i]]$y && !(y_ %in% dataframes[[i]]$y)) {
+                    newRow <- originals[[i]][originals[[i]]$y == y_, ]
+                    df.union <- rbind(df.union, newRow)
+                }
+            }
+        }
+    }
   }
   
   if (missing(ylabel)) {
@@ -103,9 +138,9 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
       g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
     }
   }
-  
   g <- g + theme(text = element_text(size = 10)) +
     labs(title = plotTitle,
+         subtitle = subs,
          x = xlabel,
          y = ylabel,
          caption = caps)

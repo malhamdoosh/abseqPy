@@ -442,10 +442,13 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     else:
         classes = ighvDistfam.keys()
         classes.sort()
+
+    allClasses = classes[:]
     if (len(classes) > top):
         classes = classes[:top]
     if not vertical:
         classes = classes[::-1]
+        allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
     #     if (proportion):
     stats = map(lambda x: ighvDistfam[x] / total * 100, classes)
@@ -466,8 +469,10 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         topvalFormat = '{:,}'
     # Create the bar plot and format it      
     if vertical:
-        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(classes, stats)],
-                 metadata="vert\n")
+        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+                 [(x, y, ighvDistfam[x])
+                  for x, y in zip(allClasses, map(lambda i: ighvDistfam[i] / total * 100, allClasses))],
+                 metadata="vert,total=" + str(total) + "\n")
         rects = ax.bar(ind, stats, width)
         ax.set_xticks(ind + width / 2)
         ax.set_ylim(top=max(stats) * 1.1)
@@ -488,8 +493,10 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
                         (topvalFormat.format(height)),
                         ha='center', va='bottom', size=10, color='red')
     else:
-        writeCSV(filename.replace(".png", ".csv"), "x,y\n", "{},{}\n", [(x, y) for x, y in zip(stats, classes)],
-                 metadata="hori\n")
+        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+                 [(x, y, ighvDistfam[y])
+                  for x, y in zip(map(lambda i: ighvDistfam[i] / total * 100, allClasses), allClasses)],
+                 metadata="hori,total=" + str(total) + "\n")
         rects = ax.barh(ind, stats, width)
         ax.set_yticks(ind + width / 2)
         ax.set_xlim(right=max(stats) * 1.1)

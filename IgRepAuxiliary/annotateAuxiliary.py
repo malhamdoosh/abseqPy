@@ -28,8 +28,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
         print('The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
         with open(fastaFile) as f:
             noSeqs = sum(1 for line in f if line.startswith(">"))
-        totalFiles = int(ceil(noSeqs / seqsPerFile))  
-        if totalFiles <  noWorkers:
+        totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
+        if totalFiles < noWorkers:
             seqsPerFile = int(noSeqs * 1.0 / noWorkers) 
             totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
         noSplit = noSeqs <= igRep.seqsPerFile
