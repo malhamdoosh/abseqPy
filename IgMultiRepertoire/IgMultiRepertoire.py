@@ -122,7 +122,7 @@ class IgMultiRepertoire:
         :return: list of files, if element of list is a tuple, then it's detected as paired end,
         or else it will just be a string
         """
-        files = os.listdir(os.path.abspath(folder))
+        files = [f for f in os.listdir(os.path.abspath(folder)) if not f.startswith(".")]
 
         def findPartner(fname):
             lookingFor = "_r2" if '_r1' in fname.lower() else "_r1"
