@@ -104,7 +104,9 @@ class PlotManager:
         if self.rscriptArgs and self.rscriptArgs != 'off':
             for pairings in self.rscriptArgs:
                 for sampleName in pairings:
-                    requestedSamples.add(self._findBestMatch(sampleName)[1])
+                    res = self._findBestMatch(sampleName)
+                    if res:
+                        requestedSamples.add(res[1])
         return requestedSamples
 
     def _flushMetadata(self, abSeqRootDir):
@@ -149,11 +151,11 @@ class PlotManager:
             with open(PlotManager._tmpFile, "w") as fp:
                 # tell R where AbSeq lives
                 fp.write(abSeqRootDir + "\n")
-                for pairing in writeBuffer:
+                for differentPairings in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: x[0].lstrip("/"), pairing)) + "?")
-                    fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
-
+                    if None not in differentPairings:
+                        fp.write(','.join(map(lambda x: x[0].lstrip("/") if x else '', differentPairings)) + "?")
+                        fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
                     # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
                     # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001,self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001,...?PCR1_L001,...
@@ -168,11 +170,12 @@ class PlotManager:
     def _findBestMatch(self, sampleName):
         v = float('-inf')
         bestMatch = None
-        for sampleDir, sampleCName in self.metadata:
-            matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
-            if matchScore > v:
-                bestMatch = (sampleDir, sampleCName)
-                v = matchScore
+        if sampleName:
+            for sampleDir, sampleCName in self.metadata:
+                matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
+                if matchScore > v:
+                    bestMatch = (sampleDir, sampleCName)
+                    v = matchScore
         return bestMatch
 
 
