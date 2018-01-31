@@ -65,6 +65,9 @@ class IgMultiRepertoire:
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
 
+        if self.plotManager.getRscriptSamples():
+            self.buffer = filter(lambda x: x.name in self.plotManager.getRscriptSamples(), self.buffer)
+
     def analyzeAbundance(self, all=False):
         self.__beginWork(GeneralWorker.ABUN, all=all)
 

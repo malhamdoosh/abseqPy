@@ -98,6 +98,15 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
+    def getRscriptSamples(self):
+        # whether or not there was python plotting, see if user explicitly chose samples
+        requestedSamples = set()
+        if self.rscriptArgs:
+            for pairings in self.rscriptArgs:
+                for sampleName in pairings:
+                    requestedSamples.add(self._findBestMatch(sampleName)[1])
+        return requestedSamples
+
     def _flushMetadata(self, abSeqRootDir):
         """
         AbSeq's way of communicating with external Rscript. AbSeq's python component supplies R with
