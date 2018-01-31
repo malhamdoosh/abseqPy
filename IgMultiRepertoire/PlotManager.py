@@ -135,7 +135,10 @@ class PlotManager:
             # as defined in AbSeq and the directory this sample lives in
             if self.rscriptArgs:
                 for pairings in self.rscriptArgs:
-                    writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
+                    # this if statement will be false when someone purposely provided a
+                    # SINGLE sample as "comparison/pairing" E.G. -rs "PCR1 |" or -rs "PCR1 | ; PCR2" etc..
+                    if not (len(pairings) == 1 or '' in pairings):
+                        writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
                     # at this point, writeBuffer is a list of list as such:
                     # writeBuffer = [
                     #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
@@ -153,9 +156,8 @@ class PlotManager:
                 fp.write(abSeqRootDir + "\n")
                 for differentPairings in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    if None not in differentPairings:
-                        fp.write(','.join(map(lambda x: x[0].lstrip("/") if x else '', differentPairings)) + "?")
-                        fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
+                    fp.write(','.join(map(lambda x: x[0].lstrip("/") if x else '', differentPairings)) + "?")
+                    fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
                     # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
                     # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001,self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001,...?PCR1_L001,...
