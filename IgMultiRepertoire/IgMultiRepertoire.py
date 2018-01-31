@@ -51,19 +51,24 @@ class IgMultiRepertoire:
                 self.plotManager.addMetadata((modifiedArgs.outdir, modifiedArgs.name))
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                # silently ignore creation of out directory if already exists
-                if not os.path.exists(modifiedArgs.outdir):
-                    os.makedirs(modifiedArgs.outdir)
                 self.buffer.append(IgRepertoire(modifiedArgs))
         else:
             self.plotManager.addMetadata((args.outdir, args.name))
             args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
-            # silently ignore creation of out directory if already exists
-            if not os.path.exists(args.outdir):
-                os.makedirs(args.outdir)
             args.log = args.outdir + args.name + ".log"
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
+
+        # filter out samples that are not specified in -rs if -rs was specified
+        if self.plotManager.getRscriptSamples():
+            self.buffer = filter(lambda x: x.name in self.plotManager.getRscriptSamples(), self.buffer)
+            self.plotManager.metadata = filter(lambda x: x[1] in self.plotManager.getRscriptSamples(), self.plotManager.metadata)
+            self.sampleCount = len(self.plotManager.getRscriptSamples())
+
+        # silently ignore creation of out directory if already exists
+        for sample in self.buffer:
+            if not os.path.exists(sample.args.outdir):
+                os.makedirs(sample.args.outdir)
 
     def analyzeAbundance(self, all=False):
         self.__beginWork(GeneralWorker.ABUN, all=all)
@@ -117,7 +122,7 @@ class IgMultiRepertoire:
         :return: list of files, if element of list is a tuple, then it's detected as paired end,
         or else it will just be a string
         """
-        files = os.listdir(os.path.abspath(folder))
+        files = [f for f in os.listdir(os.path.abspath(folder)) if not f.startswith(".")]
 
         def findPartner(fname):
             lookingFor = "_r2" if '_r1' in fname.lower() else "_r1"

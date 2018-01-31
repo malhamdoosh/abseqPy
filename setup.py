@@ -17,7 +17,7 @@
 #        os.system('rm -vrf ./build ./dist ./*.egg-info')
 #
 #setup(name="AbSeq",
-#    version="1.1.1",
+#    version="1.1.2",
 #    description="Quality control pipeline for antibody libraries",
 #    author="CSL",
 #    setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil'],

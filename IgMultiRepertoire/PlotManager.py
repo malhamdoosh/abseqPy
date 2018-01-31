@@ -98,6 +98,17 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
+    def getRscriptSamples(self):
+        # whether or not there was python plotting, see if user explicitly chose samples
+        requestedSamples = set()
+        if self.rscriptArgs and self.rscriptArgs != 'off':
+            for pairings in self.rscriptArgs:
+                for sampleName in pairings:
+                    res = self._findBestMatch(sampleName)
+                    if res:
+                        requestedSamples.add(res[1])
+        return requestedSamples
+
     def _flushMetadata(self, abSeqRootDir):
         """
         AbSeq's way of communicating with external Rscript. AbSeq's python component supplies R with
@@ -124,7 +135,10 @@ class PlotManager:
             # as defined in AbSeq and the directory this sample lives in
             if self.rscriptArgs:
                 for pairings in self.rscriptArgs:
-                    writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
+                    # this if statement will be false when someone purposely provided a
+                    # SINGLE sample as "comparison/pairing" E.G. -rs "PCR1 |" or -rs "PCR1 | ; PCR2" etc..
+                    if not (len(pairings) == 1 or '' in pairings):
+                        writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
                     # at this point, writeBuffer is a list of list as such:
                     # writeBuffer = [
                     #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
@@ -140,11 +154,10 @@ class PlotManager:
             with open(PlotManager._tmpFile, "w") as fp:
                 # tell R where AbSeq lives
                 fp.write(abSeqRootDir + "\n")
-                for pairing in writeBuffer:
+                for differentPairings in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: x[0].lstrip("/"), pairing)) + "?")
-                    fp.write(','.join(map(lambda x: x[1], pairing)) + "\n")
-
+                    fp.write(','.join(map(lambda x: x[0].lstrip("/") if x else '', differentPairings)) + "?")
+                    fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
                     # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
                     # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001,self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001,...?PCR1_L001,...
@@ -159,11 +172,12 @@ class PlotManager:
     def _findBestMatch(self, sampleName):
         v = float('-inf')
         bestMatch = None
-        for sampleDir, sampleCName in self.metadata:
-            matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
-            if matchScore > v:
-                bestMatch = (sampleDir, sampleCName)
-                v = matchScore
+        if sampleName:
+            for sampleDir, sampleCName in self.metadata:
+                matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
+                if matchScore > v:
+                    bestMatch = (sampleDir, sampleCName)
+                    v = matchScore
         return bestMatch
 
 
