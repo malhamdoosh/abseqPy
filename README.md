@@ -214,6 +214,9 @@ sample comparison analysis for:
 
 **Note** that `;` in `-rs` separates different _sample comparison_ while `|` _separates samples_ **within** the same comparison.
 
+> Tip 0: AbSeq only runs analysis on the samples provided in `-rs` (if `-rs` was specified)
+rather than _all_ samples in `-f1 dirname`. 
+
 > Tip 1: `-rs` uses fuzzy string search. Therefore, providing either the full sample file name or truncated name will work
 fine. Observe in the example, the mixed use of `SRR2_BZ929_L001` and `SRR2`. `SRR2_L001` and `SRR2_BZ929_CAGGG-GGACT_L001_R1.fastq.gz` works just fine too.
 
