@@ -51,16 +51,10 @@ class IgMultiRepertoire:
                 self.plotManager.addMetadata((modifiedArgs.outdir, modifiedArgs.name))
                 modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
                 modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                # silently ignore creation of out directory if already exists
-                if not os.path.exists(modifiedArgs.outdir):
-                    os.makedirs(modifiedArgs.outdir)
                 self.buffer.append(IgRepertoire(modifiedArgs))
         else:
             self.plotManager.addMetadata((args.outdir, args.name))
             args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
-            # silently ignore creation of out directory if already exists
-            if not os.path.exists(args.outdir):
-                os.makedirs(args.outdir)
             args.log = args.outdir + args.name + ".log"
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
@@ -69,6 +63,12 @@ class IgMultiRepertoire:
         if self.plotManager.getRscriptSamples():
             self.buffer = filter(lambda x: x.name in self.plotManager.getRscriptSamples(), self.buffer)
             self.plotManager.metadata = filter(lambda x: x[1] in self.plotManager.getRscriptSamples(), self.plotManager.metadata)
+            self.sampleCount = len(self.plotManager.getRscriptSamples())
+
+        # silently ignore creation of out directory if already exists
+        for sample in self.buffer:
+            if not os.path.exists(sample.args.outdir):
+                os.makedirs(sample.args.outdir)
 
     def analyzeAbundance(self, all=False):
         self.__beginWork(GeneralWorker.ABUN, all=all)
