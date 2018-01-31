@@ -205,7 +205,8 @@ def parseCommandLineArguments():
                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="Query sequence's starting index (1-based indexing). Subsequence before specified "
-                               "index is ignored during analysis. [default=1]", default=None, type=int)
+                               "index is ignored during analysis. By default, each individual sequence's "
+                               "offset is inferred automatically.", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
                                                    " analysis [default=[1, inf)]", default=None)
     optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
