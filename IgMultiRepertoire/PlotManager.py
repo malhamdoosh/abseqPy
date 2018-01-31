@@ -101,7 +101,7 @@ class PlotManager:
     def getRscriptSamples(self):
         # whether or not there was python plotting, see if user explicitly chose samples
         requestedSamples = set()
-        if self.rscriptArgs:
+        if self.rscriptArgs and self.rscriptArgs != 'off':
             for pairings in self.rscriptArgs:
                 for sampleName in pairings:
                     requestedSamples.add(self._findBestMatch(sampleName)[1])
