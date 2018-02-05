@@ -205,11 +205,6 @@ class IgMultiRepertoire:
                     # XXX: encountered an exception! - here, decide to raise it immediately.
                     # all accompanying processes will halt immediately due to this raise.
                     raise GeneralWorkerException(*res)
-                # XXX: cloneAnnot and cloneSeqs are the largest objects in a IgReportoire object,
-                # we remove them so that we can pickle them into the queue again afterwards.
-                # When needed, these files will be loaded automatically later on anyway
-                res.cloneAnnot = None
-                res.cloneSeqs = None
                 self.buffer.append(res)
 
             for w in workers:
