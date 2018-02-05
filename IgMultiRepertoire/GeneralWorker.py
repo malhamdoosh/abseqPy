@@ -48,6 +48,11 @@ class GeneralWorker(Process):
                 continue
             # job done
             if self.resultQueue is not None:
+                # XXX: cloneAnnot and cloneSeqs are the largest objects in a IgReportoire object,
+                # we remove them so that we can pickle them into the queue again.
+                # When needed, these files will be loaded automatically later on anyway
+                job.cloneAnnot = None
+                job.cloneSeqs = None
                 self.resultQueue.put(job)
         return
 
