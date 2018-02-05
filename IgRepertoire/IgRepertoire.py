@@ -78,6 +78,7 @@ class IgRepertoire:
 
         self.seqsPerFile = int(10.0 ** 5 / 2)
         self.cloneAnnot = None
+        self.cloneSeqs = None
         self.readFile = None
         
     def runFastqc(self):
@@ -214,7 +215,7 @@ class IgRepertoire:
             os.system("mkdir " + outDir)        
         else:
             print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")      
-        if not all:
+        if not all or self.cloneAnnot is None:
             self.annotateClones(outDir)                 
              
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)        
@@ -234,7 +235,7 @@ class IgRepertoire:
         self.cloneSeqFile += "_clones_seq.h5"      
                  
         if (not exists(self.refinedCloneAnnotFile)):
-            if not all:
+            if not all or self.cloneAnnot is None:
                 self.annotateClones(outDir)
 #             if (self.trimmed):
 #                 self.trim3End = 0
@@ -295,7 +296,7 @@ class IgRepertoire:
             os.system("mkdir " + outDir)  
         else:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
-        if not all:
+        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
             self.analyzeProductivity(self.reportInterim)
         
         gc.collect()
