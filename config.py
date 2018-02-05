@@ -12,7 +12,7 @@ import sys
 #SAMTOOLS_PROGRAM= 'samtools'
 #BGZIP = 'bgzip'
 #TABIX = 'tabix'
-VERSION = '1.1.2'
+VERSION = '1.1.3'
 CLUSTALW = 'clustalw2'
 CLUSTALOMEGA = 'clustalo'
 WEBLOGO = 'weblogo'
