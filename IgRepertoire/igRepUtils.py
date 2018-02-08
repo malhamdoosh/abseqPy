@@ -497,13 +497,15 @@ def compressCountsFamilyLevel(countsDict):
 '''
     perform multiple sequence alignment using CLUSTAL
 '''
-def alignListOfSeqs(signals, outDir):
+def alignListOfSeqs(signals, outDir, ignoreNones=False):
     L = map(len, signals)
     print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
     tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
+        if ignoreNones and signals[i] == "None":
+            continue
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + `i`))
     SeqIO.write(seqs, tempSeq, 'fasta')
     clustalw = ClustalwCommandline(CLUSTALOMEGA, infile=tempSeq, 
