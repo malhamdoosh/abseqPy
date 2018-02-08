@@ -39,11 +39,19 @@ pairings <- scan(metaFile, character(), quote = "", skip = 1)
 
 # for each set of pairing - plot!
 for (i in 1:length(pairings)) {
+  ###                               Get information                                   ###
+  
+  # get pairings, split by "?", you'll have something like c("dirname1,dirname2,...", "sampleName1, sampleName2, ...")
+  # i.e. pair[1] is a comma separated string of directories
+  # i.e. pair[2] is a comma separated string of sample names
   pair <- unlist(strsplit(pairings[i], "\\?"))
   directories <- unlist(strsplit(pair[1], ","))
   sampleNames <- unlist(strsplit(pair[2], ","))
-  # resultFolder : this will be the same string as supplied / generated output folder in AbSeq's python code
-  resultFolder <- unlist(strsplit(directories[1], "/"))[1]
+  
+  # to get the result folder, we just need to look at any one of them, and take the full path until the penultimate directory
+  decomposed <- unlist(strsplit(directories[1], "/"))
+  resultFolder <- paste0(head(decomposed, n = length(decomposed) - 1), collapse = "/")
+  
   mashedNames <- paste(sampleNames, collapse = "_")
   combinedNames <- paste(sampleNames, collapse = ", ") 
 

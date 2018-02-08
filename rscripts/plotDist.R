@@ -120,10 +120,10 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     if (frames == 1) {
       # single sample -> blue colour plot
       g <- g + geom_text(hjust = -0.15, size = 3) + 
-        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+        geom_bar(stat='identity', aes(fill = sample), position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
     } else {
       # multiple samples -> multi-coloured plot
-      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
+      g <- g + geom_bar(stat='identity', aes(fill = sample), position = 'dodge')
     }
     
   } else {
@@ -132,10 +132,10 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     if (frames == 1) {
       # single sample -> blue colour plot
       g <- g + geom_text(vjust = -0.5, size = 3) + 
-        geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
+        geom_bar(stat='identity', aes(fill = sample), position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
     } else {
       # multiple samples -> multi-coloured plot
-      g <- g + geom_bar(stat='identity', aes(fill = sample), width = 0.5, position = 'dodge')
+      g <- g + geom_bar(stat='identity', aes(fill = sample), position = 'dodge')
     }
   }
   g <- g + theme(text = element_text(size = 10)) +
