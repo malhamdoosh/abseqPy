@@ -37,6 +37,12 @@ from IgRepReporting.restrictionReport import generateOverlapFigures
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies (generateMotifs uses TAMO)
 # from IgRepAuxiliary.SeqUtils import generateMotifs
+#from TAMO.Clustering.UPGMA import UPGMA
+#from TAMO.Clustering.UPGMA import DFUNC
+#from TAMO.Clustering.UPGMA import print_tree
+#from TAMO.Clustering.UPGMA import create_tree_phylip
+#from TAMO.Clustering.UPGMA import print_tree_id
+#from TAMO import MotifTools
 
 
 class IgRepertoire:
@@ -80,7 +86,12 @@ class IgRepertoire:
         self.cloneAnnot = None
         self.cloneSeqs = None
         self.readFile = None
-        
+        # True of any of the following directories are already created. We need to distinguish this
+        # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
+        # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
+        self.warnOldDir = any(map(lambda x: exists(self.outputDir + x),
+                              ["abundance/", "productivity/", "diversity/", "restriction_sites/"]))
+
     def runFastqc(self):
         if self.format == 'fasta':
             print("Fasta file extension detected, will not perform fastqc")
@@ -213,8 +224,8 @@ class IgRepertoire:
         outDir = self.outputDir + "abundance/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)        
-        else:
-            print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")      
+        elif self.warnOldDir:
+            print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")
         if not all or self.cloneAnnot is None:
             self.annotateClones(outDir)                 
              
@@ -226,7 +237,7 @@ class IgRepertoire:
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
-        else:
+        elif self.warnOldDir:
             print("WARNING: remove the 'productivity' directory if you changed the filtering criteria.")
         self.refinedCloneAnnotFile = outDir + self.name
         self.refinedCloneAnnotFile += "_refined_clones_annot.h5" 
@@ -294,7 +305,7 @@ class IgRepertoire:
         outDir = self.outputDir + "diversity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)  
-        else:
+        elif self.warnOldDir:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
         if not all or self.cloneAnnot is None or self.cloneSeqs is None:
             self.analyzeProductivity(self.reportInterim)
@@ -318,7 +329,7 @@ class IgRepertoire:
         outDir = self.outputDir + "restriction_sites/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
-        else:
+        elif self.warnOldDir:
             print("WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.")
         siteHitsFile = outDir + self.name
         siteHitsFile += "_%s_rsasimple.csv" % (self.sitesFile.split('/')[-1].split('.')[0])
