@@ -92,7 +92,8 @@ def generateMotif(sequences, name, alphabet, filename,
             seqs = random.sample(seqs, 10000) 
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
-        alignedSeq = IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir)
+        # ignoreNones because sometimes seqs contains None when frameworks/cdrs failed to align
+        alignedSeq = IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, ignoreNones=True)
 #                 print(alignedSeq[:10])
     else:                
         # if alignment is not required, add "-" to short sequences
@@ -100,13 +101,13 @@ def generateMotif(sequences, name, alphabet, filename,
         if (min(L) != max(L)):
             #print('\t\t- is being added to short sequences ...[%d, %d[' % (min(L), max(L)))
             if '-' not in alphabet.letters: alphabet.letters += '-'
-            alignedSeq = []                    
+            alignedSeq = []
             m = max(L)
             for s in seqs:
-                if len(s) < m:
+                if len(s) < m and s != "None":
                     alignedSeq.append(s + '-'*(m-len(s)))
         else:
-            alignedSeq = seqs    
+            alignedSeq = filter(lambda x: x != "None", seqs)
     # create the sequence motif and encode it into PFM
     print("\tMotif logo is being created for %s ..." % (name))
     m = motifs.create(alignedSeq, alphabet)  #             print(m.counts)
