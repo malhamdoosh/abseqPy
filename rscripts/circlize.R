@@ -12,6 +12,7 @@ plotCirclize <- function(sampleName, path) {
   
   # open and read csv
   filename <- paste0(path, sampleName, "_vjassoc.csv")
+  print(filename)
   if (file.exists(filename)) {
       df <- read.csv(filename)
       
@@ -19,7 +20,7 @@ plotCirclize <- function(sampleName, path) {
       png(gsub(".csv", ".png", filename))
       
       # circos theme setup
-      if (length(unique(df[[1]]))-1 < 25 && length(unique(df[[2]]))-1 < 25)  {
+      if (length(unique(df[[1]]))-1 < 10 && length(unique(df[[2]]))-1 < 10)  {
           circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
                                    rep(5, length(unique(df[[2]]))-1), 15))
       }
@@ -43,4 +44,4 @@ plotCirclize <- function(sampleName, path) {
   }
 }
 
-#plotCirclize("PCR3_L001", "./PCR3_BH5C6_AGGCAGAA-TACAGC_L001/abundance/")
+plotCirclize("LambdaR2_L001", "/Users/u0001382/sandbox/LambdaR2_BGPV9_AGGCATCT-ATCACG_L001/abundance/")
