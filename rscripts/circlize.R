@@ -12,7 +12,7 @@ plotCirclize <- function(sampleName, path) {
   
   # open and read csv
   filename <- paste0(path, sampleName, "_vjassoc.csv")
-  print(filename)
+
   if (file.exists(filename)) {
       df <- read.csv(filename)
       
@@ -44,4 +44,4 @@ plotCirclize <- function(sampleName, path) {
   }
 }
 
-plotCirclize("LambdaR2_L001", "/Users/u0001382/sandbox/LambdaR2_BGPV9_AGGCATCT-ATCACG_L001/abundance/")
+#plotCirclize("LambdaR2_L001", "/Users/u0001382/sandbox/LambdaR2_BGPV9_AGGCATCT-ATCACG_L001/abundance/")
