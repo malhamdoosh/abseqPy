@@ -217,6 +217,7 @@ class IgMultiRepertoire:
                 assert res is None
 
         except GeneralWorkerException as e:
+            print("\n\n{}".format(e.errors))
             print("\n\nSomething went horribly wrong while trying to run AbSeq!")
             print("GeneralWorker stacktrace:")
             print("-" * 120)
