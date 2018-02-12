@@ -111,12 +111,12 @@ def writeCDRStats(cloneAnnot, name, outputDir, suffix = ''):
              '_cdr2_mismatches_dist.png', title='Mismatches in CDR2',
              proportion=False, rotateLabels=False)
     # CDR3 stats
-    cdrGaps = Counter(cloneAnnot['cdr3.gaps'])
+    cdrGaps = Counter(cloneAnnot['cdr3g.gaps'])
 #         print(len(cdrGaps))
     plotDist(cdrGaps, name, outputDir + name + 
              '_cdr3_gaps_dist.png', title='Gaps in CDR3 (Germline)',
              proportion=False, rotateLabels=False)
-    cdrMismatches = Counter(cloneAnnot['cdr3.mismatches'].tolist())
+    cdrMismatches = Counter(cloneAnnot['cdr3g.mismatches'].tolist())
     plotDist(cdrMismatches, name, outputDir + name + 
              '_cdr3_mismatches_dist.png', title='Mismatches in CDR3 (Germline)',
              proportion=False, rotateLabels=False)
@@ -142,13 +142,13 @@ def writeFRStats(cloneAnnot, name, outputDir, suffix = ''):
              '_fr2_mismatches_dist.png', title='Mismatches in FR2',
              proportion=False, rotateLabels=False) 
     # FR3 statistics 
-    gaps = Counter(cloneAnnot['fr3.gaps'].tolist())
+    gaps = Counter(cloneAnnot['fr3g.gaps'].tolist())
     plotDist(gaps, name, outputDir + name + 
-             '_fr3_gaps_dist.png', title='Gaps in FR3',
+             '_fr3_gaps_dist.png', title='Gaps in FR3 (Germline)',
              proportion=False, rotateLabels=False) 
-    mismatches = Counter(cloneAnnot['fr3.mismatches'].tolist())
+    mismatches = Counter(cloneAnnot['fr3g.mismatches'].tolist())
     plotDist(mismatches, name, outputDir + name + 
-             '_fr3_mismatches_dist.png', title='Mismatches in FR3',
+             '_fr3_mismatches_dist.png', title='Mismatches in FR3 (Germline)',
              proportion=False, rotateLabels=False)
     
     gc.collect()   
@@ -189,14 +189,14 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
              proportion=False, rotateLabels=False)
     del cdrGaps, frGaps
     # Indels in CDR3 and FR3
-    cdrGaps = Counter(outOfFrame['cdr3.gaps'])
+    cdrGaps = Counter(outOfFrame['cdr3g.gaps'])
 #         print(len(cdrGaps))
     plotDist(cdrGaps, name, outputDir + name + 
              '_cdr3_gaps_dist_out_of_frame.png', title='Gaps in CDR3 (Germline)',
              proportion=False, rotateLabels=False)
-    frGaps = Counter(outOfFrame['fr3.gaps'].tolist())
+    frGaps = Counter(outOfFrame['fr3g.gaps'].tolist())
     plotDist(frGaps, name, outputDir + name + 
-             '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3',
+             '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3 (Germline)',
              proportion=False, rotateLabels=False)
     del cdrGaps, frGaps
 #     # Indels in FR4

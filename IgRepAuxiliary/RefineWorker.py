@@ -73,18 +73,19 @@ class RefineWorker(Process):
                 continue                       
 #             print("process has completed a run... " + self.name) 
         return
-    
+
+
 def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut, 
                           trim5End, trim3End, chain, flags):
     seqs = [record.id, qsRec['vgene']]
-    try:        
-        if (qsRec['strand'] == "reversed"):            
-            record = SeqRecord(record.seq.reverse_complement(), id = record.id, 
-                               name="", description="")
-        record = record[trim5End:(len(record)- trim3End)]
-        # grab the beginning of the VH clone
-#         print("started")
 
+    try:
+        if qsRec['strand'] == "reversed":
+            record = SeqRecord(record.seq.reverse_complement(), id=record.id,
+                               name="", description="")
+        record = record[trim5End:(len(record) - trim3End)]
+
+        # grab the beginning of the VH clone
         if actualQstart > -1:
             # if user specified an actualQstart, use it. (parse args already converted it into 0-based)
             offset = actualQstart # zero-based
@@ -93,68 +94,75 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
             offset = int(qsRec['vqstart'] - qsRec['vstart'])  # zero-based
         if offset < 0:
             offset = 0                   
-        vh = record.seq[offset:]                       
+        vh = record.seq[offset:]
+
         # check whether the VH sequence can be translated successfully
         if len(vh) % 3 != 0:
             vh = vh[:-1 * (len(vh) % 3)]
-        protein = str(vh.translate())        
+        protein = str(vh.translate())
+
         # check whether the start of the V gene is the same as the start of FR1
         if qsRec['vqstart'] != qsRec['fr1.start']:
-            flags['fr1NotAtBegin'] += [record.id]    
-        qsRec['fr1.start'] = offset+1    
+            flags['fr1NotAtBegin'] += [record.id]
+        qsRec['fr1.start'] = offset + 1
+
+        # To classify CDR3 start, we use FR3.end + 1. That said, if FR3.end is missing (i.e. our parser said
+        # that IgBlast didn't give a CDR3.start index), then we fall back to FR3.end of V germline.
+        # XXX: There might be a chance that FR3.end of V germline isn't the "true" end of FR3
+        framework3End = qsRec['fr3g.end'] if isnan(qsRec['fr3.end']) else qsRec['fr3.end']
+
         # Identification of FR4 so that CDR3 can be defined 
         if isnan(qsRec['fr4.end']):            
-            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1,
-                     - 1, offset, trimAtStop=False)
-            if (searchRegion is None):
+            searchRegion = extractProteinFrag(protein, framework3End + 1, -1, offset, trimAtStop=False)
+            if searchRegion is None:
                 raise Exception("ERROR: undefined search region to find FR3 consensus.")
-            qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
+            qsRec['cdr3.start'] = framework3End + 1
             fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
                                                          FR4_CONSENSUS[chain])# , show=True
 #             print ("Protein", searchRegion, fr4start, fr4end)                 
-            if (not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start):
-                qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
+            if not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start:
+                qsRec['fr4.start'] = (fr4start - 1) * 3 + framework3End + 1
                 # CDR3                
                 qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-                ## Check whether to cut the Ig sequence after FR4 or not
+                # Check whether to cut the Ig sequence after FR4 or not
                 if not fr4cut: 
-                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']     
+                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + framework3End
                 else:
-                    qsRec['fr4.end'] = qsRec['fr3.end']  + fr4end * 3
+                    qsRec['fr4.end'] = framework3End + fr4end * 3
             else:                
                 # try to use the DNA consensus
-                searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
+                searchRegion = str(record.seq)[int(framework3End):]
                 fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
-                                                     FR4_CONSENSUS_DNA[chain], 
-                                                     True) # , show=True
+                                                             FR4_CONSENSUS_DNA[chain],
+                                                             True)  # , show=True
 #                 print ("DNA", searchRegion, fr4start, fr4end)  
-                if (fr4start != -1 and fr4end != -1 and fr4end > fr4start):
-                    qsRec['fr4.start']  = qsRec['fr3.end'] + fr4start
+                if fr4start != -1 and fr4end != -1 and fr4end > fr4start:
+                    qsRec['fr4.start'] = framework3End + fr4start
                     # CDR3                
                     qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
                     if not fr4cut: 
                         qsRec['fr4.end'] = len(record.seq) 
                     else:
-                        qsRec['fr4.end']  = qsRec['fr3.end'] + fr4end
+                        qsRec['fr4.end'] = framework3End + fr4end
                     flags['CDR3dna'] += [record.id]
                 else:
-                    #TODO: check this case                
+                    # TODO: check this case
                     qsRec['cdr3.end'] = qsRec['jqend']
 #                     qsRec['fr4.end'] = len(record.seq) 
 #                     qsRec['fr4.start'] =  len(record.seq)
         # Extract the CDR and FR protein sequences
         (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset)
         seqs += tmp
-        if (seqs[-1][:4] != FR4_CONSENSUS[chain][:4]):
+        if seqs[-1][:4] != FR4_CONSENSUS[chain][:4]:
             flags['fr4NotAsExpected'] += [record.id]
-        if (seqs[-1] == ''):
+        if seqs[-1] == '':
             flags['noFR4'] += [record.id]
         # Extract the CDR and FR nucleotide sequences
         tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)        
-        #TODO: consider adding the DNA sequences 
-        if ('*' in protein):
+        # TODO: consider adding the DNA sequences
+        if '*' in protein:
             flags['endsWithStopCodon'] += [record.id]                     
-            ### update the StopCodon value if it was set to No
+            # update the StopCodon value if it was set to No
             if qsRec['stopcodon'] == 'No':
                 flags['updatedStopCodon'] += [record.id]
                 qsRec['stopcodon'] = 'Yes' 
@@ -162,22 +170,24 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
         # update the annotation fields with the new calculated values                        
         gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - offset                
         mismatches = qsRec['vstart'] - 1
-        if (qsRec['vstart'] > qsRec['vqstart'] and gaps > 0):
+        if qsRec['vstart'] > qsRec['vqstart'] and gaps > 0:
             mismatches -= gaps
+
         # Only update gaps if the actual query start position is known 
         if gaps > 0:     
             qsRec['fr1.gaps'] += gaps                    
             qsRec['vgaps'] += gaps
-        # if igblast ignores mismatches at the begining ==> update
-        if (mismatches > 0):
+
+        # if igblast ignores mismatches at the beginning ==> update
+        if mismatches > 0:
             qsRec['fr1.mismatches'] += mismatches
-            qsRec['vmismatches']  += mismatches
-            qsRec['vstart']  -= mismatches
-            qsRec['vqstart']  -= mismatches      
-        #TODO: update gaps and mismatches in FR4 and CDR3 based on D and J germlines   
-        #TODO: update the start and end fields based on the trim5End         
+            qsRec['vmismatches'] += mismatches
+            qsRec['vstart'] -= mismatches
+            qsRec['vqstart'] -= mismatches
+        # TODO: update gaps and mismatches in FR4 and CDR3 based on D and J germlines
+        # TODO: update the start and end fields based on the trim5End
     except Exception as e:    
-        if ("partitioning" in str(e)):
+        if "partitioning" in str(e):
             flags['partitioning'] += [record.id]            
 #         print("ERROR: exception in the Clone Annotation Refinement method")
 #         print(record.id)
@@ -187,6 +197,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 #         traceback.print_exc(file=sys.stdout)
 #         raise e
     return seqs
+
 
 def refineInFramePrediction(qsRec, record, actualQstart, flags):
         inframe = True    
@@ -218,10 +229,10 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
         if (inframe and ( 
             qsRec['fr1.gaps'] % 3 != 0 or 
             qsRec['fr2.gaps'] % 3 != 0 or
-            qsRec['fr3.gaps'] % 3 != 0 or 
+            qsRec['fr3g.gaps'] % 3 != 0 or
             qsRec['cdr1.gaps'] % 3 != 0 or 
             qsRec['cdr2.gaps'] % 3 != 0 or
-            (not isnan(qsRec['cdr3.gaps']) and qsRec['cdr3.gaps'] % 3 != 0)
+            (not isnan(qsRec['cdr3g.gaps']) and qsRec['cdr3g.gaps'] % 3 != 0)
             )):
             inframe = False            
             flags['updatedInFrameIndel'] += [record.id]
