@@ -269,7 +269,7 @@ class IgRepertoire:
                                    complib='blosc')
             sys.stdout.flush()
             print("The clone protein sequences are being written to " + 
-                  self.refinedCloneAnnotFile.split("/")[-1])
+                  self.cloneSeqFile.split("/")[-1])
             self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
                                   complib='blosc')                      
             sys.stdout.flush()      
