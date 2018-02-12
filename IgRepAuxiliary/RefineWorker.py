@@ -106,44 +106,39 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
             flags['fr1NotAtBegin'] += [record.id]
         qsRec['fr1.start'] = offset + 1
 
-        # To classify CDR3 start, we use FR3.end + 1. That said, if FR3.end is missing (i.e. our parser said
-        # that IgBlast didn't give a CDR3.start index), then we fall back to FR3.end of V germline.
-        # XXX: There might be a chance that FR3.end of V germline isn't the "true" end of FR3
-        framework3End = qsRec['fr3g.end'] if isnan(qsRec['fr3.end']) else qsRec['fr3.end']
-
-        # Identification of FR4 so that CDR3 can be defined 
+        # Identification of FR4 so that CDR3 can be defined
         if isnan(qsRec['fr4.end']):            
-            searchRegion = extractProteinFrag(protein, framework3End + 1, -1, offset, trimAtStop=False)
+            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1, -1, offset, trimAtStop=False)
             if searchRegion is None:
                 raise Exception("ERROR: undefined search region to find FR3 consensus.")
-            qsRec['cdr3.start'] = framework3End + 1
+            qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
             fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
                                                          FR4_CONSENSUS[chain])# , show=True
 #             print ("Protein", searchRegion, fr4start, fr4end)                 
             if not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start:
-                qsRec['fr4.start'] = (fr4start - 1) * 3 + framework3End + 1
+                qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
                 # CDR3                
                 qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
                 # Check whether to cut the Ig sequence after FR4 or not
                 if not fr4cut: 
-                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + framework3End
+                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']
                 else:
-                    qsRec['fr4.end'] = framework3End + fr4end * 3
+                    qsRec['fr4.end'] = qsRec['fr3.end'] + fr4end * 3
             else:                
                 # try to use the DNA consensus
-                searchRegion = str(record.seq)[int(framework3End):]
+                searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
                 fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
                                                              FR4_CONSENSUS_DNA[chain],
                                                              True)  # , show=True
 #                 print ("DNA", searchRegion, fr4start, fr4end)  
                 if fr4start != -1 and fr4end != -1 and fr4end > fr4start:
-                    qsRec['fr4.start'] = framework3End + fr4start
+                    qsRec['fr4.start'] = qsRec['fr3.end'] + fr4start
                     # CDR3                
                     qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
                     if not fr4cut: 
                         qsRec['fr4.end'] = len(record.seq) 
                     else:
-                        qsRec['fr4.end'] = framework3End + fr4end
+                        qsRec['fr4.end'] = qsRec['fr3.end'] + fr4end
                     flags['CDR3dna'] += [record.id]
                 else:
                     # TODO: check this case

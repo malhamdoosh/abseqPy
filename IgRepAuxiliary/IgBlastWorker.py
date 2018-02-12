@@ -177,6 +177,13 @@ def extractCDRInfo(blastOutput, chain):
                         cloneRecord['cdr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])
                         cloneRecord['cdr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
+
+                # if the CDR3 region wasn't identified by IgBlast, we can't get FR3 end, so we fallback to
+                # FR3 germline end. Since CDR3.start and CDR3.end isn't really used unitl the refinement process,
+                # we ignore the fallback options for them.
+                if np.isnan(cloneRecord['fr3.end']):
+                    cloneRecord['fr3.end'] = cloneRecord['fr3g.end']
+
                 # parse alignment information between query and V, D and J genes
                 while (line and 
                        not line.startswith('# Query') and
