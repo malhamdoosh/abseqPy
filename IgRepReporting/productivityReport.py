@@ -8,25 +8,32 @@
 from collections import Counter
 from IgRepReporting.igRepPlots import plotDist
 from IgRepertoire.igRepUtils import compressCountsFamilyLevel
-from numpy import isnan
+from numpy import nan
 import gc
 import pandas as pd
 
 
 def generateProductivityReport(cloneAnnot, name, chain, outputDir):
     print("Productivity report is being generated ... ")
-    cloneAnnotCopy = cloneAnnot.where((pd.notnull(cloneAnnot)), 'NaN')
-    productive = extractProductiveClones(cloneAnnotCopy, name, outputDir)
+
+    # since np.nan is considered different objects, canonicalize them using 'NaN' string representation
+    nanString = 'NaN'
+    cloneAnnot.fillna(nanString, inplace=True)
+
+    productive = extractProductiveClones(cloneAnnot, name, outputDir)
     productiveFamilyDist = compressCountsFamilyLevel(Counter(productive['vgene'].tolist()))
     plotDist(productiveFamilyDist, name, outputDir + name + 
              '_igv_dist_productive.png',
               title='IGV Abundance of Productive Clones',
              proportion=True)
     del productiveFamilyDist
-    writeProdStats(cloneAnnotCopy, name, outputDir)
+    writeProdStats(cloneAnnot, name, outputDir)
     writeCDRStats(productive, name, outputDir, suffix = 'productive')
     writeFRStats(productive, name, outputDir, suffix = 'productive')
     writeGeneStats(productive, name, chain, outputDir, suffix = 'productive')
+
+    # now that counting is complete, replace all 'NaN' strings with np.nan again
+    cloneAnnot.replace(nanString, nan, inplace=True)
 
 
 def writeProdStats(cloneAnnot, sampleName, outdir):
