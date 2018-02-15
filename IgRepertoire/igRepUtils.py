@@ -266,9 +266,29 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     if show:
         print(format_alignment(*alignments[best]))
         print(alignments[best])
+
+
     # return alignment start and end
-    start = int(offset + alignments[best][-2] + 1)
+
+    # FR4 start is where both sequence start to align with each other
+    # including leading mismatches (these mismatches maybe due to mutations)
+    #     0123456
+    # eg: GGGGACGTACGTACGT
+    #           ||||||||||
+    #     ----CAGTACGTACGT
+    # although alignment starts at pos 6, we still consider FR4 to start at pos 4
+    start = 0
+    while start < len(alignments[best][1]) and alignments[best][1][start] == '-':
+        start += 1
+
+    # if there are no leading '-'s, just take the provided start index.
+    if start == 0:
+        start = int(offset + alignments[best][-2])
+
+    # 1-based start
+    start += 1
     end = int(offset + alignments[best][-1])
+
     gapped = False  
     if '-' in alignments[best][0]:
         start -= alignments[best][0][:(alignments[best][-2]+1)].count('-')
@@ -290,11 +310,13 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
     end = (end - offset) if end != -1 else end
     try:        
         if (start != -1):
-            s = int((start  - 1 ) / 3)# 0-based
+            #s = int(round((start  - 1.0 ) / 3))# 0-based
+            s = int(((start  - 1.0 ) / 3))# 0-based
         else:
             s = 0
         if end != -1:
-            e = int(end  / 3) # 1-based
+            #e = int(round( (end*1.0)  / 3)) # 1-based
+            e = int(( (end*1.0)  / 3)) # 1-based
         else:
             e = len(protein)
         if (s+1) < e:        
