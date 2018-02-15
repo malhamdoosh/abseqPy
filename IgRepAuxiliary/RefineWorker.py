@@ -152,8 +152,11 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
             flags['fr4NotAsExpected'] += [record.id]
         if seqs[-1] == '':
             flags['noFR4'] += [record.id]
+
         # Extract the CDR and FR nucleotide sequences
-        tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)        
+        # COMMENTED OUT ON:  Fri Feb 16 10:36:41 AEDT 2018 BY JIAHONG - REASON: tmp var not used
+        # is also generating "clones not partitioned correctly although the protein seqs are"
+        #tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)
         # TODO: consider adding the DNA sequences
         if '*' in protein:
             flags['endsWithStopCodon'] += [record.id]                     

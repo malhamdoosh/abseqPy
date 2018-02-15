@@ -311,12 +311,12 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
     try:        
         if (start != -1):
             #s = int(round((start  - 1.0 ) / 3))# 0-based
-            s = int(((start  - 1.0 ) / 3))# 0-based
+            s = int(((start - 1) / 3))# 0-based
         else:
             s = 0
         if end != -1:
             #e = int(round( (end*1.0)  / 3)) # 1-based
-            e = int(( (end*1.0)  / 3)) # 1-based
+            e = int(( (end)  / 3)) # 1-based
         else:
             e = len(protein)
         if (s+1) < e:        
