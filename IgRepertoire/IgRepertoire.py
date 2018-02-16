@@ -269,7 +269,7 @@ class IgRepertoire:
                                    complib='blosc')
             sys.stdout.flush()
             print("The clone protein sequences are being written to " + 
-                  self.refinedCloneAnnotFile.split("/")[-1])
+                  self.cloneSeqFile.split("/")[-1])
             self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w', 
                                   complib='blosc')                      
             sys.stdout.flush()      
@@ -724,7 +724,7 @@ class IgRepertoire:
             siteHitSeqsGermline[site] = []
             siteHitsSeqsIDs[site] = set()
             siteHitsSeqsIGV[site] = set()
-        germline = set(['fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'])
+        germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
         procSeqs = 0
 #         if (MEM_GB > 20):
 #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
@@ -961,14 +961,14 @@ class IgRepertoire:
 #                  '_outframe_fr2_gaps_dist.png', title='Gaps in FR2',
 #                  proportion=False, rotateLabels=False)
 #         del cdrLength, cdrGaps, frGaps
-#         cdrGaps = Counter([x if not isnan(x) else 'NA' for x in OutOfFrame['cdr3.gaps'] ])
+#         cdrGaps = Counter([x if not isnan(x) else 'NA' for x in OutOfFrame['cdr3g.gaps'] ])
 # #         print(len(cdrGaps))
 #         plotDist(cdrGaps, self.name, self.outputDir + self.name + 
 #                  '_outframe_cdr3_gaps_dist.png', title='Gaps in Germline CDR3',
 #                  proportion=False, rotateLabels=False)
-#         frGaps = Counter(OutOfFrame['fr3.gaps'].tolist())
+#         frGaps = Counter(OutOfFrame['fr3g.gaps'].tolist())
 #         plotDist(frGaps, self.name, self.outputDir + self.name + 
-#                  '_outframe_fr3_gaps_dist.png', title='Gaps in FR3',
+#                  '_outframe_fr3_gaps_dist.png', title='Gaps in FR3 (Germline)',
 #                  proportion=False, rotateLabels=False)
 #         del cdrGaps, frGaps
 #         if self.end5:

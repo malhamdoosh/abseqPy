@@ -362,4 +362,4 @@ for (i in 1:length(pairings)) {
 }
 
 # print warnings
-#warnings()
+print(warnings())

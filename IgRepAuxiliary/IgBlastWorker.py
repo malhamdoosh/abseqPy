@@ -13,7 +13,7 @@ import numpy as np
 
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
-              'identity', 'alignlen', 'bitscore',
+                    'identity', 'alignlen', 'bitscore',
                     'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps', 
                     'jgene', 'jqstart', 'jqend', 'jstart', 'jmismatches', 'jgaps',  
                     'strand', 'stopcodon', 'v-jframe',
@@ -21,8 +21,8 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
                     'cdr1.start', 'cdr1.end', 'cdr1.mismatches', 'cdr1.gaps',
                     'fr2.start', 'fr2.end', 'fr2.mismatches', 'fr2.gaps',
                     'cdr2.start', 'cdr2.end', 'cdr2.mismatches', 'cdr2.gaps',
-                    'fr3.start', 'fr3.end', 'fr3.mismatches', 'fr3.gaps',
-                    'cdr3.start', 'cdr3.end', 'cdr3.mismatches', 'cdr3.gaps',
+                    'fr3.start', 'fr3g.end', 'fr3g.mismatches', 'fr3g.gaps', 'fr3.end',
+                    'cdr3g.start', 'cdr3g.end', 'cdr3g.mismatches', 'cdr3g.gaps', 'cdr3.start', 'cdr3.end',
                     'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
                     ]
 
@@ -38,7 +38,7 @@ def getAnnotationFields(chain):
 def createCloneRecord(chain):
     cdrRecord = {}    
     for field in getAnnotationFields(chain):
-        cdrRecord[field] =  np.nan
+        cdrRecord[field] = np.nan
     return cdrRecord
 
 
@@ -64,7 +64,22 @@ def extractCDRInfo(blastOutput, chain):
     line = ""
     
     warning = False
-    with open(blastOutput) as blast:                   
+    # RE: parsing IGBLAST:
+    # VDJ junction details MAY give N/A instead of just missing:
+    # eg:
+    # V-(D)-J junction details based on top germline gene matches
+    # (V end, V-D junction, D region, D-J junction, J start).  Note that possible
+    # overlapping nucleotides at VDJ junction (i.e, nucleotides that could
+    # be assigned to either rearranging gene) are indicated in parentheses (i.e., (TACT)) but are
+    # not included under the V, D, or J gene itself
+    # GGGTC  TGTTCACGAGGGCATCTGTGTCCTGTTTTTAGGTTCTCCTCCC  TTTTGAC  N/A  N/A
+
+    # it also has a variable number of hits (depending on presence of region)
+    # EG:
+    # V-(D)-J junction details based on top germline gene matches (V end, V-J junction, J start).  Note that possible overlapping nucleotides at VDJ junction (i.e, nucleotides that could be assigned to either rearranging gene) are indicated in parentheses (i.e., (TACT)) but are not included under the V, D, or J gene itself
+    # CCTCT  N/A  GGTGT
+
+    with open(blastOutput) as blast:
         while(True):
             try:
                 if (not line.startswith('# Query')): 
@@ -104,34 +119,71 @@ def extractCDRInfo(blastOutput, chain):
                     cloneRecord['v-jframe'] = line[4]
                     cloneRecord['vgene'] = line[0].split(',')[0]
                     cloneRecord['jgene'] = line[1].split(',')[0]
-                # parse Alignment Summary between query and top germline V gene
                 line = ' '.join(line)
-                while (line and 
+
+                # Parse Sub-region analysis and ignore it if there's no CDR3 hit by IGBLAST
+                while line and \
+                        not line.startswith("# Alignment") and \
+                        not line.startswith("# Sub-region") and \
+                        not line.startswith("# Query"):
+                    line = blast.readline()
+
+                # EOF
+                if not line:
+                    filteredIDs.append(cloneRecord['queryid'])
+                    break
+
+                # there's no # Sub-region, nor is there # Alignment.
+                if line.startswith("# Query"):
+                    filteredIDs.append(cloneRecord['queryid'])
+                    continue
+
+                # this implies that IGBLAST successfully classified a CDR3 sequence
+                if line.startswith("# Sub-region"):
+                    line = blast.readline()
+                    subregionData = line.split()
+                    assert subregionData[0] == 'CDR3'
+                    cloneRecord['cdr3.start'] = to_int(subregionData[3])
+                    cloneRecord['cdr3.end'] = to_int(subregionData[4])
+                    # true FR3 end is at position cdr3.start - 1 (the alignment table only tells us the FR3 germline)
+                    # but since fr3.start always begins in the germline, there's no special field for that
+                    # and is assumed that fr3.start == fr3g.start
+                    cloneRecord['fr3.end'] = cloneRecord['cdr3.start'] - 1
+
+                # parse Alignment Summary between query and top germline V gene
+                while (line and
                        not line.startswith('# Query') and
                        not line.startswith("# Alignment")):
                     line = blast.readline()
-                if (not line):
+                if not line:
                     filteredIDs.append(cloneRecord['queryid'])
                     break
-                if (line.startswith('# Query')):
+                if line.startswith('# Query'):
                     filteredIDs.append(cloneRecord['queryid'])
                     continue
                 line = blast.readline()
-                for i in range(1,4):                
-                    if (line.lower().startswith('fr' + `i`)):
+                for i in range(1, 4):
+                    if line.lower().startswith('fr' + `i`):
                         line = line.split()
                         cloneRecord['fr%d.start' % i] = to_int(line[1])
-                        cloneRecord['fr%d.end' % i] = to_int(line[2]) 
-                        cloneRecord['fr%d.mismatches' % i] = to_int(line[5])
-                        cloneRecord['fr%d.gaps' % i] = to_int(line[6])
+                        cloneRecord['fr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
+                        cloneRecord['fr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])
+                        cloneRecord['fr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
-                    if (line.lower().startswith('cdr' + `i`)):
+                    if line.lower().startswith('cdr' + `i`):
                         line = line.replace('(germline)', '').split()
-                        cloneRecord['cdr%d.start' % i] = to_int(line[1])
-                        cloneRecord['cdr%d.end' % i] = to_int(line[2]) 
-                        cloneRecord['cdr%d.mismatches' % i] = to_int(line[5])
-                        cloneRecord['cdr%d.gaps' % i] = to_int(line[6])
+                        cloneRecord['cdr%d%s.start' % (i, 'g' if i == 3 else '')] = to_int(line[1])
+                        cloneRecord['cdr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
+                        cloneRecord['cdr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])
+                        cloneRecord['cdr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
+
+                # if the CDR3 region wasn't identified by IgBlast, we can't get FR3 end, so we fallback to
+                # FR3 germline end. Since CDR3.start and CDR3.end isn't really used unitl the refinement process,
+                # we ignore the fallback options for them.
+                if np.isnan(cloneRecord['fr3.end']):
+                    cloneRecord['fr3.end'] = cloneRecord['fr3g.end']
+
                 # parse alignment information between query and V, D and J genes
                 while (line and 
                        not line.startswith('# Query') and
