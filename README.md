@@ -58,7 +58,7 @@ AbSeq requires a few external packages available in your system, namely:
         - This is (currently) the default merger used by AbSeq. Only one of `FLAsH`, [`leeHom`, and `PEAR`](#optional-dependencies) is required.
         - Download and extract
         - Execute `make` in root directory of FLASh
-    * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
+    * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.8
         - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
         - Make sure to follow **_every_** step detailed in the guide
         - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
