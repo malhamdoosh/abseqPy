@@ -6,14 +6,14 @@ and all its dependencies without root access.
 To reiterate:
 #### Mandatory dependencies
 * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
-* [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
+* [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
 * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11
 * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
 * [Ghostscript](https://www.ghostscript.com/download/) v9.22
          
 #### Optional dependencies
 * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
-* [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
+* [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5 is only required if `leeHom` and `PEAR` is not installed
 * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
 
 

@@ -54,10 +54,10 @@ AbSeq requires a few external packages available in your system, namely:
     * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
         - Download and extract
         - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
-    * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11
-        - This is (currently) the default merger used by AbSeq. Only one of `FLAsH`, [`leeHom`, and `PEAR`](#optional-dependencies) is required.
-        - Download and extract
-        - Execute `make` in root directory of FLASh
+    * [leeHom](https://github.com/grenaud/leeHom) any version
+        - This is (currently) the default merger used by AbSeq. Only one of `leeHom`, [`FLASh`, and `PEAR`](#optional-dependencies) is required.
+        - Follow the installation guide in their README
+        - As mentioned earlier, leeHom uses `CMake` and `make` as their build tool.
     * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.8
         - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
         - Make sure to follow **_every_** step detailed in the guide
@@ -72,9 +72,9 @@ AbSeq requires a few external packages available in your system, namely:
         - Click on "Download the package", extract the tarball
         - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
         - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
-    * [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
-        - Follow the installation guide in their README
-        - As mentioned earlier, leeHom uses `CMake` and `make` as their build tool.
+    * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11 only required if `leeHom` and `PEAR` is not installed
+        - Download and extract
+        - Execute `make` in root directory of FLASh
     * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
         - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
     
