@@ -6,6 +6,7 @@ import os
 import platform
 import zipfile
 import struct
+import subprocess
 import re
 from Bio import SeqIO
 
@@ -18,6 +19,21 @@ MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
 
+
+# VERSIONING:
+# 1. [singleton] ==> minimum version
+# 2. [min, max]  ==> accepted range of versions
+# 3. True        ==> any version
+versions = {
+    'clustalo': ["1.2.2", '1.2.4'],
+    'leehom': True,
+    'igblast': ['1.8.0'],
+    'fastqc': ['0.11.6', '0.11.7'],
+    'gs': ['9.22']
+}
+
+
+
 class FTPBlast:
     def __init__(self, addr, version):
         self.ftp = FTP(addr)
@@ -29,7 +45,7 @@ class FTPBlast:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.ftp.quit()
-        
+
     def install_bins(self, binary, installation_dir):
         path = '/blast/executables/igblast/release/{}/'.format(self.version) + binary
         installation_path = (installation_dir + '/' + binary).replace('//', '/')
@@ -49,7 +65,7 @@ class FTPBlast:
         with open(download_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
         os.chmod(download_path, 0o777)
-    
+
     def download_internal_data(self, download_dir):
         path = '/blast/executables/igblast/release/internal_data/'
         self.ftp.cwd(path)
@@ -67,7 +83,6 @@ class FTPBlast:
                     self.ftp.retrbinary('RETR ' + filename, fp.write)
             self.ftp.cwd('../')
 
-
     def download_optional_file(self, download_dir):
         path = '/blast/executables/igblast/release/optional_file/'
         self.ftp.cwd(path)
@@ -82,15 +97,49 @@ class FTPBlast:
 def _get_sys_info():
     return platform.system(), 8 * struct.calcsize("P")
 
+
+def _get_software_version(prog):
+    try:
+        if prog == 'igblast':
+            retval = check_output(['igblastn', '-version']).split('\n')[1].strip().split()[2].rstrip(',')
+            return retval
+        elif prog == 'clustalo' or prog == 'fastqc' or prog == 'gs':
+            retval = check_output([prog, '--version']).strip()
+            if prog == 'fastqc':
+                retval = retval.split()[-1].strip().lstrip("v")
+            return retval
+        elif prog == 'leehom':
+            # leehomMulti, any version
+            check_output(['which', 'leeHomMulti'])
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
+def _needs_installation(prog):
+    v = versions[prog]
+    if type(v) == bool:
+        return _get_software_version(prog) != v
+    if type(v) == list:
+        if len(v) == 1:
+            return _get_software_version(prog) < v[0]
+        elif len(v) == 2:
+            return not (v[0] <= _get_software_version(prog) <= v[1])
+        else:
+            _error("Unknown versioning scheme")
+
+
 def _error(msg, stream=sys.stderr, abort=1):
     print(msg, file=stream)
     if abort:
         sys.exit(abort)
 
+
 def _syml(src, dest):
     binary_name = os.path.basename(src)
     if src:
         os.symlink(os.path.abspath(src), (dest + '/' + binary_name).replace('//', '/'))
+
 
 def setup_dir(root):
     output = (root + "/" + EXTERNAL_DEP_DIR).replace('//', '/')
@@ -98,7 +147,10 @@ def setup_dir(root):
         os.makedirs(output)
     return output
 
-def install_clustal_omega(installation_dir="."):
+
+def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]):
+    # can't use versions yet, pre-compiled binaries are a little out of sync
+
     plat, bit = _get_sys_info()
 
     # clustalo needs to create a dir
@@ -127,8 +179,8 @@ def install_clustal_omega(installation_dir="."):
     return binary
 
 
-def install_fastqc(installation_dir="."):
-    addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v0.11.7.zip'
+def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
+    addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = (installation_dir + '/' + addr.split('/')[-1].strip()).replace('//', '/')
     _ = check_output(['curl', addr, '-o', zipname])
     unzipped_name = 'FastQC'
@@ -160,10 +212,10 @@ def install_leehom(installation_dir='.'):
     os.chdir(old_dir)
 
     return (installation_dir + '/leeHom' + '/src/leeHomMulti').replace('//', '/')
-    
 
-def install_ghost_script(installation_dir='.', threads=2):
-    addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-9.22.tar.gz'
+
+def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
+    addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-{}.tar.gz'.format(version)
     tarname = addr.split('/')[-1].strip()
     old_dir = os.path.abspath('.')
 
@@ -174,7 +226,7 @@ def install_ghost_script(installation_dir='.', threads=2):
     _ = check_output(['tar', '-xvzf', tarname])
     ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
     os.chdir(ghs_dir)
-    _ = check_output(['./configure', '--prefix={}'.format(target_dir)]) 
+    _ = check_output(['./configure', '--prefix={}'.format(target_dir)])
     _ = check_output(['make', '-j', str(threads)])
     _ = check_output(['make', 'install'])
     os.chdir(old_dir)
@@ -182,7 +234,7 @@ def install_ghost_script(installation_dir='.', threads=2):
     # dont need to return binary directory, it's already in installation_dir/bin
 
 
-def install_igblast(installation_dir='.', version='1.8.0'):
+def install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     plat, bit = _get_sys_info()
 
     with FTPBlast('ftp.ncbi.nih.gov', version) as blast:
@@ -195,24 +247,27 @@ def install_igblast(installation_dir='.', version='1.8.0'):
         else:
             _error("Unknown platform detected")
 
-        blast.download_edit_imgt_pl(installation_dir)
-        igdata_dir = (installation_dir + '/igdata').replace('//', '/')
-        os.makedirs(igdata_dir)
-        blast.download_internal_data(igdata_dir)
-        blast.download_optional_file(igdata_dir)
+        if 'IGDATA' not in os.environ:
+            blast.download_edit_imgt_pl(installation_dir)
+            igdata_dir = (installation_dir + '/igdata').replace('//', '/')
+            os.makedirs(igdata_dir)
+            blast.download_internal_data(igdata_dir)
+            blast.download_optional_file(igdata_dir)
+        else:
+            print("Found IGDATA in ENV, skipping download")
 
     return bins
 
 
 def download_imgt(download_dir, species, species_layman):
     links = [
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGHV&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGHD&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGHJ&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGKV&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGKJ&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGLV&species=",
-            "http://www.imgt.org/genedb/GENElect?query=7.14+IGLJ&species="
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGHV&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGHD&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGHJ&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGKV&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGKJ&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGLV&species=",
+        "http://www.imgt.org/genedb/GENElect?query=7.14+IGLJ&species="
     ]
 
     path = (download_dir + '/imgt_' + species_layman + "/").replace('//', '/')
@@ -223,7 +278,7 @@ def download_imgt(download_dir, species, species_layman):
         _ = check_output(['curl', '-L', url + species, '-o', output])
         # TODO: parse file to get pure genes only
         with open(output[:output.rfind(".")], "w") as writer, \
-             open(output) as reader:
+                open(output) as reader:
 
             line = reader.readline()
             while not line.startswith("<b>Number of results"):
@@ -231,8 +286,8 @@ def download_imgt(download_dir, species, species_layman):
             if not line:
                 raise Exception("File has no IMGT sequences")
 
-            reader.readline() #\n
-            reader.readline() #<pre>
+            reader.readline()  # \n
+            reader.readline()  # <pre>
 
             for line in reader:
                 if line.startswith("</pre>"):
@@ -241,11 +296,12 @@ def download_imgt(download_dir, species, species_layman):
                 writer.write(line)
             # remove raw
             os.remove(output)
-            
+
+
 def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
     for f in os.listdir(data_dir):
-        clean_fasta = output_dir+ 'imgt_' + f[:f.find(".")]
-        os.system(edit_imgt_bin+ ' ' + data_dir + f + ' > ' + clean_fasta)
+        clean_fasta = output_dir + 'imgt_' + f[:f.find(".")]
+        os.system(edit_imgt_bin + ' ' + data_dir + f + ' > ' + clean_fasta)
         records = []
         for rec in SeqIO.parse(clean_fasta, 'fasta'):
             rec.description = ''
@@ -273,7 +329,6 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
                 print('Number of invalid V genes in ' + f + ' is ' + str(wrong) + ' (ignored in the protein db)')
             _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'prot', '-in', clean_fasta_prot])
         print(f + ' has been processed.')
-        
 
 
 if __name__ == '__main__':
@@ -282,29 +337,55 @@ if __name__ == '__main__':
     d = setup_dir(".")
     d_bin = (d + '/bin').replace('//', '/')
     os.makedirs(d_bin)
-    
-    # BIN: d + 'clustal-omega/clustalo'
-    b_clustal = install_clustal_omega(d)
-    _syml(b_clustal, d_bin)
 
-    # BIN: d + 'FastQC/fastqc'
-    b_fastqc = install_fastqc(d)
-    _syml(b_fastqc, d_bin)
+    if _needs_installation('clustalo'):
+        b_clustal = install_clustal_omega(d)
+        _syml(b_clustal, d_bin)
+    else:
+        print("Found clustalo, skipping installation")
 
-    # BIN: d + 'leeHom/src/leeHomMulti'
-    b_leehom = install_leehom(d)
-    _syml(b_leehom, d_bin)
+    if _needs_installation('fastqc'):
+        b_fastqc = install_fastqc(d)
+        _syml(b_fastqc, d_bin)
+    else:
+        print("Found fastqc, skipping installation")
 
-    install_ghost_script(d)
-    retvals = install_igblast(d)
-    for b in retvals:
-        _syml(b, d_bin)
+    if _needs_installation('leehom'):
+        b_leehom = install_leehom(d)
+        _syml(b_leehom, d_bin)
+    else:
+        print("Found leeHom, skipping installation")
 
-    # download human and mouse IMGT GeneDB
-    download_imgt(d, "Homo+sapiens", "human")
-    download_imgt(d, "Mus", "mouse")
+    if _needs_installation('gs'):
+        install_ghost_script(d)
+    else:
+        print("Found ghostscript, skipping installation")
 
-    # create IGBLASTDB's directory
-    os.makedirs(d + '/databases/')
-    igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
-    igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+    if _needs_installation('igblast'):
+        retvals = install_igblast(d)
+        for b in retvals:
+            _syml(b, d_bin)
+    else:
+        print("Found igblast, skipping installation")
+
+    if 'IGBLASTDB' not in os.environ:
+        # download human and mouse IMGT GeneDB
+        download_imgt(d, "Homo+sapiens", "human")
+        download_imgt(d, "Mus", "mouse")
+
+        # create IGBLASTDB's directory
+        os.makedirs(d + '/databases/')
+        igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
+        igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+    else:
+        print("Found IGBLASTDB in ENV, skipping download")
+
+    if 'IGDATA' not in os.environ:
+        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+            blast.download_edit_imgt_pl(d)
+            igdata_dir = (d + '/igdata').replace('//', '/')
+            os.makedirs(igdata_dir)
+            blast.download_internal_data(igdata_dir)
+            blast.download_optional_file(igdata_dir)
+    else:
+        print("Found IGDATA in ENV, skipping download")
