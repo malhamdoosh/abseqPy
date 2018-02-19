@@ -8,10 +8,11 @@ import zipfile
 import struct
 import subprocess
 import re
-from Bio import SeqIO
 
+from Bio import SeqIO
 from subprocess import check_output
 from ftplib import FTP
+from distutils.version import LooseVersion
 
 from config import EXTERNAL_DEP_DIR
 
@@ -31,7 +32,6 @@ versions = {
     'fastqc': ['0.11.6', '0.11.7'],
     'gs': ['9.22']
 }
-
 
 
 class FTPBlast:
@@ -122,9 +122,9 @@ def _needs_installation(prog):
         return _get_software_version(prog) != v
     if type(v) == list:
         if len(v) == 1:
-            return _get_software_version(prog) < v[0]
+            return LooseVersion(_get_software_version(prog)) < LooseVersion(v[0])
         elif len(v) == 2:
-            return not (v[0] <= _get_software_version(prog) <= v[1])
+            return not (LooseVersion(v[0]) <= LooseVersion(_get_software_version(prog)) <= LooseVersion(v[1]))
         else:
             _error("Unknown versioning scheme")
 
