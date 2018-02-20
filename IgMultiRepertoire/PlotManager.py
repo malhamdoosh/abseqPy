@@ -1,4 +1,4 @@
-from config import RSCRIPT_SAMPLE_SEPARATOR
+from config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
 import os
 import subprocess
 import sys
@@ -56,7 +56,6 @@ class PlotManager:
                len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) > 1 and \
                not PlotManager.rscriptsOff(arg)
 
-
     @staticmethod
     def pythonPlotOn():
         """
@@ -82,16 +81,15 @@ class PlotManager:
         :return: None. Side effects: plots in R if specified as such
         """
         if not PlotManager._pythonPlotting:
-            abSeqRoot = sys.path[0]
-            self._flushMetadata(abSeqRoot)
+            self._flushMetadata(ABSEQROOT)
             # todo: because main script overridden stdout to AbSeq.log
             # todo: change this to per-sample basis when logging is implemented correctly.
             # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
             retval = subprocess.call(["Rscript",
-                            abSeqRoot + "/rscripts/masterScript.R"],
-                            stdout=sys.stdout,
-                            stderr=sys.stdout
-                            )
+                                      ABSEQROOT + "/rscripts/masterScript.R"],
+                                     stdout=sys.stdout,
+                                     stderr=sys.stdout
+                                     )
             if retval != 0:
                 print("-" * 30)
                 print("Error detected in R plotting")

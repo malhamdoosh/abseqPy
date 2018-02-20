@@ -12,14 +12,13 @@ from Bio import SeqIO, AlignIO
 from pandas.core.frame import DataFrame
 from numpy import isnan
 from Bio.SeqRecord import SeqRecord
-from config import CLUSTALOMEGA, MEM_GB
+from config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
 from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
 from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 from IgRepReporting.igRepPlots import plotDist
-from config import VERSION
 import gzip
 import shutil
 
@@ -155,19 +154,19 @@ def runIgblastn(blastInput, chain, threads = 8, db='$IGBLASTDB', igdata="$IGDATA
         return blastOutput 
     print('\tRunning igblast ... ' + blastInput.split("/")[-1])
     if (chain == 'hv'):
-        command = ("igblastn -germline_db_V " + db+"/imgt_human_ighv -germline_db_J " 
+        command = (IGBLASTN + " -germline_db_V " + db+"/imgt_human_ighv -germline_db_J " 
                    "" + db+"/imgt_human_ighj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
                    "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
                    )
     elif (chain == 'kv'):
-        command = ("igblastn -germline_db_V " + db+"/imgt_human_igkv -germline_db_J " 
+        command = (IGBLASTN + " -germline_db_V " + db+"/imgt_human_igkv -germline_db_J " 
                    "" + db+"/imgt_human_igkj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
                    "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
                    )
     elif (chain == 'lv'):
-        command = ("igblastn -germline_db_V " + db+"/imgt_human_iglv -germline_db_J " 
+        command = (IGBLASTN + " -germline_db_V " + db+"/imgt_human_iglv -germline_db_J " 
                    "" + db+"/imgt_human_iglj -germline_db_D " + db+"/imgt_human_ighd -domain_system imgt "
                    "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "  
                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
@@ -190,19 +189,19 @@ def runIgblastp(blastInput, chain, threads = 8, db='$IGBLASTDB', outputDir=""):
         return blastOutput 
     print('\tRunning igblast ... ' + blastInput.split("/")[-1])
     if (chain == 'hv'):
-        command = ("igblastp -germline_db_V " + db+"/imgt_human_ighv_p " 
+        command = (IGBLASTP + " -germline_db_V " + db+"/imgt_human_ighv_p " 
                    "-domain_system imgt "
                    "-query %s -organism human "  
                    "-outfmt 7 -extend_align5end -num_threads %d -out %s"
                    )
     elif (chain == 'kv'):
-        command = ("igblastp -germline_db_V " + db+"/imgt_human_igkv_p " 
+        command = (IGBLASTP + " -germline_db_V " + db+"/imgt_human_igkv_p " 
                    "-domain_system imgt "
                    "-query %s -organism human "  
                    "-outfmt 7 -extend_align5end -num_threads %d -out %s"
                    )
     elif (chain == 'lv'):
-        command = ("igblastp -germline_db_V " + db+"/imgt_human_iglv_p " 
+        command = (IGBLASTP + " -germline_db_V " + db+"/imgt_human_iglv_p " 
                    "-domain_system imgt "
                    "-query %s -organism human "  
                    "-outfmt 7 -extend_align5end -num_threads %d -out %s"
@@ -409,7 +408,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
         if (not exists(mergedFastq)):
             print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                               , readFile2.split('/')[-1])) 
-            command = "leeHomMulti -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
+            command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
             os.system('gunzip ' + mergedFastq + '.gz')
             #os.system("mv %s.* %s" % (outputPrefix, seqOut))
