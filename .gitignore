@@ -9,3 +9,4 @@
 *.eggs/
 /*.egg-info/
 /dist/
+**/3rd_party*/
