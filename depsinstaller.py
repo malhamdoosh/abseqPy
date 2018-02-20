@@ -140,7 +140,13 @@ def _syml(src, dest):
         os.makedirs(dest)
     binary_name = os.path.basename(src)
     if src:
-        os.symlink(os.path.abspath(src), (dest + '/' + binary_name).replace('//', '/'))
+        link_src = os.path.abspath(src)
+        link_dest = (dest + '/' + binary_name).replace('//', '/')
+        # anaconda / conda doesn't like os.symlink
+        if 'continuum' in sys.version.lower() or 'anaconda' in sys.version.lower():
+            _ = check_output(['ln', '-s', link_src, link_dest])
+        else:
+            os.symlink(link_src, link_dest)
 
 
 def setup_dir(root):
@@ -250,25 +256,18 @@ def install_igblast(installation_dir='.', version=versions['igblast'][-1]):
         else:
             _error("Unknown platform detected")
 
-        if 'IGDATA' not in os.environ:
-            blast.download_edit_imgt_pl(installation_dir)
-            igdata_dir = (installation_dir + '/igdata').replace('//', '/')
-            os.makedirs(igdata_dir)
-            blast.download_internal_data(igdata_dir)
-            blast.download_optional_file(igdata_dir)
-        else:
-            print("Found IGDATA in ENV, skipping download")
-
     return bins
 
 
 def install_TAMO():
     # TAMO comes packed with AbSeq, just need to install it!
     _ = check_output(['tar', 'xvzf', 'TAMO.tar.gz'])
+    old_dir = os.path.abspath(".")
     os.chdir("TAMO-1.0_120321/")
     # install!
     _ = check_output(['python', 'setup.py', 'install'])
     # remove files (tar?)
+    os.chdir(old_dir)
 
 
 # deprecate this with setup.py in the future
@@ -329,7 +328,7 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
             records.append(rec)
         SeqIO.write(records, clean_fasta, 'fasta')
         _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'nucl', '-in', clean_fasta])
-        if len(re.findall('ig[h,k,l][v,c]', clean_fasta)) > 0:
+        if len(re.findall('ig[hkl][vc]', clean_fasta)) > 0:
             clean_fasta_prot = clean_fasta + "_p"
             records = []
             wrong = 0
@@ -393,6 +392,16 @@ if __name__ == '__main__':
     except ImportError:
         install_TAMO()
 
+    if 'IGDATA' not in os.environ:
+        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+            blast.download_edit_imgt_pl(d)
+            igdata_dir = (d + '/igdata').replace('//', '/')
+            os.makedirs(igdata_dir)
+            blast.download_internal_data(igdata_dir)
+            blast.download_optional_file(igdata_dir)
+    else:
+        print("Found IGDATA in ENV, skipping download")
+
     if 'IGBLASTDB' not in os.environ:
         # download human and mouse IMGT GeneDB
         download_imgt(d, "Homo+sapiens", "human")
@@ -405,12 +414,3 @@ if __name__ == '__main__':
     else:
         print("Found IGBLASTDB in ENV, skipping download")
 
-    if 'IGDATA' not in os.environ:
-        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-            blast.download_edit_imgt_pl(d)
-            igdata_dir = (d + '/igdata').replace('//', '/')
-            os.makedirs(igdata_dir)
-            blast.download_internal_data(igdata_dir)
-            blast.download_optional_file(igdata_dir)
-    else:
-        print("Found IGDATA in ENV, skipping download")
