@@ -110,20 +110,21 @@ def _get_software_version(prog):
         elif prog == 'leehom':
             # leehomMulti, any version
             check_output(['which', 'leeHomMulti'])
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         return False
     return True
 
 
 def _needs_installation(prog):
     v = versions[prog]
-    if type(v) == bool:
-        return _get_software_version(prog) != v
+    software_version = _get_software_version(prog) 
+    if type(v) == bool or type(software_version) == bool:
+        return software_version != v
     if type(v) == list:
         if len(v) == 1:
-            return LooseVersion(_get_software_version(prog)) < LooseVersion(v[0])
+            return LooseVersion(software_version) < LooseVersion(v[0])
         elif len(v) == 2:
-            return not (LooseVersion(v[0]) <= LooseVersion(_get_software_version(prog)) <= LooseVersion(v[1]))
+            return not (LooseVersion(v[0]) <= LooseVersion(software_version) <= LooseVersion(v[1]))
         else:
             _error("Unknown versioning scheme")
 
