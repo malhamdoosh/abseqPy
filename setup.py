@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
-from setuptools import setup, Command
+from setuptools import setup, Command, find_packages
 from setuptools.command.install import install
 import glob
 import platform
@@ -435,10 +435,10 @@ setup(name="AbSeq",
       long_description=readme(),
       author="CSL",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
-      setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil'],
+      setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1'] + (['psutil'] if "darwin" in sys.platform else []),
-      packages=['abseq'],
+                        'tables>=3.2.3.1', 'psutil'],
+      packages=find_packages(),
       cmdclass={
           'clean': CleanCommand,
           # 'install': ExternalDependencyInstaller,
