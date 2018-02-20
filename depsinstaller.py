@@ -14,7 +14,6 @@ from subprocess import check_output
 from ftplib import FTP
 from distutils.version import LooseVersion
 
-from config import EXTERNAL_DEP_DIR
 
 MAC = 'Darwin'
 LIN = 'Linux'
@@ -142,6 +141,7 @@ def _syml(src, dest):
 
 
 def setup_dir(root):
+    from config import EXTERNAL_DEP_DIR
     output = (root + "/" + EXTERNAL_DEP_DIR).replace('//', '/')
     #if not os.path.exists(output):
         #os.makedirs(output)
