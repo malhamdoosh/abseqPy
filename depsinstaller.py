@@ -349,6 +349,7 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
 
 
 if __name__ == '__main__':
+    install_sequential_deps()
     # create external deps dir
     d = setup_dir(".")
     d_bin = (d + '/bin').replace('//', '/')
