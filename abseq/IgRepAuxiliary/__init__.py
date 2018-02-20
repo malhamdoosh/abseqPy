@@ -6,14 +6,14 @@
 '''
 
 __all__ = [
-    'IgBlastWorker.py',
-    'RefineWorker.py',
-    'RestrictionSitesScanner.py',
-    'SeqUtils.py',
-    'annotateAuxiliary.py',
-    'diversityAuxiliary.py',
-    'primerAuxiliary.py',
-    'productivityAuxiliary.py',
-    'restrictionAuxiliary.py',
-    'upstreamAuxiliary.py'
+    'annotateAuxiliary',
+    'diversityAuxiliary',
+    'IgBlastWorker',
+    'primerAuxiliary',
+    'productivityAuxiliary',
+    'RefineWorker',
+    'restrictionAuxiliary',
+    'RestrictionSitesScanner',
+    'SeqUtils',
+    'upstreamAuxiliary'
 ]

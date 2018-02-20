@@ -3,6 +3,4 @@ __all__ = [
     'IgRepAuxiliary',
     'IgRepReporting',
     'IgRepertoire',
-    'argsParser.py',
-    'config.py'
 ]

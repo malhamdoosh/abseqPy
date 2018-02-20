@@ -6,9 +6,9 @@
 '''
 
 __all__ = [
-    'abundanceReport.py',
-    'diversityReport.py',
-    'igRepPlots.py',
-    'productivityReport.py',
-    'restrictionReport.py'
+    'abundanceReport',
+    'diversityReport',
+    'igRepPlots',
+    'productivityReport',
+    'restrictionReport'
 ]
