@@ -136,7 +136,8 @@ def _error(msg, stream=sys.stderr, abort=1):
 
 
 def _syml(src, dest):
-    os.makedirs(dest)
+    if not os.path.exists(dest):
+        os.makedirs(dest)
     binary_name = os.path.basename(src)
     if src:
         os.symlink(os.path.abspath(src), (dest + '/' + binary_name).replace('//', '/'))
@@ -145,8 +146,8 @@ def _syml(src, dest):
 def setup_dir(root):
     from config import EXTERNAL_DEP_DIR
     output = (root + "/" + EXTERNAL_DEP_DIR).replace('//', '/')
-    #if not os.path.exists(output):
-        #os.makedirs(output)
+    if os.path.exists(output):
+        _error("{} already exists! Remove the directory and try again".format(EXTERNAL_DEP_DIR))
     return output
 
 
