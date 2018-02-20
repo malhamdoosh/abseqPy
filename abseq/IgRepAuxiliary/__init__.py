@@ -3,4 +3,17 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
+__all__ = [
+    'IgBlastWorker.py',
+    'RefineWorker.py',
+    'RestrictionSitesScanner.py',
+    'SeqUtils.py',
+    'annotateAuxiliary.py',
+    'diversityAuxiliary.py',
+    'primerAuxiliary.py',
+    'productivityAuxiliary.py',
+    'restrictionAuxiliary.py',
+    'upstreamAuxiliary.py'
+]
