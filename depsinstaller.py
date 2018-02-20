@@ -136,6 +136,7 @@ def _error(msg, stream=sys.stderr, abort=1):
 
 
 def _syml(src, dest):
+    os.makedirs(dest)
     binary_name = os.path.basename(src)
     if src:
         os.symlink(os.path.abspath(src), (dest + '/' + binary_name).replace('//', '/'))
@@ -354,7 +355,6 @@ if __name__ == '__main__':
     # create external deps dir
     d = setup_dir(".")
     d_bin = (d + '/bin').replace('//', '/')
-    #os.makedirs(d_bin)
 
     if _needs_installation('clustalo'):
         b_clustal = install_clustal_omega(d)
