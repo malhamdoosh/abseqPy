@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import pip
 import sys
 import glob
 import os
@@ -9,7 +10,6 @@ import struct
 import subprocess
 import re
 
-from Bio import SeqIO
 from subprocess import check_output
 from ftplib import FTP
 from distutils.version import LooseVersion
@@ -143,8 +143,8 @@ def _syml(src, dest):
 
 def setup_dir(root):
     output = (root + "/" + EXTERNAL_DEP_DIR).replace('//', '/')
-    if not os.path.exists(output):
-        os.makedirs(output)
+    #if not os.path.exists(output):
+        #os.makedirs(output)
     return output
 
 
@@ -259,6 +259,22 @@ def install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     return bins
 
 
+def install_TAMO():
+    # TAMO comes packed with AbSeq, just need to install it!
+    _ = check_output(['tar', 'xvzf', 'TAMO.tar.gz'])
+    os.chdir("TAMO-1.0_120321/")
+    # install!
+    _ = check_output(['python', 'setup.py', 'install'])
+    # remove files (tar?)
+
+
+# deprecate this with setup.py in the future
+def install_sequential_deps():
+    with open("requirements.txt") as fp:
+        for package in fp:
+            pip.main(['install', package])
+
+
 def download_imgt(download_dir, species, species_layman):
     links = [
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGHV&species=",
@@ -299,6 +315,7 @@ def download_imgt(download_dir, species, species_layman):
 
 
 def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
+    from Bio import SeqIO
     for f in os.listdir(data_dir):
         clean_fasta = output_dir + 'imgt_' + f[:f.find(".")]
         os.system(edit_imgt_bin + ' ' + data_dir + f + ' > ' + clean_fasta)
@@ -332,11 +349,10 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
 
 
 if __name__ == '__main__':
-
     # create external deps dir
     d = setup_dir(".")
     d_bin = (d + '/bin').replace('//', '/')
-    os.makedirs(d_bin)
+    #os.makedirs(d_bin)
 
     if _needs_installation('clustalo'):
         b_clustal = install_clustal_omega(d)
@@ -367,6 +383,12 @@ if __name__ == '__main__':
             _syml(b, d_bin)
     else:
         print("Found igblast, skipping installation")
+
+    try:
+        import TAMO
+        print("Found TAMO, skipping installation")
+    except ImportError:
+        install_TAMO()
 
     if 'IGBLASTDB' not in os.environ:
         # download human and mouse IMGT GeneDB
