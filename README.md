@@ -219,3 +219,6 @@ Bioinformatics. 2005 Jul 15;21(14):3164-5.
 Jian Ye, Ning Ma, Thomas L. Madden, James M. Ostell
 Nucleic Acids Res. 2013 Jul; 41(Web Server issue): W34–W40. Published online 2013 May 11. doi: 10.1093/nar/gkt382
 PMCID: PMC3692102
+
+[Ghostscript](https://ghostscript.com/index.html): an interpreter for the PostScript language and for PDF.
+Artifex Software, Inc.
