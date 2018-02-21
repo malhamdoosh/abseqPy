@@ -12,13 +12,13 @@ import sys
 # ==========================================
 #           ABSEQ's VERSION
 # ==========================================
-ABSEQROOT = sys.path[0]
+ABSEQROOT = os.path.abspath(os.path.dirname(__file__))
 VERSION = '1.1.4'
 
 # ====================================================================================
 #           ABSEQ's EXTERNAL DEPENDENCIES
 # ====================================================================================
-EXTERNAL_DEP_DIR = 'abseq/3rd_party/'
+EXTERNAL_DEP_DIR = '3rd_party/'
 # 1. clustal omega
 CLUSTALOMEGA = 'clustalo'
 # 2. FASTQC

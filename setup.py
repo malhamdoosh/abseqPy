@@ -408,27 +408,6 @@ class ExternalDependencyInstaller(install):
         else:
             print("Found IGBLASTDB in ENV, skipping download")
 
-        # update abseq root position
-        update_abseqroot()
-
-
-def update_abseqroot():
-    '''
-    as soon as someone installed this via setup.py, we can point abseq root to the installed directory
-    (eg: /Users/johndoe/anaconda3/envs/abseq-dev/lib/python2.7/site-packages/abseq)
-
-    But if this repository was just cloned from a SCV, leave it as the installation directory
-    :return:
-    '''
-    import re
-    f = ""
-    with open("abseq/config.py", "r") as fp:
-        f = fp.read()
-    with open("abseq/config.py", "w") as fp:
-        new_path = "os.path.abspath(os.path.dirname(__file__))"
-        f = re.sub(r'ABSEQROOT\s*=\s*sys.path\[0\]', 'ABSEQROOT = "{}"'.format(new_path), f)
-        fp.write(f)
-
 
 def readme():
     with open("README.md") as f:
@@ -437,7 +416,7 @@ def readme():
 
 def external_binaries():
     from abseq.config import EXTERNAL_DEP_DIR
-    return os.path.basename(EXTERNAL_DEP_DIR.rstrip('/'))
+    return EXTERNAL_DEP_DIR.rstrip('/')
 
 
 setup(name="AbSeq",
