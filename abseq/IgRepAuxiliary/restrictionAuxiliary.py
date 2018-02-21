@@ -3,19 +3,20 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
+import re
+import sys
 
 from numpy import isnan, nan
-import re
-from Bio import SeqIO
 from multiprocessing import Queue, Manager
-import sys
 from math import ceil
-from config import MEM_GB
-from RestrictionSitesScanner import RestrictionSitesScanner
-from productivityAuxiliary import ProcCounter
 from pandas.core.frame import DataFrame
-from IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
+
+from abseq.IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
+from abseq.config import MEM_GB
+from abseq.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
+from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
 
 
 def initSimpleRSAStats(sites):
@@ -271,9 +272,10 @@ def findHitsRegion(cdrRec, hitStarts):
             regions['fr4'] = 1    
         else:
             print(hitStarts, vhStart, cdrRec)
-            raise
+            raise Exception
     return regions
-                
+
+
 def findHits(seq, site):
     seq = seq.upper()
     site = site.replace('/', '')  

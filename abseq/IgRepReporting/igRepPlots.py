@@ -14,15 +14,17 @@ import numpy as np
 import matplotlib.colors as mcolors
 import math
 import numpy
-import IgRepertoire.igRepUtils
 import random
+import abseq.IgRepertoire.igRepUtils
+
 from matplotlib import cm
 from collections import Counter
-from IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
-from IgMultiRepertoire.PlotManager import PlotManager
 from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
+
+from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
+from abseq.IgMultiRepertoire.PlotManager import PlotManager
 
 
 
@@ -34,7 +36,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     print("\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
-    with IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
+    with abseq.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
             if (len(rec) <= maxLen):
                 if (rec.id.split('|') > 1):
@@ -73,7 +75,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     print("\tThe sequence length distribution is being plotted for " + sampleName)
     if (type("") == type(counts)):
-        with IgRepertoire.igRepUtils.safeOpen(counts) as fp:
+        with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         count = Counter(sizes)
         sizes = count.keys()

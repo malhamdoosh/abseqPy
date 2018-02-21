@@ -6,14 +6,16 @@
 '''
 
 import sys
-from IgRepertoire.igRepUtils import writeClonoTypesToFile
-from IgRepReporting.igRepPlots import plotSeqLenDist, \
-    generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction,\
-    plotSeqRecapture, plotSeqRecaptureNew
 import os
 import gzip
-from IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
+
 from collections import Counter
+
+from abseq.IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
+from abseq.IgRepertoire.igRepUtils import writeClonoTypesToFile
+from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, \
+    generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \
+    plotSeqRecapture, plotSeqRecaptureNew
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes):
     generateSpectraTypePlots(spectraTypes,  name, outDir)

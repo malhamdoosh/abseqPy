@@ -5,8 +5,9 @@
     Changes log: check git commits. 
 ''' 
 
-from IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
 from numpy import array
+
+from abseq.IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
 
 
 def generateOverlapFigures(overlapResults, noSeqs, name, siteHitsFile):

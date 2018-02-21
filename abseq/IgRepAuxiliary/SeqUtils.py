@@ -3,25 +3,25 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
 
-import IgRepertoire
-from Bio.Seq import Seq
-from Bio.Alphabet.IUPAC import IUPACProtein
-from Bio.Alphabet import Alphabet
-from os.path import exists
-import os
-from Bio import SeqIO, motifs
-from Bio.SeqRecord import SeqRecord
-from config import WEBLOGO
 import gc
 import sys
 import pickle
 import random
-from collections import Sequence
 import bisect
-from numpy import dtype
-#from IgRepertoire.igRepUtils import alignListOfSeqs
+import os
+
+from os.path import exists
+from collections import Sequence
+from Bio.Seq import Seq
+from Bio.Alphabet.IUPAC import IUPACProtein
+from Bio import SeqIO, motifs
+from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import Alphabet
+
+from abseq.config import WEBLOGO
+import abseq.IgRepertoire
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies
@@ -93,7 +93,7 @@ def generateMotif(sequences, name, alphabet, filename,
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
         # ignoreNones because sometimes seqs contains None when frameworks/cdrs failed to align
-        alignedSeq = IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, ignoreNones=True)
+        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, ignoreNones=True)
 #                 print(alignedSeq[:10])
     else:                
         # if alignment is not required, add "-" to short sequences

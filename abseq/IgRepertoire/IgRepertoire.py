@@ -3,46 +3,46 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
-from igRepUtils import fastq2fasta, mergeReads, writeListToFile
-from collections import Counter
-from os.path import exists
+'''
+import gc
 import os
 import sys
+
+from collections import Counter
+from os.path import exists
 from Bio import SeqIO
 from Bio.Seq import Seq
 from pandas.io.parsers import read_csv
 from numpy import Inf, random, isnan, logical_not
-from igRepUtils import writeCountsCategoriesToFile
-import gc
-from igRepUtils import compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
 from Bio.SeqRecord import SeqRecord
-from igRepUtils import compressCountsGeneLevel
-from igRepUtils import gunzip
-from config import FASTQC
-from IgRepAuxiliary.productivityAuxiliary import  refineClonesAnnotation
-from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
 from pandas.io.pytables import read_hdf
-from IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
-from IgRepReporting.abundanceReport import writeAbundanceToFiles
-from IgRepReporting.productivityReport import generateProductivityReport
-from IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
-from IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes,\
+
+
+from abseq.config import FASTQC
+from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
+    writeListToFile, writeParams, writeCountsCategoriesToFile, \
+    compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
+from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
+from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
+from abseq.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
+from abseq.IgRepReporting.abundanceReport import writeAbundanceToFiles
+from abseq.IgRepReporting.productivityReport import generateProductivityReport
+from abseq.IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
+from abseq.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
     annotateClonotypes
-from igRepUtils import writeParams
-from IgRepAuxiliary.restrictionAuxiliary import findHits,\
+from abseq.IgRepAuxiliary.restrictionAuxiliary import findHits, \
     findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
-from IgRepReporting.restrictionReport import generateOverlapFigures
+from abseq.IgRepReporting.restrictionReport import generateOverlapFigures
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies (generateMotifs uses TAMO)
 # from IgRepAuxiliary.SeqUtils import generateMotifs
-#from TAMO.Clustering.UPGMA import UPGMA
-#from TAMO.Clustering.UPGMA import DFUNC
-#from TAMO.Clustering.UPGMA import print_tree
-#from TAMO.Clustering.UPGMA import create_tree_phylip
-#from TAMO.Clustering.UPGMA import print_tree_id
-#from TAMO import MotifTools
+# from TAMO.Clustering.UPGMA import UPGMA
+# from TAMO.Clustering.UPGMA import DFUNC
+# from TAMO.Clustering.UPGMA import print_tree
+# from TAMO.Clustering.UPGMA import create_tree_phylip
+# from TAMO.Clustering.UPGMA import print_tree_id
+# from TAMO import MotifTools
 
 
 class IgRepertoire:

@@ -3,14 +3,15 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
 
-from multiprocessing import Process
-from numpy import isnan, nan
-import restrictionAuxiliary 
-from Bio.Seq import Seq
 import sys
-import time
+from multiprocessing import Process
+from numpy import isnan
+from Bio.Seq import Seq
+
+import abseq.IgRepAuxiliary.restrictionAuxiliary
+
 
 class RestrictionSitesScanner(Process):
     '''
@@ -58,7 +59,7 @@ class RestrictionSitesScanner(Process):
         return
     
     def runSimple(self, nextTask):
-        stats = restrictionAuxiliary.initSimpleRSAStats(self.sites)
+        stats = abseq.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
         stats['total'] = len(nextTask)      
         for id in nextTask:
             record = self.records[id]
@@ -73,9 +74,9 @@ class RestrictionSitesScanner(Process):
             seqRC = str(Seq(seq).reverse_complement())            
             cut = False
             for site in stats["siteHitsCount"].keys():
-                hits = restrictionAuxiliary.findHits(seq, self.sites[site])                
+                hits = abseq.IgRepAuxiliary.restrictionAuxiliary.findHits(seq, self.sites[site])
                 if len(hits) == 0:                    
-                    hits = restrictionAuxiliary.findHits(seqRC, self.sites[site])                   
+                    hits = abseq.IgRepAuxiliary.restrictionAuxiliary.findHits(seqRC, self.sites[site])
                 if len(hits) > 0:
                     stats["siteHitsCount"][site] += len(hits) 
                     stats["siteHitSeqsCount"][site] += 1                     
@@ -97,5 +98,3 @@ def sliceRecord((rec, qsRec)):
     else:
         end = int(qsRec['fr4.end'])
     return rec[qstart:end]  
-    
-        

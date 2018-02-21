@@ -5,11 +5,13 @@
     Changes log: check git commits. 
 ''' 
 
-from multiprocessing import Process
-from IgRepertoire.igRepUtils import runIgblastn, runIgblastp
-from pandas.core.frame import DataFrame
 import sys
 import numpy as np
+
+from multiprocessing import Process
+from pandas.core.frame import DataFrame
+
+from abseq.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
 
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',

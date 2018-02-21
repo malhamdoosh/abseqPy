@@ -1,1 +1,10 @@
 include TAMO.tar.gz
+include README.md
+include NEWS
+include abseq-run
+recursive-include rscripts *.R
+include LICENSE
+include INSTALL.md
+include requirements.txt
+include NUC.4.4.txt
+include NEWS

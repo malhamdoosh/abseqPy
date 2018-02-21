@@ -3,17 +3,18 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
+import sys
 
 from multiprocessing import Process
-import sys
 from Bio.SeqRecord import SeqRecord
-from config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
-from IgRepertoire.igRepUtils import extractProteinFrag,\
-    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA
 from numpy import isnan
-import traceback
-from IgBlastWorker import convertCloneRecordToOrderedList
+
+from abseq.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
+from abseq.IgRepertoire.igRepUtils import extractProteinFrag,\
+    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA
+from abseq.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
 
 
 class RefineWorker(Process):
