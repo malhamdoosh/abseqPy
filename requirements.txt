@@ -4,4 +4,5 @@ biopython >= 1.66
 weblogo >= 3.4
 matplotlib >= 1.5.1
 tables >= 3.2.3.1
+matplotlib-venn
 psutil
