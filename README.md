@@ -3,16 +3,9 @@
     * [AbSeq](#abseq)
     * [About](#about)
     * [Wiki](#wiki)
-* [Dependencies](#dependencies)
-    * [Binary dependencies](#binary-dependencies)
-        * [Mandatory dependencies](#mandatory-dependencies)
-        * [Optional dependencies](#optional-dependencies)
-    * [R library dependencies](#r-library-dependencies)
 * [Setup](#setup)
+    * [Dependencies](#dependencies)
     * [Download](#download)
-    * [Installation and configuration](#installation-and-configuration)
-    * [Exporting variables](#exporting-variables)
-    * [Exporting environment variables](#exporting-environment-variables)
 * [Usage](#usage)
     * [Parameter definitions](#parameter-definitions)
     * [Use cases](#use-cases)
@@ -39,110 +32,39 @@ There will be more information on contribution guidelines in the wikipage.
 * Other guidelines
 * How to run tests
 
-# Dependencies
-## Binary dependencies
-In this section, we assume Unix's `make` build tool is readily available.
-If you're (optionally) building for `leeHom` paired-end merger, you will require [`CMake`](https://cmake.org/download/) too.
-
-AbSeq requires a few external packages available in your system, namely:
-
-  * ### Mandatory dependencies
-
-    * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
-        - Download and extract the tarball or install the pre-compiled binaries
-        - Follow the installation guide [here](http://www.clustal.org/omega/INSTALL)
-    * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
-        - Download and extract
-        - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
-    * [leeHom](https://github.com/grenaud/leeHom) any version
-        - This is (currently) the default merger used by AbSeq. Only one of `leeHom`, [`FLASh`, and `PEAR`](#optional-dependencies) is required.
-        - Follow the installation guide in their README
-        - As mentioned earlier, leeHom uses `CMake` and `make` as their build tool.
-    * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.8
-        - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
-        - Make sure to follow **_every_** step detailed in the guide
-        - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
-         See [here](#exporting-environment-variables)
-    * [Ghostscript](https://www.ghostscript.com/download/) v9.22
-        - Download and follow the instructions to install [here](https://www.ghostscript.com/doc/9.22/Install.htm)
-         
-  * ### Optional dependencies
-  
-    * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
-        - Click on "Download the package", extract the tarball
-        - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
-        - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
-    * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11 only required if `leeHom` and `PEAR` is not installed
-        - Download and extract
-        - Execute `make` in root directory of FLASh
-    * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
-        - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
-    
-> Make sure the above programs are available in your [`$PATH` variable](#exporting-variables). Pay special
-attention to the versions - these versions were used during the development and testing process of AbSeq.
-
-
-## R library dependencies
-The plotting facilities provided by AbSeq uses a few R libraries. You will require `ggplot2`,
-`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`.
-
-**These packages will be _automatically installed_ if they can't be located in your system.**
-
-> Alternatively, you can **avoid R and all its dependencies entirely** if you explicitly tell AbSeq to [plot in python only](#python-only-plot). 
-See [R vs Python plots](#r-vs-python-plots).
-
-Pat yourself on the back - all the dependencies are installed - you're almost there!
-
 # Setup
-Setting up AbSeq is simple as pie:
 
-  1. Download AbSeq
-  2. Install
-  3. Exporting path variables to locate the binaries you installed [earlier](#binary-dependencies)
-  
+## Dependencies
+Before proceeding, you should confirm that you have at least these tools readily available:
+* CMake
+* C/C++ compilers
+* curl
+* git
+* make
+* python v2.7
+* R (optional, see below)
+
+By default, AbSeq plots with `Rscript`. If you do not want to install R in your system, you can opt out
+by specifying `-rs off`, see [usage](#usage) and [python only plot](#python-only-plot) for more information.
+
 ## Download
-`git clone` this repository or manually download this repository.
+To download and install AbSeq:
 
-## Installation and configuration
-Before proceeding any further, make sure you have all the [external dependencies](#dependencies)
-installed and ready to go. You will require Python v2.7 on your system with [pip](https://pip.pypa.io/en/stable/installing/) installed.
-
-Additionally, you will also need R installed on your machine unless you disable R plotting. See [above](#r-library-dependencies).
-
-AbSeq depends on several python packages, namely:
-
-  1. [Biopython](http://biopython.org/)
-  2. [pandas](https://pandas.pydata.org/)
-  3. [numpy](http://www.numpy.org/)
-  4. [Weblogo](https://github.com/WebLogo/weblogo) 
-
-To automatically install the above packages, run:
 ```bash
-$ pip install -r requirements.txt
-```
-in AbSeq's root directory (where requirements.txt lives).
+$ git clone <insert-abseq-repo-url>
+$ cd abseq
+$ python setup.py install
+``` 
 
-## Exporting variables
-To make the [installed binaries](#binary-dependencies) available in your `$PATH` variable:
-```bash
-export PATH="/path/to/fastqc:/path/to/leehom/:$PATH"
-```
-in your `.bashrc` or equivalent.
+depending on what your system already has (and your internet speed), this may take up to 10-15 minutes.
 
-`/path/to/binaries` is the absolute path to the directory where your programs (listed above) are installed,
-each separated by colons. Repeat this for every dependency. Alternatively, move all binaries into one
-folder (eg, `/Users/john/bin/`) and `export PATH="/Users/john/bin/:$PATH"`
+Folks who care about maintaining (and occasionally using) different versions of AbSeq can create a symlink to `abseq-run` script instead.
 
-## Exporting environment variables
-Make sure `$IGBLASTDB` and `$IGDATA` are exported.
-```bash
-export IGBLASTDB="/path/to/data/igblastDB/databases/"
-export IGDATA="/path/to/data/igblastDB/data/"
-```
-Again, `/path/to/data/` is the absolute path to the directory where `/igblastDB/ ... /` lives.
+Either way, installing AbSeq via `python setup.py install` will always create an executable in your path called `abseq`.
 
-
-
+If you really want to, you can install and 'compile' AbSeq yourself. After cloning this repository (omitting `python setup.py install`), follow the
+instructions in INSTALL.md, then you should create a symlink to `abseq-run`.
+  
 # Usage
 ## Parameter definitions
 | Parameters                 	| Arguments                                                                                                                                                      	| Help                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|

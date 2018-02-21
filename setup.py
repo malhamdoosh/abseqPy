@@ -60,6 +60,8 @@ class FTPBlast:
 
     def download_edit_imgt_pl(self, download_dir):
         path = '/blast/executables/igblast/release/edit_imgt_file.pl'
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
         download_path = (download_dir + '/edit_imgt_file.pl').replace('//', '/')
         with open(download_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
@@ -395,7 +397,8 @@ class ExternalDependencyInstaller(install):
             with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
                 blast.download_edit_imgt_pl(d)
                 igdata_dir = (d + '/igdata').replace('//', '/')
-                os.makedirs(igdata_dir)
+                if not os.path.exists(igdata_dir):
+                    os.makedirs(igdata_dir)
                 blast.download_internal_data(igdata_dir)
                 blast.download_optional_file(igdata_dir)
         else:
@@ -407,7 +410,20 @@ class ExternalDependencyInstaller(install):
             download_imgt(d, "Mus", "mouse")
 
             # create IGBLASTDB's directory
-            os.makedirs(d + '/databases/')
+            if not os.path.exists(d + '/databases/'):
+                os.makedirs(d + '/databases/')
+
+            # if we don't have edit_imgt_file.pl script, download it!
+            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
+                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+                    blast.download_edit_imgt_pl(d)
+
+            # if we don't have makeblastdb, download it!
+            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
+                retvals = install_igblast(d)
+                for b in retvals:
+                    _syml(b, d_bin)
+
             igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
             igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
         else:
@@ -426,6 +442,7 @@ def readme():
 setup(name="AbSeq",
       version="1.1.4",
       description="Quality control pipeline for antibody libraries",
+      license="placeholder",
       long_description=readme(),
       author="CSL",
       author_email="placeholder",
