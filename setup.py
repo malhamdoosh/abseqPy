@@ -2,8 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
-from setuptools import setup, Command, find_packages
-from setuptools.command.install import install
+import pip
 import glob
 import platform
 import zipfile
@@ -14,6 +13,8 @@ import re
 from subprocess import check_output
 from ftplib import FTP
 from distutils.version import LooseVersion
+from setuptools import setup, find_packages
+from setuptools.command.install import install
 
 MAC = 'Darwin'
 LIN = 'Linux'
@@ -345,9 +346,13 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
 
 class ExternalDependencyInstaller(install):
     def run(self):
-        install.run(self)
+        # although setup() has this, it's installed locally in abseq's installation dir.
+        # By pip.installing here, it's going to be available globally
+        setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66']
+        for pack in setup_requires:
+            pip.main(['install', pack])
         # create external deps dir
-        d = setup_dir(".")
+        d = setup_dir("abseq")
         d_bin = (d + '/bin').replace('//', '/')
 
         if _needs_installation('clustalo'):
@@ -408,15 +413,14 @@ class ExternalDependencyInstaller(install):
         else:
             print("Found IGBLASTDB in ENV, skipping download")
 
+        # replace install.run(self)
+        # install.run(self)
+        self.do_egg_install()
+
 
 def readme():
     with open("README.md") as f:
         return f.read()
-
-
-def external_binaries():
-    from abseq.config import EXTERNAL_DEP_DIR
-    return EXTERNAL_DEP_DIR.rstrip('/')
 
 
 setup(name="AbSeq",
@@ -424,13 +428,19 @@ setup(name="AbSeq",
       description="Quality control pipeline for antibody libraries",
       long_description=readme(),
       author="CSL",
+      author_email="placeholder",
+      maintainer="CSL",
+      maintainer_email="placeholder",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
+      # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
       setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn'],
       packages=find_packages(),
+      # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
+      # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
       package_data={
-          'abseq': ['rscripts', external_binaries()]
+          'abseq': ['rscripts', '3rd_party']
       },
       include_package_data=True,
       cmdclass={

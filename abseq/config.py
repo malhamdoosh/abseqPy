@@ -18,6 +18,8 @@ VERSION = '1.1.4'
 # ====================================================================================
 #           ABSEQ's EXTERNAL DEPENDENCIES
 # ====================================================================================
+# NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
+# IT IN setup.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
 EXTERNAL_DEP_DIR = '3rd_party/'
 # 1. clustal omega
 CLUSTALOMEGA = 'clustalo'
