@@ -3,6 +3,8 @@
 > This section provides a comprehensive installation guide, including downloading and installing AbSeq
 and all its dependencies without root access. 
 
+If you're here because `pip` wants to install AbSeq with root access, have a look [here](https://stackoverflow.com/a/7465532).
+
 # Dependencies
 ## Binary dependencies
 In this section, we assume Unix's `make` build tool is readily available.
