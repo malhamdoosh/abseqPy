@@ -408,20 +408,21 @@ class ExternalDependencyInstaller(install):
         else:
             print("Found IGBLASTDB in ENV, skipping download")
 
+        # update abseq root position
+        tell_location()
 
-# https://stackoverflow.com/questions/3779915/why-does-python-setup-py-sdist-create-unwanted-project-egg-info-in-project-r
-class CleanCommand(Command):
-    """Custom clean command to tidy up the project root."""
-    user_options = []
 
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        os.system('rm -vrf ./build ./dist ./*.egg-info')
+def tell_location():
+    import re
+    f = ""
+    with open("abseq/config.py", "r") as fp:
+        f = fp.read()
+    with open("abseq/config.py", "w") as fp:
+        print(f)
+        new_path = os.path.abspath(".")
+        f = re.sub(r'ABSEQROOT\s*=\s*sys.path\[0\]', 'ABSEQROOT = "{}"'.format(new_path), f)
+        print(f)
+        fp.write(f)
 
 
 def readme():
@@ -437,13 +438,11 @@ setup(name="AbSeq",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1', 'psutil'],
+                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn'],
       packages=find_packages(),
       cmdclass={
-          'clean': CleanCommand,
-          # 'install': ExternalDependencyInstaller,
+          'install': ExternalDependencyInstaller,
       },
       entry_points={
-          'console_scripts': ['abseq=abseq.abseqQC.py:main'],
-      }
-      )
+          'console_scripts': ['abseq=abseq.abseqQC:main'],
+      })
