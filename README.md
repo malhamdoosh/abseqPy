@@ -59,7 +59,7 @@ see [virtualenv](https://packaging.python.org/guides/installing-using-pip-and-vi
 [conda](https://conda.io/docs/user-guide/tasks/manage-environments.html).
 
 > If you already have the datafiles required by IgBlast, now is a good time to set your `$IGDATA` and `$IGBLASTDB`
-variables to `/path/to/dir/containing/internal_data_and_optional_data` and `/path/to/igblast/makeblastdb_output` to save
+variables to `/path/to/dir/containing/internal_data_and_optional_file` and `/path/to/igblast/makeblastdb_output` to save
 some time installing AbSeq.
 
 To download and install AbSeq:
