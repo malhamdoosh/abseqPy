@@ -1,8 +1,3 @@
 __all__ = [
-    'IgMultiRepertoire',
-    'IgRepAuxiliary',
-    'IgRepReporting',
-    'IgRepertoire',
-    'argsParser',
-    'config'
+    'config', 'argsParser', 'IgRepAuxiliary', 'IgRepertoire', 'IgRepReporting', 'IgMultiRepertoire'
 ]

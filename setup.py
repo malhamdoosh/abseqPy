@@ -409,25 +409,35 @@ class ExternalDependencyInstaller(install):
             print("Found IGBLASTDB in ENV, skipping download")
 
         # update abseq root position
-        tell_location()
+        update_abseqroot()
 
 
-def tell_location():
+def update_abseqroot():
+    '''
+    as soon as someone installed this via setup.py, we can point abseq root to the installed directory
+    (eg: /Users/johndoe/anaconda3/envs/abseq-dev/lib/python2.7/site-packages/abseq)
+
+    But if this repository was just cloned from a SCV, leave it as the installation directory
+    :return:
+    '''
     import re
     f = ""
     with open("abseq/config.py", "r") as fp:
         f = fp.read()
     with open("abseq/config.py", "w") as fp:
-        print(f)
-        new_path = os.path.abspath(".")
+        new_path = "os.path.abspath(os.path.dirname(__file__))"
         f = re.sub(r'ABSEQROOT\s*=\s*sys.path\[0\]', 'ABSEQROOT = "{}"'.format(new_path), f)
-        print(f)
         fp.write(f)
 
 
 def readme():
     with open("README.md") as f:
         return f.read()
+
+
+def external_binaries():
+    from abseq.config import EXTERNAL_DEP_DIR
+    return os.path.basename(EXTERNAL_DEP_DIR.rstrip('/'))
 
 
 setup(name="AbSeq",
@@ -440,6 +450,10 @@ setup(name="AbSeq",
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn'],
       packages=find_packages(),
+      package_data={
+          'abseq': ['rscripts', external_binaries()]
+      },
+      include_package_data=True,
       cmdclass={
           'install': ExternalDependencyInstaller,
       },

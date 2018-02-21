@@ -39,7 +39,6 @@ def printFormattedTitle(title):
 
 
 def main():
-    print(sys.path[0])
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
     logFile = None

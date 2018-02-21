@@ -2,7 +2,8 @@ include TAMO.tar.gz
 include README.md
 include NEWS
 include abseq-run
-recursive-include rscripts *.R
+recursive-include abseq/rscripts/ *.R
+recursive-include abseq/3rd_party/ *
 include LICENSE
 include INSTALL.md
 include requirements.txt
