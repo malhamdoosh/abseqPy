@@ -584,7 +584,7 @@ class IgRepertoire:
         
     def analyzeSequences(self, sampleName, expectLength, startCodon=True,
                          type='secsig', clusterMotifs=False):
-        from IgRepAuxiliary.SeqUtils import generateMotifs
+        from abseq.IgRepAuxiliary.SeqUtils import generateMotifs
         lastFile = self.outputDir + sampleName + '_%s%d%d_dna_family' % (type, expectLength[0], expectLength[1])
         lastFile += '_consensus.txt'
         if (exists(lastFile)):

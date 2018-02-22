@@ -11,8 +11,8 @@ import argparse
 from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR, RSCRIPT_SAMPLE_SEPARATOR
 from numpy import Inf
 from os.path import abspath
-from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
-from IgMultiRepertoire.PlotManager import PlotManager
+from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
+from abseq.IgMultiRepertoire.PlotManager import PlotManager
 
 
 def parseArgs():
