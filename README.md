@@ -6,6 +6,7 @@
 * [Setup](#setup)
     * [Dependencies](#dependencies)
     * [Download](#download)
+        * [Maintaining versions](#maintaining-versions)
 * [Usage](#usage)
     * [Parameter definitions](#parameter-definitions)
     * [Use cases](#use-cases)
@@ -71,12 +72,15 @@ $ pip install .
 
 depending on what your system already has _and your internet speed_, this may take awhile to install.
 
-Folks who care about maintaining (and occasionally using) different versions of AbSeq can create a symlink to `abseq-run` script instead.
-
-Either way, installing AbSeq via `pip install .` will always create an executable in your path called `abseq`.
+You can now use abseq from your command line as `abseq`.
 
 If you really want to, you can install and 'compile' AbSeq yourself. After cloning this repository (omitting `pip install .`), follow the
 instructions in INSTALL.md, then you should create a symlink to `abseq-run`.
+
+### Maintaining versions
+Folks who care about maintaining (and occasionally using) different versions of AbSeq should **_not_** install
+AbSeq via `pip`. Instead, clone this repository and run `python setup.py install` in the root directory.
+When installation has completed, create a symlink to `abseq-run`.
   
 # Usage
 ## Parameter definitions
