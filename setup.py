@@ -48,6 +48,8 @@ class FTPBlast:
     def install_bins(self, binary, installation_dir):
         path = '/blast/executables/igblast/release/{}/'.format(self.version) + binary
         installation_path = (installation_dir + '/' + binary).replace('//', '/')
+        if not os.path.exists(installation_dir):
+            os.makedirs(installation_dir)
         with open(installation_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
 
