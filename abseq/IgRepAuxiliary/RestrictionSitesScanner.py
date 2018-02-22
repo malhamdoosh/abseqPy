@@ -62,6 +62,7 @@ class RestrictionSitesScanner(Process):
         stats = abseq.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
         stats['total'] = len(nextTask)      
         for id in nextTask:
+            # record = raw sequence (taken from m.dict())
             record = self.records[id]
             qsRec = self.cloneAnnot.loc[id].to_dict()
             qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
