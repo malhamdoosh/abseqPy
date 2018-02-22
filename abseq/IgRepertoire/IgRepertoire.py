@@ -488,70 +488,70 @@ class IgRepertoire:
         print("The diversity of the upstream of IGV genes is being analyzed ... ")
         #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
         #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        self.upstreamFile = self.outputDir + self.name
-        self.upstreamFile += "_upigv_%.0f_%.0f.fasta" % (self.upstream[0],
+        upstreamFile = self.outputDir + self.name
+        upstreamFile += "_upigv_%.0f_%.0f.fasta" % (self.upstream[0],
                                                          self.upstream[1])
         # extract upstream sequences
-        if (not exists(self.upstreamFile)):
-            self.extractUpstreamSeqs()
+        if (not exists(upstreamFile)):
+            self.extractUpstreamSeqs(upstreamFile)
         else:
-            print("\tUpstream sequences file was found! ... " + self.upstreamFile.split('/')[-1])
-        self.upstreamFile = os.path.abspath(self.upstreamFile)
+            print("\tUpstream sequences file was found! ... " + upstreamFile.split('/')[-1])
+        upstreamFile = os.path.abspath(upstreamFile)
         # plot the distribution of sequence length
         expectLength = self.upstream[1] - self.upstream[0] + 1
-        outputFile = self.upstreamFile.replace('.fasta', '_dist.png')
-        plotSeqLenDist(self.upstreamFile, self.name, outputFile, self.format)
-        outputFile = self.upstreamFile.replace('.fasta', '_dist_short.png')
-        plotSeqLenDist(self.upstreamFile, self.name, outputFile, self.format,
+        outputFile = upstreamFile.replace('.fasta', '_dist.png')
+        plotSeqLenDist(upstreamFile, self.name, outputFile, self.format)
+        outputFile = upstreamFile.replace('.fasta', '_dist_short.png')
+        plotSeqLenDist(upstreamFile, self.name, outputFile, self.format,
                        expectLength - 1)
-        outputFile = self.upstreamFile.replace('.fasta', '_dist_class.png')
-        plotSeqLenDistClasses(self.upstreamFile, self.name, outputFile,
+        outputFile = upstreamFile.replace('.fasta', '_dist_class.png')
+        plotSeqLenDistClasses(upstreamFile, self.name, outputFile,
                               self.format)
-        outputFile = self.upstreamFile.replace('.fasta', '_dist_short_class.png')
-        plotSeqLenDistClasses(self.upstreamFile, self.name, outputFile,
+        outputFile = upstreamFile.replace('.fasta', '_dist_short_class.png')
+        plotSeqLenDistClasses(upstreamFile, self.name, outputFile,
                               self.format, expectLength - 1)
         # classify secretion signals based on length, ATG location, gene and gene family
         # analyze intact secretion signals
-        self.analyzeSequences(self.name, [expectLength, expectLength], True)
+        self.analyzeSequences(upstreamFile, self.name, [expectLength, expectLength], True)
         # analyze trimmed secretion signals
-        self.analyzeSequences(self.name, [1, expectLength - 1], True)
+        self.analyzeSequences(upstreamFile, self.name, [1, expectLength - 1], True)
         # analyze
 
     def analyze5UTR(self):
         print("The diversity of the upstream of IGV genes is being analyzed ... ")
         #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
         #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        self.upstreamFile = self.outputDir + self.name
-        self.upstreamFile += "_5utr_%.0f_%.0f.fasta" % (self.upstream[0],
+        upstreamFile = self.outputDir + self.name
+        upstreamFile += "_5utr_%.0f_%.0f.fasta" % (self.upstream[0],
                                                         self.upstream[1])
         # extract upstream sequences
-        if (not exists(self.upstreamFile)):
-            self.extractUpstreamSeqs()
+        if (not exists(upstreamFile)):
+            self.extractUpstreamSeqs(upstreamFile)
         else:
-            print("\tUpstream sequences file was found! ... " + self.upstreamFile)
-        self.upstreamFile = os.path.abspath(self.upstreamFile)
+            print("\tUpstream sequences file was found! ... " + upstreamFile)
+        upstreamFile = os.path.abspath(upstreamFile)
         # plot the distribution of sequence length
         expectLength = self.upstream[1] - self.upstream[0] + 1
-        outputFile = self.upstreamFile.replace('.fasta', '_dist.png')
-        plotSeqLenDist(self.upstreamFile, self.name, outputFile, self.format)
-        outputFile = self.upstreamFile.replace('.fasta', '_dist_class.png')
-        plotSeqLenDistClasses(self.upstreamFile, self.name, outputFile,
+        outputFile = upstreamFile.replace('.fasta', '_dist.png')
+        plotSeqLenDist(upstreamFile, self.name, outputFile, self.format)
+        outputFile = upstreamFile.replace('.fasta', '_dist_class.png')
+        plotSeqLenDistClasses(upstreamFile, self.name, outputFile,
                               self.format)
         if (expectLength != Inf):
-            outputFile = self.upstreamFile.replace('.fasta', '_dist_short.png')
-            plotSeqLenDist(self.upstreamFile, self.name, outputFile, self.format,
+            outputFile = upstreamFile.replace('.fasta', '_dist_short.png')
+            plotSeqLenDist(upstreamFile, self.name, outputFile, self.format,
                            expectLength - 1)
-            outputFile = self.upstreamFile.replace('.fasta', '_dist_short_class.png')
-            plotSeqLenDistClasses(self.upstreamFile, self.name, outputFile,
+            outputFile = upstreamFile.replace('.fasta', '_dist_short_class.png')
+            plotSeqLenDistClasses(upstreamFile, self.name, outputFile,
                                   self.format, expectLength - 1)
             # # analyze intact secretion signals
-            self.analyzeSequences(self.name, [expectLength, expectLength],
+            self.analyzeSequences(upstreamFile, self.name, [expectLength, expectLength],
                                   startCodon=False, type='5utr', clusterMotifs=True)
 
     def analyzePrimerSpecificity(self):
         pass
 
-    def extractUpstreamSeqs(self, all=False):
+    def extractUpstreamSeqs(self, upstreamFile, all=False):
         if not all or self.cloneAnnot is None:
             self.analyzeAbundance(all)
 
@@ -565,7 +565,7 @@ class IgRepertoire:
         noSeq = 0
         queryIds = self.cloneAnnot.index
         procSeqs = 0  # processed sequences
-        fileHandle = open(self.upstreamFile, 'w')
+        fileHandle = open(upstreamFile, 'w')
         fileHandle.close()
         #         if (MEM_GB > 20):
         #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
@@ -600,7 +600,7 @@ class IgRepertoire:
                     procSeqs += 1
                     if procSeqs % self.seqsPerFile == 0:
                         print('%d/%d sequences have been processed ... ' % (procSeqs, len(queryIds)))
-                        SeqIO.write(records, open(self.upstreamFile, 'a'), 'fasta')
+                        SeqIO.write(records, open(upstreamFile, 'a'), 'fasta')
                         records = []
             else:
                 trimmedBegin += 1
@@ -608,7 +608,7 @@ class IgRepertoire:
 
         if (len(records) > 0):
             print('%d/%d sequences have been processed ... ' % (procSeqs, len(queryIds)))
-            SeqIO.write(records, open(self.upstreamFile, 'a'), 'fasta')
+            SeqIO.write(records, open(upstreamFile, 'a'), 'fasta')
         if (revAlign > 0):
             print("\t\t\tReversed alignment is not supported ... %d found and excluded!" % (revAlign))
         if (trimmedBegin > 0):
@@ -633,7 +633,7 @@ class IgRepertoire:
             outputFile = self.args.outdir + self.args.name + '_seq_length_dist.png'
             plotSeqLenDist(self.args.f1, self.args.name, outputFile, self.args.fmt, maxbins=-1)
 
-    def loadValidSequences(self, sampleName, expectLength, startCodon=True, type='secsig'):
+    def loadValidSequences(self, upstreamFile, sampleName, expectLength, startCodon=True, type='secsig'):
         print("\tSequences between %d and %d are being extracted ... "
               % (expectLength[0], expectLength[1]))
         ighvSignals = {}
@@ -645,10 +645,10 @@ class IgRepertoire:
         #         if (MEM_GB > 20):
         #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
         #                   (use safeOpen from IgRepertoire.utils) if not sure
-        #             records = SeqIO.to_dict(SeqIO.parse(self.upstreamFile, 'fasta'))
+        #             records = SeqIO.to_dict(SeqIO.parse(upstreamFile, 'fasta'))
         #         else:
         # SeqIO.index can only parse string filename (that isn't opened) and unzipped
-        records = SeqIO.index(gunzip(self.upstreamFile), 'fasta')
+        records = SeqIO.index(gunzip(upstreamFile), 'fasta')
         for id in records:
             rec = records[id]
             ighv = rec.id.split('|')[1]
@@ -728,7 +728,7 @@ class IgRepertoire:
         gc.collect()
         return (ighvSignals, faultySeqFile, noStartCodonFile)
 
-    def analyzeSequences(self, sampleName, expectLength, startCodon=True,
+    def analyzeSequences(self, upstreamFile, sampleName, expectLength, startCodon=True,
                          type='secsig', clusterMotifs=False):
         from abseq.IgRepAuxiliary.SeqUtils import generateMotifs
         lastFile = self.outputDir + sampleName + '_%s%d%d_dna_family' % (type, expectLength[0], expectLength[1])
@@ -742,7 +742,7 @@ class IgRepertoire:
                 type, expectLength[0], expectLength[1])
         else:
             print("Sequences are being analyzed ... ")
-            (ighvSignals, faultySeqFile, noStartCodonFile) = self.loadValidSequences(
+            (ighvSignals, faultySeqFile, noStartCodonFile) = self.loadValidSequences(upstreamFile,
                 sampleName, expectLength, startCodon, type)
 
         # extract DNA motifs for each germline variant

@@ -208,7 +208,7 @@ def parseCommandLineArguments():
                                "index is ignored during analysis. By default, each individual sequence's "
                                "offset is inferred automatically.", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
-                                                   " analysis [default=[1, inf)]", default=None)
+                                                   " analysis. Index starts from 1 [default=[1, inf)]", default=None)
     optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
                           default=0, type=int)
     optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
