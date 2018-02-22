@@ -39,6 +39,7 @@ There will be more information on contribution guidelines in the wikipage.
 
 ## Dependencies
 Before proceeding, you should confirm that you have at least these tools readily available:
+
 * [C/C++ compilers](https://gcc.gnu.org/)
 * [curl](https://curl.haxx.se/)
 * [git](https://git-scm.com/)
@@ -202,7 +203,7 @@ generated in R but there will be **no** explicit sample comparisons.
 
 # References 
 
-Sievers F, Wilm A, Dineen DG, Gibson TJ, Karplus K, Li W, Lopez R, McWilliam H, Remmert M, SÃ¶ding J, Thompson JD,
+Sievers F, Wilm A, Dineen DG, Gibson TJ, Karplus K, Li W, Lopez R, McWilliam H, Remmert M, Söding J, Thompson JD,
 Higgins DG (2011). 
 [Fast, scalable generation of high-quality protein multiple sequence alignments using Clustal Omega](http://www.nature.com/msb/journal/v7/n1/full/msb201175.html).
 Molecular Systems Biology 7:539 doi:10.1038/msb.2011.75
@@ -221,7 +222,7 @@ Bioinformatics. 2005 Jul 15;21(14):3164-5.
 
 [IgBLAST](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3692102/): an immunoglobulin variable domain sequence analysis tool
 Jian Ye, Ning Ma, Thomas L. Madden, James M. Ostell
-Nucleic Acids Res. 2013 Jul; 41(Web Server issue): W34â€“W40. Published online 2013 May 11. doi: 10.1093/nar/gkt382
+Nucleic Acids Res. 2013 Jul; 41(Web Server issue): W34–W40. Published online 2013 May 11. doi: 10.1093/nar/gkt382
 PMCID: PMC3692102
 
 [Ghostscript](https://ghostscript.com/index.html): an interpreter for the PostScript language and for PDF.
