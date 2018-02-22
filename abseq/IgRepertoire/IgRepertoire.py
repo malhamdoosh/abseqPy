@@ -138,26 +138,26 @@ class IgRepertoire:
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
-        self.cloneAnnotFile = outDir + self.name
-        self.cloneAnnotFile += "_clones_annot.h5"
-        #         self.cloneAnnotFile += "_clones_annot.tab"
+        cloneAnnotFile = outDir + self.name
+        cloneAnnotFile += "_clones_annot.h5"
+        #         cloneAnnotFile += "_clones_annot.tab"
         #         print("The IGV clones are being annotated ... ")
         # merge reads if needed
         #         print("\tPaired-end reads are being merged using " + self.merger)
         if (self.readFile is None):
             self.mergePairedReads(outDir)
 
-        if exists(self.cloneAnnotFile):
+        if exists(cloneAnnotFile):
             if self.task == "annotate":
                 print("\tClones annotation file found and no further work needed ... " +
-                      self.cloneAnnotFile.split('/')[-1])
+                      cloneAnnotFile.split('/')[-1])
             else:
                 print("\tClones annotation file found and being loaded ... " +
-                      self.cloneAnnotFile.split('/')[-1])
+                      cloneAnnotFile.split('/')[-1])
                 sys.stdout.flush()
-                #             self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
+                #             self.cloneAnnot = read_csv(cloneAnnotFile, sep='\t',
                 #                                        header=0, index_col=0)
-                self.cloneAnnot = read_hdf(self.cloneAnnotFile, "cloneAnnot")
+                self.cloneAnnot = read_hdf(cloneAnnotFile, "cloneAnnot")
         else:
             if (not exists(self.readFile)):
                 raise Exception(self.readFile + " does not exist!")
@@ -182,21 +182,21 @@ class IgRepertoire:
                 writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
             # export the CDR/FR annotation to a file
             print("\tClones annotation file is being written to " +
-                  self.cloneAnnotFile.split("/")[-1])
-            #             self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)
-            self.cloneAnnot.to_hdf(self.cloneAnnotFile, "cloneAnnot", mode='w')
+                  cloneAnnotFile.split("/")[-1])
+            #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
+            self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
             writeParams(self.args, outDir)
         print("Number of clones that are annotated is {0:,}".format(
             int(self.cloneAnnot.shape[0])))
         if outDirFilter or all:
             if outDirFilter is None:
                 outDirFilter = outDir
-            ## Filter clones based on bitscore, alignLen and sStart
+            # Filter clones based on bitscore, alignLen, qStart, and sStart
             print("Clones are being filtered based on the following criteria: ")
-            print("\tBit score: " + `self.bitScore`)
-            print("\tAlignment length: " + `self.alignLen`)
-            print("\tSubject V gene start: " + `self.sStart`)
-            print("\tQuery V gene start: " + `self.qStart`)
+            print("\tBit score: " + repr(self.bitScore))
+            print("\tAlignment length: " + repr(self.alignLen))
+            print("\tSubject V gene start: " + repr(self.sStart))
+            print("\tQuery V gene start: " + repr(self.qStart))
             selectedRows = (
                     (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
                     (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
@@ -239,13 +239,13 @@ class IgRepertoire:
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
             print("WARNING: remove the 'productivity' directory if you changed the filtering criteria.")
-        self.refinedCloneAnnotFile = outDir + self.name
-        self.refinedCloneAnnotFile += "_refined_clones_annot.h5"
+        refinedCloneAnnotFile = outDir + self.name
+        refinedCloneAnnotFile += "_refined_clones_annot.h5"
 
-        self.cloneSeqFile = outDir + self.name
-        self.cloneSeqFile += "_clones_seq.h5"
+        cloneSeqFile = outDir + self.name
+        cloneSeqFile += "_clones_seq.h5"
 
-        if (not exists(self.refinedCloneAnnotFile)):
+        if (not exists(refinedCloneAnnotFile)):
             if not all or self.cloneAnnot is None:
                 self.annotateClones(outDir)
             #             if (self.trimmed):
@@ -264,22 +264,22 @@ class IgRepertoire:
             # if generateReport:
             # export the CDR/FR annotation to a file                
             print("The refined clone annotation file is being written to " +
-                  self.refinedCloneAnnotFile.split("/")[-1])
-            self.cloneAnnot.to_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot", mode='w',
+                  refinedCloneAnnotFile.split("/")[-1])
+            self.cloneAnnot.to_hdf(refinedCloneAnnotFile, "refinedCloneAnnot", mode='w',
                                    complib='blosc')
             sys.stdout.flush()
             print("The clone protein sequences are being written to " +
-                  self.cloneSeqFile.split("/")[-1])
-            self.cloneSeqs.to_hdf(self.cloneSeqFile, "cloneSequences", mode='w',
+                  cloneSeqFile.split("/")[-1])
+            self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w',
                                   complib='blosc')
             sys.stdout.flush()
             writeParams(self.args, outDir)
         else:
             print("The refined clone annotation files were found and being loaded ... " +
-                  self.refinedCloneAnnotFile.split('/')[-1])
-            self.cloneAnnot = read_hdf(self.refinedCloneAnnotFile, "refinedCloneAnnot")
+                  refinedCloneAnnotFile.split('/')[-1])
+            self.cloneAnnot = read_hdf(refinedCloneAnnotFile, "refinedCloneAnnot")
             print("\tClone annotation was loaded successfully")
-            self.cloneSeqs = read_hdf(self.cloneSeqFile, "cloneSequences")
+            self.cloneSeqs = read_hdf(cloneSeqFile, "cloneSequences")
             print("\tClone sequences were loaded successfully")
         if generateReport:
             # display statistics 
@@ -309,14 +309,14 @@ class IgRepertoire:
         elif self.warnOldDir:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
         if not all or self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(self.reportInterim)
+            self.analyzeProductivity(self.reportInterim, all)
 
         gc.collect()
         # Identify spectratypes 
         spectraTypes = annotateSpectratypes(self.cloneAnnot)
         # Identify clonotypes 
         clonoTypes = annotateClonotypes(self.cloneSeqs)
-        #### HERE       
+        # HERE
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
                                 self.clonelimit)
 
@@ -368,35 +368,18 @@ class IgRepertoire:
     def analyzeRestrictionSites(self, all=False):
         #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
         #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        self.siteHitsFile = self.outputDir + self.name
-        self.siteHitsFile += "_%s.csv" % (self.sitesFile.split('/')[-1].split('.')[0])
+        siteHitsFile = self.outputDir + self.name
+        siteHitsFile += "_%s.csv" % (self.sitesFile.split('/')[-1].split('.')[0])
 
-        if (exists(self.siteHitsFile)):
-            print("Restriction sites were already searched at ... " + self.siteHitsFile.split('/')[-1])
+        if (exists(siteHitsFile)):
+            print("Restriction sites were already searched at ... " + siteHitsFile.split('/')[-1])
             return
 
-        self.cloneAnnotFile = self.outputDir + self.name
-        self.cloneAnnotFile += "_cdr_info.tab"
+        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
+            self.analyzeProductivity(self.reportInterim, all)
 
-        self.cloneSeqFile = self.outputDir + self.name
-        self.cloneSeqFile += "_cdr_seq.tab"
-        if (not exists(self.cloneAnnotFile)):
-            self.analyzeAbundance('cdrinfo')
-            # export the CDR/FR annotation to a file
-            self.cloneAnnot.to_csv(self.cloneAnnotFile, sep='\t', header=True, index=True)
-            print("Text file has been written to " + self.cloneAnnotFile)
-            # Refine the annotation of CDR3 and FR4
-            self.analyzeProductivity(all)
-        else:
-            print("\tCDRs information file was found! ... " + self.cloneAnnotFile.split('/')[-1])
-            self.cloneAnnot = read_csv(self.cloneAnnotFile, sep='\t',
-                                       header=0, index_col=0)
-            if (not exists(self.cloneSeqFile)):
-                self.analyzeProductivity(all)
-
-        loadRestrictionSites()
+        rsites = loadRestrictionSites(self.sitesFile)
         print("Restriction sites are being searched ... ")
-        self.cloneSeqs = None
         gc.collect()
         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'No']
@@ -408,7 +391,7 @@ class IgRepertoire:
         seqsCutByAny = 0
         siteHitsSeqsIDs = {}
         siteHitsSeqsIGV = {}
-        for site in self.sites.keys():
+        for site in rsites.keys():
             siteHitsCount[site] = 0
             siteHitSeqsCount[site] = 0
             hitRegion[site] = Counter({'fr1': 0, 'cdr1': 0,
@@ -440,10 +423,10 @@ class IgRepertoire:
                 seqRC = str(Seq(seq).reverse_complement())
                 cut = False
                 for site in siteHitsCount.keys():
-                    hits = findHits(seq, self.sites[site])
+                    hits = findHits(seq, rsites[site])
                     strand = "forward"
                     if len(hits) == 0:
-                        hits = findHits(seqRC, self.sites[site])
+                        hits = findHits(seqRC, rsites[site])
                         strand = "reversed"
                     if len(hits) > 0:
                         siteHitsCount[site] += len(hits)
@@ -469,13 +452,13 @@ class IgRepertoire:
         records.close()
         print('%d/%d sequences have been searched ... ' % (procSeqs, len(queryIds)))
         # # print out the results
-        f = open(self.siteHitsFile, 'w')
-        f.write(
-            "Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),No.Molecules,Percentage of Molecules (%),FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4, V Germlines \n")
+        f = open(siteHitsFile, 'w')
+        f.write("Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),"
+                "No.Molecules,Percentage of Molecules (%),FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4, V Germlines \n")
         sites = sorted(siteHitSeqsCount, key=siteHitSeqsCount.get)
         for site in sites:
             f.write("%s,%s,%d,%.3f,%d,%.3f,%d,%d,%d,%d,%d,%d,%d,%s\n" % (site,
-                                                                         self.sites[site],
+                                                                         rsites[site],
                                                                          siteHitsCount[site],
                                                                          siteHitsCount[site] * 100.0 / sum(
                                                                              siteHitsCount.values()),
@@ -493,13 +476,13 @@ class IgRepertoire:
             seqs = []
             for (strand, seq) in siteHitSeqsGermline[site]:
                 seqs.append(SeqRecord(Seq(seq), id='seq' + `len(seqs)` + strand))
-            SeqIO.write(seqs, self.siteHitsFile.replace('.csv', '_germline' + site + '.fasta'), 'fasta')
-        f.write("Sequences cut by any of the above enzymes, %d, %.3f\n" % (
-        seqsCutByAny, seqsCutByAny * 100.0 / len(queryIds)))
+            SeqIO.write(seqs, siteHitsFile.replace('.csv', '_germline' + site + '.fasta'), 'fasta')
+        f.write("Sequences cut by any of the above enzymes, %d, %.3f\n" % (seqsCutByAny,
+                                                                           seqsCutByAny * 100.0 / len(queryIds)))
         f.close()
         # Ven Diagram of overlapping sequences
-        plotVenn(siteHitsSeqsIDs, self.siteHitsFile.replace('.csv', '_venn.png'))
-        print("Restriction enzyme results were written to " + self.siteHitsFile)
+        plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'))
+        print("Restriction enzyme results were written to " + siteHitsFile)
 
     def analyzeSecretionSignal(self):
         print("The diversity of the upstream of IGV genes is being analyzed ... ")
@@ -681,7 +664,7 @@ class IgRepertoire:
             rec = records[id]
             ighv = rec.id.split('|')[1]
             seq = rec.seq
-            if (len(rec) >= expectLength[0] and len(rec) <= expectLength[1]):
+            if (expectLength[0] <= len(rec) <= expectLength[1]):
                 if (not startCodon or "ATG" in seq):
                     if (faultyTransCounts.get(ighv, None) is None):
                         faultyTransCounts[ighv] = 0
@@ -849,7 +832,7 @@ class IgRepertoire:
     def analyzeIgProtein(self):
         # sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
         # sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-        # self.cloneSeqs = read_csv(self.cloneSeqFile, sep='\t',
+        # self.cloneSeqs = read_csv(cloneSeqFile, sep='\t',
         #                                header=0, index_col=0)
         self.readFile1 = self.outputDir + self.name
         self.readFile1 += '_productive_prot.fasta'

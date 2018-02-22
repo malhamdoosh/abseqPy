@@ -13,8 +13,7 @@ from abseq.IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
 def generateOverlapFigures(overlapResults, noSeqs, name, siteHitsFile):
     if overlapResults is None:
         return         
-    if (overlapResults.get('order1', None) is not None and 
-        len(overlapResults["order1"]) in [2,3]):
+    if (overlapResults.get('order1', None) is not None and len(overlapResults["order1"]) in [2,3]):
         # Ven Diagram of overlapping sequences
         title = 'Restriction sites in Sample ' + name 
         title += '\nTotal is {:,}'.format(int(noSeqs)) 

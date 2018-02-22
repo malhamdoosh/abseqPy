@@ -74,9 +74,7 @@ def calcRSAOverlapOrder2(order1, sites):
     return overlap
 
 
-
-def scanRestrictionSitesSimple(name, readFile, format, 
-       cloneAnnot, sitesFile, threads):
+def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, threads):
     sitesInfo = loadRestrictionSites(sitesFile)
     seqsPerWorker = len(sitesInfo)
     workers = []   
@@ -101,7 +99,7 @@ def scanRestrictionSitesSimple(name, readFile, format,
         # Initialize workers
         for i in range(threads):
             w = RestrictionSitesScanner(records, cloneAnnot, procCounter, 
-                                        sitesInfo.copy(), simpleScan = True)
+                                        sitesInfo.copy(), simpleScan=True)
             w.tasksQueue = tasks
             w.exitQueue = exitQueue  
             w.resultsQueue = resultsQueue    
@@ -256,19 +254,19 @@ def findHitsRegion(cdrRec, hitStarts):
     vhStart = cdrRec['vqstart'] - cdrRec['vstart']
     regions = {}
     for s in hitStarts:
-        if (s >= cdrRec['fr1.start']-cdrRec['vstart']  - vhStart and s <= cdrRec['fr1.end'] - vhStart):
+        if ((cdrRec['fr1.start'] - cdrRec['vstart'] - vhStart) <= s <= (cdrRec['fr1.end'] - vhStart)):
             regions['fr1'] = 1
-        elif (s >= cdrRec['cdr1.start'] - vhStart and s <= cdrRec['cdr1.end'] - vhStart):
+        elif ((cdrRec['cdr1.start'] - vhStart) <= s <= (cdrRec['cdr1.end'] - vhStart)):
             regions['cdr1'] = 1
-        elif (s >= cdrRec['fr2.start'] - vhStart and s <= cdrRec['fr2.end'] - vhStart):
+        elif ((cdrRec['fr2.start'] - vhStart) <= s <= (cdrRec['fr2.end'] - vhStart)):
             regions['fr2'] = 1
-        elif (s >= cdrRec['cdr2.start'] - vhStart and s <= cdrRec['cdr2.end'] - vhStart):
+        elif ((cdrRec['cdr2.start'] - vhStart) <= s <= (cdrRec['cdr2.end'] - vhStart)):
             regions['cdr2'] = 1
-        elif (s >= cdrRec['fr3.start'] - vhStart and s <= cdrRec['fr3.end'] - vhStart):
+        elif ((cdrRec['fr3.start'] - vhStart) <= s <= (cdrRec['fr3.end'] - vhStart)):
             regions['fr3'] = 1
-        elif (s >= cdrRec['cdr3.start'] - vhStart and s <= cdrRec['cdr3.end'] - vhStart):
+        elif ((cdrRec['cdr3.start'] - vhStart) <= s <= (cdrRec['cdr3.end'] - vhStart)):
             regions['cdr3'] = 1
-        elif (not isnan(cdrRec['fr4.end']) and s >= cdrRec['fr4.start'] - vhStart and s <= cdrRec['fr4.end'] - vhStart):
+        elif ((not isnan(cdrRec['fr4.end'])) and ((cdrRec['fr4.start'] - vhStart) <= s <= (cdrRec['fr4.end'] - vhStart))):
             regions['fr4'] = 1    
         else:
             print(hitStarts, vhStart, cdrRec)
