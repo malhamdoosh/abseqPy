@@ -3,19 +3,22 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
+import gc
+import sys
 
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
 from numpy import  random
 from multiprocessing import Queue, Value, Lock
-from IgRepAuxiliary.RefineWorker import RefineWorker
-from IgRepertoire.igRepUtils import gunzip
-import sys
 from math import ceil
-from config import MEM_GB
-import gc
-from IgRepAuxiliary.IgBlastWorker import getAnnotationFields
+
+from abseq.IgRepAuxiliary.RefineWorker import RefineWorker
+from abseq.IgRepertoire.igRepUtils import gunzip
+from abseq.IgRepAuxiliary.IgBlastWorker import getAnnotationFields
+from abseq.config import MEM_GB
+
 
 def loadRefineFlagInfo():
     refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 

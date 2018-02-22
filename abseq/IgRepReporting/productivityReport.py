@@ -5,12 +5,14 @@
     Changes log: check git commits. 
 ''' 
 
-from collections import Counter
-from IgRepReporting.igRepPlots import plotDist
-from IgRepertoire.igRepUtils import compressCountsFamilyLevel
-from numpy import nan
 import gc
 import pandas as pd
+
+from collections import Counter
+from numpy import nan
+
+from abseq.IgRepReporting.igRepPlots import plotDist
+from abseq.IgRepertoire.igRepUtils import compressCountsFamilyLevel
 
 
 def generateProductivityReport(cloneAnnot, name, chain, outputDir):

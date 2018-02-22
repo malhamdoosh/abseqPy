@@ -3,24 +3,27 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
+
+import os
+import gzip
+import shutil
+import sys
 
 from os.path import exists
-import os
-import sys
 from Bio import SeqIO, AlignIO
 from pandas.core.frame import DataFrame
 from numpy import isnan
 from Bio.SeqRecord import SeqRecord
-from config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
 from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
 from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
-from IgRepReporting.igRepPlots import plotDist
-import gzip
-import shutil
+
+from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
+from abseq.IgRepReporting.igRepPlots import plotDist
+
 
 def detectFileFormat(fname, noRaise=False):
     """

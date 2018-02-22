@@ -1,6 +1,7 @@
-from multiprocessing import Process, current_process
 import traceback
 import sys
+
+from multiprocessing import Process, current_process
 
 
 class GeneralWorker(Process):

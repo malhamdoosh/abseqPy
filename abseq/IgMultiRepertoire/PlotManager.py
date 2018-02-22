@@ -1,7 +1,7 @@
-from config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
-import os
 import subprocess
 import sys
+
+from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
 
 """
 XXX: IMPORTANT NOTE

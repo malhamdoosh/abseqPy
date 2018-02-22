@@ -1,12 +1,14 @@
-from PlotManager import PlotManager
-from IgRepertoire.IgRepertoire import IgRepertoire
-from IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
+import os
+
 from multiprocessing import Queue
 from copy import deepcopy
-from config import DEFAULT_MERGER
-from GeneralWorker import GeneralWorker, GeneralWorkerException
 from math import floor
-import os
+
+from abseq.config import DEFAULT_MERGER
+from abseq.IgMultiRepertoire.GeneralWorker import GeneralWorker, GeneralWorkerException
+from abseq.IgMultiRepertoire.PlotManager import PlotManager
+from abseq.IgRepertoire.IgRepertoire import IgRepertoire
+from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 
 
 class IgMultiRepertoire:

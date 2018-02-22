@@ -8,14 +8,13 @@
 '''
 
 import sys
-import os
-from IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 import time
-from argsParser import parseArgs
 import traceback
-from IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses
-from config import VERSION, PriorityPath
 import warnings
+
+from abseq.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
+from abseq.argsParser import parseArgs
+from abseq.config import VERSION, PriorityPath
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=DeprecationWarning)

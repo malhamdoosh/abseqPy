@@ -3,20 +3,20 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
-from collections import Counter
-from math import ceil
+'''
+
 import os
-from multiprocessing import Queue
-from IgRepAuxiliary.IgBlastWorker import analyzeSmallFile, IgBlastWorker
 import sys
+import gc
+
+from multiprocessing import Queue
+from collections import Counter
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
-import gc
-from IgRepertoire.igRepUtils import splitFastaFile, safeOpen
+from math import ceil
 
-
-
+from abseq.IgRepAuxiliary.IgBlastWorker import analyzeSmallFile, IgBlastWorker
+from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 
 
 def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):

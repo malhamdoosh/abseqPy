@@ -7,8 +7,9 @@
 
 import os
 from collections import Counter, defaultdict
-from IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
-from IgRepertoire.igRepUtils import compressCountsGeneLevel,\
+
+from abseq.IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
+from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, \
     compressCountsFamilyLevel
 
 
