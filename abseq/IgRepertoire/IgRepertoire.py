@@ -557,16 +557,11 @@ class IgRepertoire:
     def analyzePrimerSpecificity(self):
         pass
 
-    def extractUpstreamSeqs(self):
-        if (not exists(self.alignInfoFile)):
-            self.analyzeAbundance('aligninfo')
-            self.alignInfo.to_csv(self.alignInfoFile, sep='\t', header=True, index=True)
-            print("Text file has been written to " + self.alignInfoFile)
-        else:
-            print("\tAlignment information file was found! ... " + self.alignInfoFile.split('/')[-1])
-            self.alignInfo = read_csv(self.alignInfoFile, sep='\t',
-                                      header=0, index_col=0)
-        # extract the upstream DNA sequences and write them into a fasta file  
+    def extractUpstreamSeqs(self, all=False):
+        if not all or self.cloneAnnot is None:
+            self.analyzeAbundance(all)
+
+        # extract the upstream DNA sequences and write them into a fasta file
         print("\tExtracting the upstream sequences ... ")
         records = []
         revAlign = 0
@@ -574,7 +569,7 @@ class IgRepertoire:
         expectLength = self.upstream[1] - self.upstream[0] + 1
         trimmedUpstream = 0
         noSeq = 0
-        queryIds = self.alignInfo.index
+        queryIds = self.cloneAnnot.index
         procSeqs = 0  # processed sequences
         fileHandle = open(self.upstreamFile, 'w')
         fileHandle.close()
@@ -589,16 +584,16 @@ class IgRepertoire:
         for id in queryIds:
             record = records[id]
 
-            qsRec = self.alignInfo.loc[record.id]
+            qsRec = self.cloneAnnot.loc[record.id]
             if (qsRec.strand != 'forward'):
                 revAlign += 1
                 record.seq = record.seq.reverse_complement()
-            if (qsRec.sstart <= 3):
-                end = qsRec.qstart - self.upstream[0] - qsRec.sstart + 1
+            if (qsRec.vstart <= 3):
+                end = qsRec.vqstart - self.upstream[0] - qsRec.vstart + 1
                 if end <= 1:
                     noSeq += 1
                 else:
-                    start = qsRec.qstart - self.upstream[1] - qsRec.sstart + 1
+                    start = qsRec.vqstart - self.upstream[1] - qsRec.vstart + 1
                     if start < 1:
                         start = 1
                     record.description = ""
@@ -606,7 +601,7 @@ class IgRepertoire:
                     record.seq = record.seq[int(start - 1):int(end)]
                     if (expectLength != Inf and len(record.seq) < expectLength):
                         trimmedUpstream += 1
-                    record.id = record.id + '|' + qsRec.subjid
+                    record.id = record.id + '|' + qsRec.vgene
                     records.append(record)
                     procSeqs += 1
                     if procSeqs % self.seqsPerFile == 0:
@@ -866,7 +861,7 @@ class IgRepertoire:
         if (exists(self.outputDir + "/abundance/")):
             print("Protein sequences have been already analyzed ... ")
         else:
-            self.analyzeAbundance('abundance')
+            self.analyzeAbundance()
 
     def write5EndPrimerStats(self, cdrInfo, fileprefix, category="All"):
         # sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
