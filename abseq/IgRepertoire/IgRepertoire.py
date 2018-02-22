@@ -491,15 +491,12 @@ class IgRepertoire:
         self.upstreamFile = self.outputDir + self.name
         self.upstreamFile += "_upigv_%.0f_%.0f.fasta" % (self.upstream[0],
                                                          self.upstream[1])
-        self.alignInfoFile = self.outputDir + self.name
-        self.alignInfoFile += "_align_info.tab"
         # extract upstream sequences
         if (not exists(self.upstreamFile)):
             self.extractUpstreamSeqs()
         else:
             print("\tUpstream sequences file was found! ... " + self.upstreamFile.split('/')[-1])
         self.upstreamFile = os.path.abspath(self.upstreamFile)
-        self.alignInfoFile = os.path.abspath(self.alignInfoFile)
         # plot the distribution of sequence length
         expectLength = self.upstream[1] - self.upstream[0] + 1
         outputFile = self.upstreamFile.replace('.fasta', '_dist.png')
@@ -527,15 +524,12 @@ class IgRepertoire:
         self.upstreamFile = self.outputDir + self.name
         self.upstreamFile += "_5utr_%.0f_%.0f.fasta" % (self.upstream[0],
                                                         self.upstream[1])
-        self.alignInfoFile = self.outputDir + self.name
-        self.alignInfoFile += "_align_info.tab"
         # extract upstream sequences
         if (not exists(self.upstreamFile)):
             self.extractUpstreamSeqs()
         else:
             print("\tUpstream sequences file was found! ... " + self.upstreamFile)
         self.upstreamFile = os.path.abspath(self.upstreamFile)
-        self.alignInfoFile = os.path.abspath(self.alignInfoFile)
         # plot the distribution of sequence length
         expectLength = self.upstream[1] - self.upstream[0] + 1
         outputFile = self.upstreamFile.replace('.fasta', '_dist.png')
