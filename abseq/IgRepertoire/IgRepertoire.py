@@ -17,6 +17,7 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
+from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeParams, writeCountsCategoriesToFile, \
@@ -548,8 +549,14 @@ class IgRepertoire:
             self.analyzeSequences(upstreamFile, self.name, [expectLength, expectLength],
                                   startCodon=False, type='5utr', clusterMotifs=True)
 
-    def analyzePrimerSpecificity(self):
-        pass
+    def analyzePrimerSpecificity(self, all=False):
+        if not all or self.cloneAnnot is None:
+            if self.fr4cut:
+                self.analyzeProductivity(all=all)
+            else:
+                self.analyzeAbundance(all)
+        addPrimerData(self.cloneAnnot, self.readFile, self.format, self.fr4cut, self.trim5End, self.trim3End,
+                      self.actualQstart, self.end5, self.end3, self.end5offset, self.threads)
 
     def extractUpstreamSeqs(self, upstreamFile, all=False):
         if not all or self.cloneAnnot is None:
