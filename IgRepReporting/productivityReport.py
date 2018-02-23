@@ -15,7 +15,7 @@ import pandas as pd
 
 def generateProductivityReport(cloneAnnot, name, chain, outputDir):
     print("Productivity report is being generated ... ")
-    cloneAnnotCopy = cloneAnnot.where((pd.notna(cloneAnnot)), 'NaN')
+    cloneAnnotCopy = cloneAnnot.where((pd.notnull(cloneAnnot)), 'NaN')
     productive = extractProductiveClones(cloneAnnotCopy, name, outputDir)
     productiveFamilyDist = compressCountsFamilyLevel(Counter(productive['vgene'].tolist()))
     plotDist(productiveFamilyDist, name, outputDir + name + 
