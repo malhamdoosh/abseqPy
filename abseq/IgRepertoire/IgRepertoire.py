@@ -17,7 +17,7 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
-from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData
+from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, writePrimerStats
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeParams, writeCountsCategoriesToFile, \
@@ -550,6 +550,8 @@ class IgRepertoire:
                                   startCodon=False, type='5utr', clusterMotifs=True)
 
     def analyzePrimerSpecificity(self, all=False):
+        # Load self.cloneAnnot for further analysis.
+        # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
         if not all or self.cloneAnnot is None:
             if self.fr4cut:
                 self.analyzeProductivity(all=all)
@@ -557,6 +559,29 @@ class IgRepertoire:
                 self.analyzeAbundance(all)
         addPrimerData(self.cloneAnnot, self.readFile, self.format, self.fr4cut, self.trim5End, self.trim3End,
                       self.actualQstart, self.end5, self.end3, self.end5offset, self.threads)
+        outDir = self.outputDir + 'primer_specificity/'
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+
+        invalid5Clones = None
+        if self.end5:
+            print("5-end analysis of all clones ... ")
+            writePrimerStats('5', self.name, self.cloneAnnot, outDir + self.name + '_all_5end_')
+            invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
+        if self.end3:
+            print("3-end analysis of all clones ... ")
+            writePrimerStats('3', self.name, self.cloneAnnot, outDir + self.name + '_all_3end_')
+
+            if invalid5Clones:
+                invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
+                plotVenn({"5'-end": set(invalid5Clones), "3'-end": set(invalid3Clones)},
+                         outDir + self.name + '_all_invalid_primers.png')
+                del invalid3Clones, invalid5Clones
+        # TODO: Fri Feb 23 17:13:09 AEDT 2018
+        # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
+        # TODO: check wht's == Indelled, ... etc (see what's the output to the dataframe in primeraux
+        # TODO: finish off from extractProductiveRNAs
+
 
     def extractUpstreamSeqs(self, upstreamFile, all=False):
         if not all or self.cloneAnnot is None:
@@ -863,49 +888,6 @@ class IgRepertoire:
             print("Protein sequences have been already analyzed ... ")
         else:
             self.analyzeAbundance()
-
-    def write5EndPrimerStats(self, cdrInfo, fileprefix, category="All"):
-        # sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
-        # sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-
-        valid5End = Counter(cdrInfo['5end'].tolist())
-        plotDist(valid5End, self.name, fileprefix + 'integrity_dist.png',
-                 title='Integrity of 5`-end Primer Sequence (%s)' % (category),
-                 proportion=True, rotateLabels=False)
-        invalid5Clones = cdrInfo.index[cdrInfo['5end'] == 'Indelled'].tolist()
-        print("Example of Indelled 5`-end:", invalid5Clones[1:10])
-        print("Example of valid 5`-end:", cdrInfo.index[cdrInfo['5end'] != 'Indelled'].tolist()[1:10])
-
-        stopcodonInFrameDist = Counter(cdrInfo['stopcodon'].tolist())
-        plotDist(stopcodonInFrameDist, self.name,
-                 fileprefix + 'stopcodon_dist.png',
-                 title='Stop Codons in 5`-End (%s)' % (category),
-                 proportion=False, rotateLabels=False)
-
-        c1 = Counter(cdrInfo[cdrInfo['5end'] == 'Indelled']['5endPrimer'].tolist())
-        plotDist(c1, self.name, fileprefix +
-                 'indelled_dist.png',
-                 title='Abundance of Indelled 5`-end Primers (%s)' % (category),
-                 proportion=False, rotateLabels=False, vertical=False, top=50)
-        c = Counter(cdrInfo[cdrInfo['5end'] == 'Indelled']['5endIndel'].tolist())
-        plotDist(c, self.name, fileprefix +
-                 'indel_pos_dist.png',
-                 title='Abundance of Indel Positions in 5`-end Primers (%s)' % (category),
-                 proportion=False, rotateLabels=False, vertical=True,
-                 sortValues=False, top=50)
-        primers = set(cdrInfo['5endPrimer'].tolist())
-        # print(c1, primers)
-        for primer in primers:
-            # print(primer)
-            df = cdrInfo[cdrInfo['5end'] == 'Indelled']
-            df = df[df['5endPrimer'] == primer]
-            # print(df.shape)
-            germLineDist = compressCountsGeneLevel(Counter(df['vgene'].tolist()))
-            plotDist(germLineDist, self.name, fileprefix + primer +
-                     '_igv_dist.png',
-                     title='IGV Abundance (%s)' % (category),
-                     proportion=False, vertical=False, top=20, rotateLabels=False)
-        gc.collect()
 
 #     def extractProductiveRNAs(self):
 # #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
