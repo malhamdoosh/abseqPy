@@ -1,10 +1,11 @@
 import numpy as np
 
 from multiprocessing import Process
+
+from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
-from abseq.IgRepertoire.igRepUtils import findBestMatchedPattern
-from abseq.IgRepAuxiliary.primerAuxiliary import parsePrimerFile
+from abseq.IgRepertoire.igRepUtils import findBestMatchedPattern, calMaxIUPACAlignScores
 
 
 class PrimerWorker(Process):
@@ -24,8 +25,8 @@ class PrimerWorker(Process):
         self.exitQueue = exitQueue
         self.resultsQueue = resultsQueue
         self.firstJobTaken = False
-        self.maxPrimer5Length, self.primer5sequences = parsePrimerFile(self.end5)
-        self.maxPrimer3Length, self.primer3sequences = parsePrimerFile(self.end3)
+        self.maxPrimer5Length, self.primer5sequences = _parsePrimerFile(self.end5)
+        self.maxPrimer3Length, self.primer3sequences = _parsePrimerFile(self.end3)
 
     def run(self):
         while True:
@@ -82,3 +83,18 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
         qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
 
     # finish
+
+
+def _parsePrimerFile(primerFile):
+    if primerFile:
+        primerSequences = []
+        maxPrimerlength = float('-inf')
+        primerids = []
+        for rec in SeqIO.parse(primerFile, "fasta"):
+            maxPrimerlength = max(maxPrimerlength, len(rec.seq))
+            primerids.append(rec.id)
+            primerSequences.append(str(rec.seq).upper())
+        maxScores = calMaxIUPACAlignScores(primerSequences)
+        return maxPrimerlength, zip(primerids, primerSequences, maxScores)
+    return None, None
+

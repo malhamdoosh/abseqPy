@@ -9,14 +9,14 @@ import numpy as np
 import gc
 
 from math import ceil
-from multiprocessing import  Queue
+from multiprocessing import Queue
 from Bio import SeqIO
 from collections import Counter
 
-from abseq.IgRepReporting.igRepPlots import plotDist
 from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
+from abseq.IgRepReporting.igRepPlots import plotDist
 from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
-from abseq.IgRepertoire.igRepUtils import gunzip, calMaxIUPACAlignScores, compressCountsGeneLevel
+from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
 from abseq.config import MEM_GB
 
 
@@ -77,20 +77,6 @@ def _addPrimerColumns(cloneAnnot, end5, end3):
         cloneAnnot['3end'] = np.nan
         cloneAnnot['3endPrimer'] = np.nan
         cloneAnnot['3endIndel'] = np.nan
-
-
-def parsePrimerFile(primerFile):
-    if primerFile:
-        primerSequences = []
-        maxPrimerlength = float('-inf')
-        primerids = []
-        for rec in SeqIO.parse(primerFile, "fasta"):
-            maxPrimerlength = max(maxPrimerlength, len(rec.seq))
-            primerids.append(rec.id)
-            primerSequences.append(str(rec.seq).upper())
-        maxScores = calMaxIUPACAlignScores(primerSequences)
-        return maxPrimerlength, zip(primerids, primerSequences, maxScores)
-    return None, None
 
 
 def write5EndPrimerStats(name, cloneAnnot, fileprefix, category="All"):
