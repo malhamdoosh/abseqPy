@@ -77,6 +77,12 @@ class IgMultiRepertoire:
             if not os.path.exists(sample.args.outdir):
                 os.makedirs(sample.args.outdir)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.finish()
+
     def analyzeAbundance(self, all=False):
         self.__beginWork(GeneralWorker.ABUN, all=all)
 
@@ -112,11 +118,15 @@ class IgMultiRepertoire:
 
     def finish(self):
         """
-        Queue might still be buffered, finish off cleanup here.
-        Then, delegate to plot manager to decide if there's further plotting required.
+        Extremely important that finish is called (for 3 reasons):
+            1. Make sure that primer specificity was conducted if either one of primer files were provided (regardless of
+               the -t <task> option) - unless, of course, if -t was already 'primer',
+               then no additional analysis is required.
+            2. Queue might still be buffered, finish off cleanup here.
+            3. Then, delegate to plot manager to decide if there's further plotting required.
         :return: None
         """
-        # make sure that if user specified either one of primer end file, we unconditonally run primer analysis
+        # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
         # (duh)
         if (self.buffer[0].end3 or self.buffer[0].end5) and self.buffer[0].task != 'primer':
             self.analyzePrimerSpecificity()
