@@ -116,6 +116,10 @@ class IgMultiRepertoire:
         Then, delegate to plot manager to decide if there's further plotting required.
         :return: None
         """
+        # make sure that if user specified either one of primer end file, we unconditonally run primer analysis
+        # (duh)
+        if (self.buffer[0].end3 or self.buffer[0].end5) and self.buffer[0].task != 'primer':
+            self.analyzePrimerSpecificity()
         self.queue.close()
         self.queue.join_thread()
         self.result.close()
