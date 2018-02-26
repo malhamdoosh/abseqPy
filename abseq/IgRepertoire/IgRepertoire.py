@@ -64,19 +64,23 @@ class IgRepertoire:
         self.format = args.fmt
         self.chain = args.chain
         self.name = args.name
+        self.fr4cut = args.fr4cut
+
         if args.task in ['secretion', '5utr']:
             self.upstream = args.upstream
+
         if args.task in ['rsa', 'rsasimple']:
             self.sitesFile = args.sites
+
         if args.task in ['productivity', 'diversity', 'all']:
             self.actualQstart = args.actualqstart
-            self.fr4cut = args.fr4cut
+
         self.trim5End = args.trim5
         self.trim3End = args.trim3
-        if args.task == 'primer':
-            self.end5 = args.primer5end
-            self.end3 = args.primer3end
-            self.end5offset = args.primer5endoffset
+
+        self.end5 = args.primer5end
+        self.end3 = args.primer3end
+        self.end5offset = args.primer5endoffset
 
         self.readFile1 = args.f1
         self.readFile2 = args.f2
