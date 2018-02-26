@@ -107,6 +107,10 @@ def parseArgs():
     if args.task == 'primer':
         args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
         args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
+        if not os.path.exists(args.primer5end):
+            parser.error("{} file not found!".format(args.primer5end))
+        if not os.path.exists(args.primer3end):
+            parser.error("{} file not found!".format(args.primer3end))
 
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
     args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
