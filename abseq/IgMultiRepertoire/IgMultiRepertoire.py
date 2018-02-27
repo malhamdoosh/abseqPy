@@ -81,7 +81,31 @@ class IgMultiRepertoire:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.finish()
+        """
+        Extremely important that finish is called (for 3 reasons):
+            1. Make sure that primer specificity was conducted if either one of primer files were provided (regardless of
+               the -t <task> option) - unless, of course, if -t was already 'primer',
+               then no additional analysis is required.
+            2. Queue might still be buffered, finish off cleanup here.
+            3. Then, delegate to plot manager to decide if there's further plotting required.
+        :return: None
+        """
+        noExceptionRaised = exc_tb is None and exc_val is None and exc_tb is None
+
+        if noExceptionRaised:
+            # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
+            # (duh)
+            if (self.buffer[0].end3 or self.buffer[0].end5) and self.buffer[0].task != 'primer':
+                print("Primer file detected, conducting primer specificity analysis ... ")
+                self.analyzePrimerSpecificity()
+
+        self.queue.close()
+        self.queue.join_thread()
+        self.result.close()
+        self.result.join_thread()
+
+        if noExceptionRaised:
+            self.plotManager.plot()
 
     def analyzeAbundance(self, all=False):
         self.__beginWork(GeneralWorker.ABUN, all=all)
@@ -117,24 +141,7 @@ class IgMultiRepertoire:
         self.__beginWork(GeneralWorker.SEQLEN, klass=klass)
 
     def finish(self):
-        """
-        Extremely important that finish is called (for 3 reasons):
-            1. Make sure that primer specificity was conducted if either one of primer files were provided (regardless of
-               the -t <task> option) - unless, of course, if -t was already 'primer',
-               then no additional analysis is required.
-            2. Queue might still be buffered, finish off cleanup here.
-            3. Then, delegate to plot manager to decide if there's further plotting required.
-        :return: None
-        """
-        # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
-        # (duh)
-        if (self.buffer[0].end3 or self.buffer[0].end5) and self.buffer[0].task != 'primer':
-            self.analyzePrimerSpecificity()
-        self.queue.close()
-        self.queue.join_thread()
-        self.result.close()
-        self.result.join_thread()
-        self.plotManager.plot()
+        self.__exit__(None, None, None)
 
     def __pairFiles(self, folder, args):
         """
