@@ -32,6 +32,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
     _addPrimerColumns(cloneAnnot, end5, end3)
     workers = []
     records = SeqIO.index(gunzip(readFile), format)
+    newColumns = ['queryid'] + list(cloneAnnot.columns)
     try:
         print("\t " + format + " index created and refinement started ...")
         noSeqs = len(queryIds)
@@ -64,7 +65,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
             i += (m == 'exit')
         print("All workers have completed their tasks successfully.")
         print("Results are being collated from all workers ...")
-        cloneAnnotList = _collectPrimerResults(list(cloneAnnot.columns), resultsQueue, totalTasks, noSeqs)
+        cloneAnnotList = _collectPrimerResults(newColumns, resultsQueue, totalTasks, noSeqs)
         print("Results were collated successfully.")
     except Exception as e:
         print("Something went wrong during the primer specificity analysis!")
@@ -74,8 +75,9 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
             w.terminate()
         records.close()
 
-    primerAnnot = DataFrame(cloneAnnotList, columns=list(cloneAnnot.columns))
-    primerAnnot.index = cloneAnnot.index
+    primerAnnot = DataFrame(cloneAnnotList, columns=newColumns)
+    primerAnnot.index = primerAnnot.queryid
+    del primerAnnot['queryid']
     return primerAnnot
 
 

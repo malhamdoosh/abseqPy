@@ -42,9 +42,11 @@ class PrimerWorker(Process):
                     print(self.name + " process commenced a new task ... ")
                     self.firstJobTaken = True
                 for record, qsRec in zip(nextTask[0], nextTask[1]):
+                    qsRec['queryid'] = record.id
                     recs.append(_matchClosestPrimer(qsRec, record, self.actualQstart, self.trim5end,
-                                        self.trim3end, self.end5offset, self.fr4cut, self.maxPrimer5Length,
-                                        self.maxPrimer3Length, self.primer5sequences, self.primer3sequences))
+                                                    self.trim3end, self.end5offset, self.fr4cut, self.maxPrimer5Length,
+                                                    self.maxPrimer3Length, self.primer5sequences,
+                                                    self.primer3sequences))
                 self.resultsQueue.put(recs)
             except Exception as e:
                 print("An error as occurred while processing " + self.name)
@@ -89,7 +91,7 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
         try:
             qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
         except Exception as e:
-            #print("DEBUG: something went wrong!" + str(e.message))
+            # print("DEBUG: something went wrong!" + str(e.message))
             pass
     return qsRec
     # finish
@@ -107,4 +109,3 @@ def _parsePrimerFile(primerFile):
         maxScores = calMaxIUPACAlignScores(primerSequences)
         return maxPrimerlength, zip(primerids, primerSequences, maxScores)
     return None, None
-
