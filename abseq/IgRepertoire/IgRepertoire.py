@@ -563,7 +563,7 @@ class IgRepertoire:
         # the naming convention obeys previous h5 dataframes:
         # if self.cloneAnnot was refined, primer_annot will be named samplename_primer_annot_refined.h5
         # else if self.cloneAnnot was not refined, primer_annot will be named samplename_primer_annot.h5
-        primerAnnotFile = outDir + self.name + "_primer_annot{}.h5".format('_refined' if self.fr4cut else '')
+        primerAnnotFile = os.path.join(outDir, self.name + "_primer_annot{}.h5".format('_refined' if self.fr4cut else ''))
 
         # if we can't find hdf file, create it, else read it
         if not exists(primerAnnotFile):
@@ -588,7 +588,7 @@ class IgRepertoire:
             self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
             print("\tPrimer clone annotation was loaded successfully")
 
-        generatePrimerPlots(self.cloneAnnot, outDir, self.name, self.end5, self.end3)
+        generatePrimerPlots(self.cloneAnnot, outDir + '/', self.name, self.end5, self.end3)
         # TODO: Fri Feb 23 17:13:09 AEDT 2018
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
         # TODO: check wht's == Indelled, ... etc (see what's the output to the dataframe in primeraux

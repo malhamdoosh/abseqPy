@@ -80,6 +80,7 @@ def _addPrimerColumns(cloneAnnot, end5, end3):
 
 
 def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
+
     validEnd = Counter(cloneAnnot['{}end'.format(end)].tolist())
 
     plotDist(validEnd, name, fileprefix + 'integrity_dist.png',
@@ -121,10 +122,13 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
                  '_igv_dist.png',
                  title='IGV Abundance (%s)' % (category),
                  proportion=False, vertical=False, top=20, rotateLabels=False)
-    gc.collect()
 
 
 def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
+    nanString = 'NaN'
+    # similar with productivity analysis etc ..
+    cloneAnnot.fillna(nanString, inplace=True)
+
     outOfFrameClones = cloneAnnot[cloneAnnot['v-jframe'] == 'Out-of-frame']
     productiveClones = cloneAnnot[(cloneAnnot['v-jframe'] == 'In-frame') & (cloneAnnot['stopcodon'] == 'No')]
 
@@ -165,3 +169,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
             productiveInvalid3Clones = productiveClones.index[productiveClones['3end'] == 'Indelled'].tolist()
             plotVenn({"5'-end": set(productiveInvalid5Clones), "3'-end": set(productiveInvalid3Clones)},
                      outDir + name + "_productive_invalid_primers.png")
+
+    # similar with abundance analysis etc ..
+    cloneAnnot.replace(nanString, np.nan, inplace=True)
+    gc.collect()

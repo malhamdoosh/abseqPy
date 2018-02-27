@@ -76,11 +76,17 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
 
     if primer5seqs:
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
-        qsRec['5endPrimer'], qsRec['5end'], qsRec['5endIndel'] = findBestMatchedPattern(primer, primer5seqs)
+        try:
+            qsRec['5endPrimer'], qsRec['5end'], qsRec['5endIndel'] = findBestMatchedPattern(primer, primer5seqs)
+        except:
+            print("DEBUG: something went wrong!")
 
     if primer3seqs:
         primer = str(vh[-1 * maxPrimer3Length:])
-        qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
+        try:
+            qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
+        except:
+            print("DEBUG: something went wrong!")
 
     # finish
 
