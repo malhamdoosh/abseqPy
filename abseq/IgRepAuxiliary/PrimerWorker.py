@@ -37,13 +37,15 @@ class PrimerWorker(Process):
                 break
 
             try:
+                recs = []
                 if not self.firstJobTaken:
                     print(self.name + " process commenced a new task ... ")
                     self.firstJobTaken = True
                 for record, qsRec in zip(nextTask[0], nextTask[1]):
-                    _matchClosestPrimer(qsRec, record, self.actualQstart, self.trim5end,
+                    recs.append(_matchClosestPrimer(qsRec, record, self.actualQstart, self.trim5end,
                                         self.trim3end, self.end5offset, self.fr4cut, self.maxPrimer5Length,
-                                        self.maxPrimer3Length, self.primer5sequences, self.primer3sequences)
+                                        self.maxPrimer3Length, self.primer5sequences, self.primer3sequences))
+                self.resultsQueue.put(recs)
             except Exception as e:
                 print("An error as occurred while processing " + self.name)
                 print(e)
@@ -78,16 +80,18 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
         try:
             qsRec['5endPrimer'], qsRec['5end'], qsRec['5endIndel'] = findBestMatchedPattern(primer, primer5seqs)
-        except:
-            print("DEBUG: something went wrong!")
+        except Exception as e:
+            # print("DEBUG: something went wrong!" + str(e.message))
+            pass
 
     if primer3seqs:
         primer = str(vh[-1 * maxPrimer3Length:])
         try:
             qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
-        except:
-            print("DEBUG: something went wrong!")
-
+        except Exception as e:
+            #print("DEBUG: something went wrong!" + str(e.message))
+            pass
+    return qsRec
     # finish
 
 

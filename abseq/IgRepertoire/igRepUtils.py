@@ -670,7 +670,7 @@ def findBestMatchedPattern(seq, patterns):
         return (best[0], "Indelled", delPos) # 1-based
     else:
         # if it is Mismatched ==> length of alignment == length of pattern
-        try:           
+        try:
             assert len(best[1][0]) == len(patterns[bestInd][1])
             misPos = 0
             while (misPos < len(best[1][0])):
@@ -678,8 +678,8 @@ def findBestMatchedPattern(seq, patterns):
                 if (subMatIUPAC[(best[1][0][misPos], patterns[bestInd][1][misPos])] != 5):
                     break
                 misPos += 1 
-        except:
-            raise Exception("Unexpected behaviour:" + seq +  " " + scores + " " + best)            
+        except Exception as e:
+            raise Exception("Unexpected behaviour {}: ".format(e.message) + seq +  " " + str(scores) + " " + str(best))
         return (best[0], "Mismatched", misPos+1) # 1-based
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir, 

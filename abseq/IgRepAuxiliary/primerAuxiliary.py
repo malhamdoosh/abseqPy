@@ -7,17 +7,21 @@
 
 import numpy as np
 import gc
+import sys
 
 from math import ceil
 from multiprocessing import Queue
 from Bio import SeqIO
 from collections import Counter
+from pandas import DataFrame
 
 from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
 from abseq.IgRepReporting.igRepPlots import plotDist, plotVenn
 from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
 from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
 from abseq.config import MEM_GB
+
+PRIMER_ANNOTATED_FIELDS = ['5end', '5endPrimer', '5endIndel', '3end', '3endPrimer', '3endIndel']
 
 
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
@@ -59,6 +63,9 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
             m = exitQueue.get()
             i += (m == 'exit')
         print("All workers have completed their tasks successfully.")
+        print("Results are being collated from all workers ...")
+        cloneAnnotList = _collectPrimerResults(list(cloneAnnot.columns), resultsQueue, totalTasks, noSeqs)
+        print("Results were collated successfully.")
     except Exception as e:
         print("Something went wrong during the primer specificity analysis!")
         raise e
@@ -67,16 +74,40 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
             w.terminate()
         records.close()
 
+    primerAnnot = DataFrame(cloneAnnotList, columns=list(cloneAnnot.columns))
+    primerAnnot.index = cloneAnnot.index
+    return primerAnnot
+
+
+def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
+    processed = 0
+    cloneAnnot = []
+    while totalTasks:
+        result = queue.get()
+        totalTasks -= 1
+        if result is None:
+            continue
+        for entry in result:
+            # put them as a list (in the ordering specified by 'columns')
+            cloneAnnot.append([entry[col] for col in columns])
+        processed = len(cloneAnnot)
+        if processed % 50000 == 0:
+            print("\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
+            sys.stdout.flush()
+
+    print("\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
+    return cloneAnnot
+
 
 def _addPrimerColumns(cloneAnnot, end5, end3):
     if end5:
-        cloneAnnot['5end'] = np.nan
-        cloneAnnot['5endPrimer'] = np.nan
-        cloneAnnot['5endIndel'] = np.nan
+        for i in PRIMER_ANNOTATED_FIELDS:
+            if i.startswith('5'):
+                cloneAnnot[i] = np.nan
     if end3:
-        cloneAnnot['3end'] = np.nan
-        cloneAnnot['3endPrimer'] = np.nan
-        cloneAnnot['3endIndel'] = np.nan
+        for i in PRIMER_ANNOTATED_FIELDS:
+            if i.startswith('3'):
+                cloneAnnot[i] = np.nan
 
 
 def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
@@ -89,9 +120,9 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
 
     invalidClones = cloneAnnot.index[cloneAnnot['{}end'.format(end)] == 'Indelled'].tolist()
 
-    print("Example of Indelled {}'-end:".format(end), invalidClones[1:10])
-    print("Example of valid {}'-end:".format(end),
-          cloneAnnot.index[cloneAnnot['{}end'.format(end)] != 'Indelled'].tolist()[1:10])
+    print("Example of Indelled {}'-end: {}".format(end, str(invalidClones[1:10])))
+    print("Example of valid {}'-end: {}".format(end,
+          str(cloneAnnot.index[cloneAnnot['{}end'.format(end)] != 'Indelled'].tolist()[1:10])))
 
     stopcodonInFrameDist = Counter(cloneAnnot['stopcodon'].tolist())
     plotDist(stopcodonInFrameDist, name,
