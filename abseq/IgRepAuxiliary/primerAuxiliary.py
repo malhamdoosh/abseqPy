@@ -21,7 +21,6 @@ from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
 from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
 from abseq.config import MEM_GB
 
-PRIMER_ANNOTATED_FIELDS = ['5end', '5endPrimer', '5endIndel', '3end', '3endPrimer', '3endIndel']
 
 
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
@@ -103,13 +102,13 @@ def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
 
 def _addPrimerColumns(cloneAnnot, end5, end3):
     if end5:
-        for i in PRIMER_ANNOTATED_FIELDS:
-            if i.startswith('5'):
-                cloneAnnot[i] = np.nan
+        cloneAnnot['5end'] = str(np.nan)
+        cloneAnnot['5endPrimer'] = str(np.nan)
+        cloneAnnot['5endIndel'] = np.nan
     if end3:
-        for i in PRIMER_ANNOTATED_FIELDS:
-            if i.startswith('3'):
-                cloneAnnot[i] = np.nan
+        cloneAnnot['3end'] = str(np.nan)
+        cloneAnnot['3endPrimer'] = str(np.nan)
+        cloneAnnot['3endIndel'] = np.nan
 
 
 def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
