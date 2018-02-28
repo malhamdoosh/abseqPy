@@ -78,12 +78,14 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     if fr4cut and not np.isnan(qsRec['fr4.end']):
         vh = record.seq[offset:int(qsRec['fr4.end'])]
 
+    unexpected5 = unexpected3 = 0
     if primer5seqs:
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
         try:
             qsRec['5endPrimer'], qsRec['5end'], qsRec['5endIndel'] = findBestMatchedPattern(primer, primer5seqs)
         except Exception as e:
-            # print("DEBUG: something went wrong!" + str(e.message))
+            # print("ARGH: something went wrong!" + str(e.message))
+            unexpected5 += 1
             pass
 
     if primer3seqs:
@@ -91,21 +93,28 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
         try:
             qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
         except Exception as e:
-            # print("DEBUG: something went wrong!" + str(e.message))
+            # print("DEBUG: something went wrong! {}".format(str(e.message)))
+            unexpected3 += 1
             pass
-    return qsRec
+    return qsRec, unexpected5, unexpected3
     # finish
 
 
 def _parsePrimerFile(primerFile):
     if primerFile:
-        primerSequences = []
-        maxPrimerlength = float('-inf')
         primerids = []
+        primerLengths = []
+        primerSequences = []
         for rec in SeqIO.parse(primerFile, "fasta"):
-            maxPrimerlength = max(maxPrimerlength, len(rec.seq))
+            primerLengths.append(len(rec.seq))
             primerids.append(rec.id)
             primerSequences.append(str(rec.seq).upper())
+
         maxScores = calMaxIUPACAlignScores(primerSequences)
-        return maxPrimerlength, zip(primerids, primerSequences, maxScores)
+
+        if len(set(primerLengths)) != 1:
+            print("WARNING: Provided primer file {} has primers with different length. Analysis assumes uniform length"
+                  .format(primerFile))
+        return max(primerLengths), zip(primerids, primerSequences, maxScores)
+
     return None, None

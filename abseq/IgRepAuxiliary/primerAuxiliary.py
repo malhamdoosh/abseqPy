@@ -22,7 +22,6 @@ from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
 from abseq.config import MEM_GB
 
 
-
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
                   trim3end, actualQstart, end5, end3, end5offset, threads):
     print("Primer specificity analysis has begun ...")
@@ -83,12 +82,15 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
 def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
     processed = 0
     cloneAnnot = []
+    totalUnexpected5 = totalUnexpected3 = 0
     while totalTasks:
         result = queue.get()
         totalTasks -= 1
         if result is None:
             continue
-        for entry in result:
+        for entry, unexpected5, unexpected3 in result:
+            totalUnexpected5 += unexpected5
+            totalUnexpected3 += unexpected3
             # put them as a list (in the ordering specified by 'columns')
             cloneAnnot.append([entry[col] for col in columns])
         processed = len(cloneAnnot)
@@ -97,6 +99,8 @@ def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
             sys.stdout.flush()
 
     print("\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
+    print("\tThere were {} unexpected 5' alignment and {} unexpected 3' alignment".format(totalUnexpected5,
+                                                                                          totalUnexpected3))
     return cloneAnnot
 
 

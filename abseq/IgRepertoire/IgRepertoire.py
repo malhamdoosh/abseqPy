@@ -296,11 +296,11 @@ class IgRepertoire:
         # Diversity analysis can be applied on productive clones only     
         before = int(self.cloneAnnot.shape[0])
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-        self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+        self.cloneSeqs = self.cloneSeqs.loc[cloneAnnot.index]
         print("Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
-            self.cloneAnnot.shape[0] * 100.0 / before,
-            int(self.cloneAnnot.shape[0]),
+            cloneAnnot.shape[0] * 100.0 / before,
+            int(cloneAnnot.shape[0]),
             int(before)
         ))
 
