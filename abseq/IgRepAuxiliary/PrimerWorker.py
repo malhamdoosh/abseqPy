@@ -66,14 +66,16 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
         # zero based (argparse converted it for us)
         offset = actualQstart
     else:
-        offset = int(qsRec['vqstart'] - qsRec['vstart'])
+        # NOTE: primers always start at the beginning of the sequence, regardless of the V germline alignment!
+        offset = 0          # int(qsRec['vqstart'] - qsRec['vstart'])
 
     offset = max(0, offset)
 
     vh = record.seq[offset:]
 
-    if len(vh) % 3 != 0:
-        vh = vh[:-1 * (len(vh) % 3)]
+    # TODO: is this necessary?
+    # if len(vh) % 3 != 0:
+    #     vh = vh[:-1 * (len(vh) % 3)]
 
     if fr4cut and not np.isnan(qsRec['fr4.end']):
         vh = record.seq[offset:int(qsRec['fr4.end'])]
