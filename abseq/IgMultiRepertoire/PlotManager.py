@@ -29,6 +29,8 @@ class PlotManager:
         # there's no R plotting if user specified that r scripts shouldn't run => python's plotting should run instead
         PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
         self.metadata = []
+        self.end5File = args.primer5end
+        self.end3File = args.primer3end
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
@@ -85,8 +87,17 @@ class PlotManager:
             # todo: because main script overridden stdout to AbSeq.log
             # todo: change this to per-sample basis when logging is implemented correctly.
             # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
+            if self.end5File or self.end3File:
+                arg1 = str(self.end5File)
+                arg2 = str(self.end3File)
+            else:
+                arg1 = ""
+                arg2 = ""
+            import sys;sys.stdout.flush()
             retval = subprocess.call(["Rscript",
-                                      ABSEQROOT + "/rscripts/masterScript.R"],
+                                      ABSEQROOT + "/rscripts/masterScript.R",
+                                      arg1,
+                                      arg2],
                                      stdout=sys.stdout,
                                      stderr=sys.stdout
                                      )

@@ -30,12 +30,17 @@ source(paste0(abSeqRoot, '/rscripts/rarefaction.R'))
 source(paste0(abSeqRoot, '/rscripts/recapture.R'))
 source(paste0(abSeqRoot, '/rscripts/regionAnalysis.R'))
 source(paste0(abSeqRoot, '/rscripts/spectratype.R'))
+source(paste0(abSeqRoot, '/rscripts/primerSpecificity.R'))
 source(paste0(abSeqRoot, '/rscripts/topNDist.R'))
 
 
 
-# find all pairings (each different set of pairings is separated by a new line)
-pairings <- scan(metaFile, character(), quote = "", skip = 1)
+# find all pairings (each different set of pairings is separated by a new line) -> reversed because we want to plot
+# individual samples before doing sample comparisons
+pairings <- rev(scan(metaFile, character(), quote = "", skip = 1))
+
+# analysis types -> since ALL samples will have the SAME -t option, we can just infer from the first sample itself
+analysis <- inferAnalyzed((unlist(strsplit(pairings[1], "\\?")[1]))[1])
 
 # for each set of pairing - plot!
 for (i in 1:length(pairings)) {
@@ -87,86 +92,91 @@ for (i in 1:length(pairings)) {
   #               ANNOT PLOTS                      #
   #                                                #
   ##################################################
-  annotOut <- paste0(outputDir, "annot/")
-  dir.create(annotOut)
-  annotDirectories <- unlist(lapply(directories, paste0, "/annot/"))
-  
-  # with outliers
-  searchFiles <- listFilesInOrder(path = annotDirectories, pattern = ".*_all_clones_len_dist\\.csv(\\.gz)?$")
-  if (length(searchFiles) > 0) {
-      g <- plotSpectratype(
-        lapply(searchFiles, read.csv),
-        sampleNames,
-        title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
-        xlabel = "Sequence Length (bp)",
-        ylabel = "Proportion"
-      )
-      ggsave(paste0(annotOut, mashedNames, "_all_clones_len_dist.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
-  }
-  searchFiles <- listFilesInOrder(path = annotDirectories, pattern = ".*_all_clones_len_dist_no_outliers\\.csv(\\.gz)?$")
-  # without outliers
-  if (length(searchFiles) > 0) {
-      g <- plotSpectratype(
-        lapply(searchFiles, read.csv),
-        sampleNames,
-        title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
-        xlabel = "Sequence Length (bp)",
-        ylabel = "Proportion"
-      )
-      ggsave(paste0(annotOut, mashedNames, "_all_clones_len_dist_no_outliers.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+  if ('annot' %in% analysis) {
+    annotOut <- paste0(outputDir, "annot/")
+    dir.create(annotOut)
+    annotDirectories <- unlist(lapply(directories, paste0, "/annot/"))
+    
+    # with outliers
+    searchFiles <- listFilesInOrder(path = annotDirectories, pattern = ".*_all_clones_len_dist\\.csv(\\.gz)?$")
+    if (length(searchFiles) > 0) {
+        g <- plotSpectratype(
+          lapply(searchFiles, read.csv),
+          sampleNames,
+          title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
+          xlabel = "Sequence Length (bp)",
+          ylabel = "Proportion"
+        )
+        ggsave(paste0(annotOut, mashedNames, "_all_clones_len_dist.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    }
+    searchFiles <- listFilesInOrder(path = annotDirectories, pattern = ".*_all_clones_len_dist_no_outliers\\.csv(\\.gz)?$")
+    # without outliers
+    if (length(searchFiles) > 0) {
+        g <- plotSpectratype(
+          lapply(searchFiles, read.csv),
+          sampleNames,
+          title = "Sequence lengths",  # plotSpectratype names the sample(s) for us in the title; don't have to do it here
+          xlabel = "Sequence Length (bp)",
+          ylabel = "Proportion"
+        )
+        ggsave(paste0(annotOut, mashedNames, "_all_clones_len_dist_no_outliers.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    }
   }
   ##################################################
   #                                                #
   #               ABUNDANCE PLOTS                  #
   #                                                #
   ##################################################
-  abunOut <- paste0(outputDir, "abundance/")
-  dir.create(abunOut)
-  abundanceDirectories <- unlist(lapply(directories, paste0, "/abundance/"))
-  # where to find the files
-  searchFiles <- listFilesInOrder(path = abundanceDirectories,
-                     pattern = ".*ig[vdj]_dist_[family|gene|variant].*\\.csv(\\.gz)?$",
-                     expectedRet = c(8, 5))            # 3 each from V and D, then 2 from J (no gene) or 5 (exclude the 3 from D)
-  if (length(searchFiles) > 0) {
-      abundancePlot(
-        searchFiles,
-        # what are the sample names (in-order)
-        sampleNames,
-        # output directory
-        abunOut
-      )
-  }
-  
-  # plot igv mismatches distribution
-  abunIgvMismatchFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_mismatches_dist\\.csv(\\.gz)?$")
-  if (length(abunIgvMismatchFiles) > 0) {
-      subtitle <- paste("Total is", paste(lapply(abunIgvMismatchFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
-      abunIgvMismatches <- plotDist(
-        lapply(abunIgvMismatchFiles, read.csv, skip = 1),
-        sampleNames,
-        paste("Number of mismatches in V gene in", combinedNames),
-        checkVert(abunIgvMismatchFiles[[1]]),
-        subs = subtitle
-      )
-      ggsave(paste0(abunOut, mashedNames, "_igv_mismatches_dist.png"), plot = abunIgvMismatches, width = V_WIDTH, height = V_HEIGHT)
-  }
-  # plot igv gaps distribution
-  abunIgvGapsFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_gaps_dist\\.csv(\\.gz)?$")
-  if (length(abunIgvGapsFiles) > 0) {
-      subtitle <- paste("Total is", paste(lapply(abunIgvGapsFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
-      abunIgvGaps <- plotDist(
-        lapply(abunIgvGapsFiles, read.csv, skip = 1),
-        sampleNames,
-        paste("Number of gaps in V gene in ", combinedNames),
-        checkVert(abunIgvGapsFiles[[1]]),
-        subs = subtitle
-      )
-      ggsave(paste0(abunOut, mashedNames, "_igv_gaps_dist.png"), plot = abunIgvGaps, width = V_WIDTH, height = V_HEIGHT)
-  }
-  
-  if (length(sampleNames) == 1) {
-    # we can plot circlize if there's only one sample
-    plotCirclize(sampleNames[1], abunOut)
+  if ('abundance' %in% analysis) {
+    abunOut <- paste0(outputDir, "abundance/")
+    dir.create(abunOut)
+    abundanceDirectories <- unlist(lapply(directories, paste0, "/abundance/"))
+    # where to find the files
+    searchFiles <- listFilesInOrder(path = abundanceDirectories,
+                       pattern = ".*ig[vdj]_dist_[family|gene|variant].*\\.csv(\\.gz)?$",
+                       expectedRet = c(8, 5))            # 3 each from V and D, then 2 from J (no gene) or 5 (exclude the 3 from D)
+    if (length(searchFiles) > 0) {
+        abundancePlot(
+          searchFiles,
+          # what are the sample names (in-order)
+          sampleNames,
+          # output directory
+          abunOut
+        )
+    }
+    
+    # plot igv mismatches distribution
+    abunIgvMismatchFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_mismatches_dist\\.csv(\\.gz)?$")
+    if (length(abunIgvMismatchFiles) > 0) {
+        subtitle <- paste("Total is", paste(lapply(abunIgvMismatchFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
+        abunIgvMismatches <- plotDist(
+          lapply(abunIgvMismatchFiles, read.csv, skip = 1),
+          sampleNames,
+          paste("Number of mismatches in V gene in", combinedNames),
+          checkVert(abunIgvMismatchFiles[[1]]),
+          subs = subtitle
+        )
+        ggsave(paste0(abunOut, mashedNames, "_igv_mismatches_dist.png"), plot = abunIgvMismatches, width = V_WIDTH, height = V_HEIGHT)
+    }
+    # plot igv gaps distribution
+    abunIgvGapsFiles <- listFilesInOrder(path = abundanceDirectories, pattern = ".*_igv_gaps_dist\\.csv(\\.gz)?$")
+    if (length(abunIgvGapsFiles) > 0) {
+        subtitle <- paste("Total is", paste(lapply(abunIgvGapsFiles, function(x) { as.integer(getTotal(x)) }), collapse = ", "))
+        abunIgvGaps <- plotDist(
+          lapply(abunIgvGapsFiles, read.csv, skip = 1),
+          sampleNames,
+          paste("Number of gaps in V gene in ", combinedNames),
+          checkVert(abunIgvGapsFiles[[1]]),
+          subs = subtitle
+        )
+        ggsave(paste0(abunOut, mashedNames, "_igv_gaps_dist.png"), plot = abunIgvGaps, width = V_WIDTH, height = V_HEIGHT)
+    }
+    
+    if (length(sampleNames) == 1) {
+      # we can plot circlize if there's only one sample
+      plotCirclize(sampleNames[1], abunOut)
+    }
+    
   }
   
   ##################################################
@@ -174,191 +184,211 @@ for (i in 1:length(pairings)) {
   #              PRODUCTIVITY PLOTS                #
   #                                                #
   ##################################################
-  prodOut <- paste0(outputDir, "productivity/")
-  dir.create(prodOut)
-  productivityDirectories <- unlist(lapply(directories, paste0, "/productivity/"))
-  # main productivity file
-  ########################
-  prodFiles <- listFilesInOrder(path = productivityDirectories, pattern = ".*_productivity\\.csv(\\.gz)?$")
-  if (length(prodFiles) > 0) {
-      g <- productivityPlot(lapply(prodFiles, read.csv, stringsAsFactors = FALSE), sampleNames)
-      ggsave(paste0(prodOut, mashedNames, "_productivity.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
-  }
-  
-  # sub-productivity files
-  ########################
-  regions <- c("cdr1", "cdr2", "cdr3", "fr1", "fr2", "fr3", "igv", "igd", "igj")
-  
-  # gaps_dist plots only
-  gapPlots <- prodDistPlot(productivityDirectories,
-                            sampleNames,
-                            "Gaps in",
-                            "_gaps_dist\\.csv(\\.gz)?$",
-                            unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_gaps_dist.png") })),
-                            regions)
-  # gaps_out_of_frame plots only (no igv, igd, ihj plots for this)
-  subregions <- head(regions, n = 6)
-  gapOutFramePlots <- prodDistPlot(productivityDirectories,
-                                   sampleNames,
-                                   "Gaps in",
-                                   "_gaps_dist_out_of_frame\\.csv(\\.gz)?$",
-                                   unlist(lapply(subregions, function(region) {paste0(prodOut, mashedNames, "_", region, "_gaps_dist_out_of_frame.png") })),
-                                   subregions)
-  # mismatch dist only
-  mismatchPlots <- prodDistPlot(productivityDirectories,
-                                sampleNames,
-                                "Mismatches in",
-                                "_mismatches_dist\\.csv(\\.gz)?$",
-                                unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_mismatches_dist.png")})),
-                                regions)
-  # stop codon dist plot
-  stopCodonPlot <- prodDistPlot(productivityDirectories, sampleNames,
-                            "Stop codon in In-frame Clones",
-                            "_stopcodon_dist_in_frame\\.csv(\\.gz)?$",
-                            c(paste0(prodOut, mashedNames, "_stopcodon_dist_in_frame.png")),
-                            c("")) # no regions
-  # vjframe plot
-  vjframePlot <- prodDistPlot(productivityDirectories, sampleNames,
-                              "V-D-J Rearrangement",
-                              "_vjframe_dist\\.csv(\\.gz)?$",
-                              c(paste0(prodOut, mashedNames, "_vjframe_dist.png")),
+  if ('productivity' %in% analysis) {
+    prodOut <- paste0(outputDir, "productivity/")
+    dir.create(prodOut)
+    productivityDirectories <- unlist(lapply(directories, paste0, "/productivity/"))
+    # main productivity file
+    ########################
+    prodFiles <- listFilesInOrder(path = productivityDirectories, pattern = ".*_productivity\\.csv(\\.gz)?$")
+    if (length(prodFiles) > 0) {
+        g <- productivityPlot(lapply(prodFiles, read.csv, stringsAsFactors = FALSE), sampleNames)
+        ggsave(paste0(prodOut, mashedNames, "_productivity.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    }
+    
+    # sub-productivity files
+    ########################
+    regions <- c("cdr1", "cdr2", "cdr3", "fr1", "fr2", "fr3", "igv", "igd", "igj")
+    
+    # gaps_dist plots only
+    gapPlots <- prodDistPlot(productivityDirectories,
+                              sampleNames,
+                              "Gaps in",
+                              "_gaps_dist\\.csv(\\.gz)?$",
+                              unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_gaps_dist.png") })),
+                              regions)
+    # gaps_out_of_frame plots only (no igv, igd, ihj plots for this)
+    subregions <- head(regions, n = 6)
+    gapOutFramePlots <- prodDistPlot(productivityDirectories,
+                                     sampleNames,
+                                     "Gaps in",
+                                     "_gaps_dist_out_of_frame\\.csv(\\.gz)?$",
+                                     unlist(lapply(subregions, function(region) {paste0(prodOut, mashedNames, "_", region, "_gaps_dist_out_of_frame.png") })),
+                                     subregions)
+    # mismatch dist only
+    mismatchPlots <- prodDistPlot(productivityDirectories,
+                                  sampleNames,
+                                  "Mismatches in",
+                                  "_mismatches_dist\\.csv(\\.gz)?$",
+                                  unlist(lapply(regions, function(region) { paste0(prodOut, mashedNames, "_", region, "_mismatches_dist.png")})),
+                                  regions)
+    # stop codon dist plot
+    stopCodonPlot <- prodDistPlot(productivityDirectories, sampleNames,
+                              "Stop codon in In-frame Clones",
+                              "_stopcodon_dist_in_frame\\.csv(\\.gz)?$",
+                              c(paste0(prodOut, mashedNames, "_stopcodon_dist_in_frame.png")),
                               c("")) # no regions
-  # 3 special cases for IGV region
-  # igv - inframe_unproductive, out of frame, productive
-  igvInframeUnProductive <- prodDistPlot(productivityDirectories, sampleNames,
-                                      "Abundance of In-frame Unproductive Clones in",
-                                      "_dist_inframe_unproductive\\.csv(\\.gz)?$",
-                                      c(paste0(prodOut, mashedNames, "_igv_dist_inframe_unproductive.png")),
-                                      c("igv"))
-  
-  igvOutOfFrame <- prodDistPlot(productivityDirectories, sampleNames,
-                                "Abundance of Out-Of-Frame Clones in",
-                                "_dist_out_of_frame\\.csv(\\.gz)?$",
-                                c(paste0(prodOut, mashedNames, "_igv_dist_out_of_frame.png")),
-                                c("igv"))
-  
-  igvProductivity <- prodDistPlot(productivityDirectories, sampleNames,
-                                  "Abundance of Productive Clones in",
-                                  "_dist_productive\\.csv(\\.gz)?$",
-                                  c(paste0(prodOut, mashedNames, "_igv_dist_productive.png")),
+    # vjframe plot
+    vjframePlot <- prodDistPlot(productivityDirectories, sampleNames,
+                                "V-D-J Rearrangement",
+                                "_vjframe_dist\\.csv(\\.gz)?$",
+                                c(paste0(prodOut, mashedNames, "_vjframe_dist.png")),
+                                c("")) # no regions
+    # 3 special cases for IGV region
+    # igv - inframe_unproductive, out of frame, productive
+    igvInframeUnProductive <- prodDistPlot(productivityDirectories, sampleNames,
+                                        "Abundance of In-frame Unproductive Clones in",
+                                        "_dist_inframe_unproductive\\.csv(\\.gz)?$",
+                                        c(paste0(prodOut, mashedNames, "_igv_dist_inframe_unproductive.png")),
+                                        c("igv"))
+    
+    igvOutOfFrame <- prodDistPlot(productivityDirectories, sampleNames,
+                                  "Abundance of Out-Of-Frame Clones in",
+                                  "_dist_out_of_frame\\.csv(\\.gz)?$",
+                                  c(paste0(prodOut, mashedNames, "_igv_dist_out_of_frame.png")),
                                   c("igv"))
+    
+    igvProductivity <- prodDistPlot(productivityDirectories, sampleNames,
+                                    "Abundance of Productive Clones in",
+                                    "_dist_productive\\.csv(\\.gz)?$",
+                                    c(paste0(prodOut, mashedNames, "_igv_dist_productive.png")),
+                                    c("igv"))
   
-  ##################################################
-  #                                                #
-  #               CLONOTYPE PLOTS                  #
-  #                                                #
-  ##################################################
-  diversityOut <- paste0(outputDir, "diversity/")
-  dir.create(diversityOut)
-  diversityDirectories <- unlist(lapply(directories, paste0, "/diversity/"))
-  cdr3ClonesFile <- listFilesInOrder(path = diversityDirectories, pattern = ".*_cdr3_clonotypes_.*_over\\.csv(\\.gz)?$")
-  if (length(cdr3ClonesFile) > 0 && length(sampleNames) > 1) {
-    # plot scatter plot (CDR3 clonotypes)
-    scatterClones(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE),
-                  sampleNames,
-                  diversityOut, "CDR3")
-    
-    # plot venn diagram (clonotypes)
-    vennIntersection(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE), 
-                     sampleNames,
-                     paste0(diversityOut, mashedNames, "_cdr3_clonotypeIntersection.png"))
-    
-    # plot top N distribution (clonotypes)
-    g <- topNDist(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE),
-                  sampleNames)
-    ggsave(paste0(diversityOut, mashedNames, "_top10Clonotypes.png"), plot = g, width = V_WIDTH_L, height = V_HEIGHT_L)
   }
-  
   ##################################################
   #                                                #
   #               DIVERSITY PLOTS                  #
   #                                                #
   ##################################################
-  # plot duplication, rarefaction, recapture
-  for (reg in c("cdr", "cdr_v", "fr")) {
-    if (reg == "cdr")
-      includedRegions <- c("CDR1", "CDR2", "CDR3")
-    else if (reg == "cdr_v")
-      includedRegions <- c("CDR3", "V")
-    else
-      includedRegions <- c("FR1", "FR2", "FR3")
-    searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg,"_duplication\\.csv(\\.gz)?$"))
-    if (length(searchFiles) > 0) {
-        # duplication
-        g <- plotDuplication(searchFiles,
-                             sampleNames,
-                             includedRegions)
-        ggsave(paste0(diversityOut, mashedNames, "_", reg, "_duplication.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+  if ('diversity' %in% analysis) {
+    
+    #               CLONOTYPE PLOTS                  #
+    ##################################################
+    diversityOut <- paste0(outputDir, "diversity/")
+    dir.create(diversityOut)
+    diversityDirectories <- unlist(lapply(directories, paste0, "/diversity/"))
+    cdr3ClonesFile <- listFilesInOrder(path = diversityDirectories, pattern = ".*_cdr3_clonotypes_.*_over\\.csv(\\.gz)?$")
+    if (length(cdr3ClonesFile) > 0 && length(sampleNames) > 1) {
+      # plot scatter plot (CDR3 clonotypes)
+      scatterClones(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE),
+                    sampleNames,
+                    diversityOut, "CDR3")
+      
+      # plot venn diagram (clonotypes)
+      vennIntersection(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE), 
+                       sampleNames,
+                       paste0(diversityOut, mashedNames, "_cdr3_clonotypeIntersection.png"))
+      
+      # plot top N distribution (clonotypes)
+      g <- topNDist(lapply(cdr3ClonesFile, read.csv, stringsAsFactors = FALSE),
+                    sampleNames)
+      ggsave(paste0(diversityOut, mashedNames, "_top10Clonotypes.png"), plot = g, width = V_WIDTH_L, height = V_HEIGHT_L)
     }
     
-    searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg, "_rarefaction\\.csv(\\.gz)?$"))
-    if (length(searchFiles) > 0) {
-        # plot rarefaction
-        g <- plotRarefaction(searchFiles,
+    #               FR/CDR    PLOTS                  #
+    ##################################################
+    # plot duplication, rarefaction, recapture
+    for (reg in c("cdr", "cdr_v", "fr")) {
+      if (reg == "cdr")
+        includedRegions <- c("CDR1", "CDR2", "CDR3")
+      else if (reg == "cdr_v")
+        includedRegions <- c("CDR3", "V")
+      else
+        includedRegions <- c("FR1", "FR2", "FR3")
+      searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg,"_duplication\\.csv(\\.gz)?$"))
+      if (length(searchFiles) > 0) {
+          # duplication
+          g <- plotDuplication(searchFiles,
+                               sampleNames,
+                               includedRegions)
+          ggsave(paste0(diversityOut, mashedNames, "_", reg, "_duplication.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+      }
+      
+      searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg, "_rarefaction\\.csv(\\.gz)?$"))
+      if (length(searchFiles) > 0) {
+          # plot rarefaction
+          g <- plotRarefaction(searchFiles,
+                               sampleNames,
+                               includedRegions)
+          ggsave(paste0(diversityOut, mashedNames, "_", reg, "_rarefaction.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+      }
+      searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg, "_recapture\\.csv(\\.gz)?$"))
+      if (length(searchFiles) > 0) {
+          # plot recapture
+          g <- plotRecapture(searchFiles,
                              sampleNames,
                              includedRegions)
-        ggsave(paste0(diversityOut, mashedNames, "_", reg, "_rarefaction.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+          ggsave(paste0(diversityOut, mashedNames, "_", reg, "_recapture.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+      }
     }
-    searchFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_", reg, "_recapture\\.csv(\\.gz)?$"))
-    if (length(searchFiles) > 0) {
-        # plot recapture
-        g <- plotRecapture(searchFiles,
-                           sampleNames,
-                           includedRegions)
-        ggsave(paste0(diversityOut, mashedNames, "_", reg, "_recapture.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    
+    # MINISECTION:
+    # ## SPECTRATYPES ###
+    specOut <- paste0(diversityOut, "spectratypes/")
+    dir.create(specOut)
+    # CDR 1 - 3
+    for (i in 1:3) {
+      specFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_cdr", i, "_spectratype\\.csv(\\.gz)?$"))
+      if (length(specFiles) > 0) {
+          g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
+                               sampleNames,
+                               paste0("CDR", i))
+          ggsave(paste0(specOut, mashedNames, "_cdr", i, "_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+      }
     }
-  }
-  
-  # MINISECTION:
-  # ## SPECTRATYPES ###
-  specOut <- paste0(diversityOut, "spectratypes/")
-  dir.create(specOut)
-  # CDR 1 - 3
-  for (i in 1:3) {
-    specFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_cdr", i, "_spectratype\\.csv(\\.gz)?$"))
+    
+    # special case, no outliers plot for CDR3 only
+    specFiles <- listFilesInOrder(path = diversityDirectories, pattern = ".*_cdr3_spectratype_no_outliers\\.csv(\\.gz)?$")
     if (length(specFiles) > 0) {
         g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
                              sampleNames,
-                             paste0("CDR", i))
-        ggsave(paste0(specOut, mashedNames, "_cdr", i, "_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+                             "CDR3")
+        ggsave(paste0(specOut, mashedNames, "_cdr3_spectratype_no_outliers.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
     }
-  }
-  
-  # special case, no outliers plot for CDR3 only
-  specFiles <- listFilesInOrder(path = diversityDirectories, pattern = ".*_cdr3_spectratype_no_outliers\\.csv(\\.gz)?$")
-  if (length(specFiles) > 0) {
-      g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
-                           sampleNames,
-                           "CDR3")
-      ggsave(paste0(specOut, mashedNames, "_cdr3_spectratype_no_outliers.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
-  }
-  
-  # FR 1 - 4
-  for (i in 1:4) {
-    specFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_fr", i, "_spectratype\\.csv(\\.gz)?$"))
+    
+    # FR 1 - 4
+    for (i in 1:4) {
+      specFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_fr", i, "_spectratype\\.csv(\\.gz)?$"))
+      if (length(specFiles) > 0) {
+          g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
+                               sampleNames,
+                               paste0("FR", i))
+          ggsave(paste0(specOut, mashedNames, "_fr", i, "_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+      }
+    }
+    
+    # entire V-domain
+    specFiles <- listFilesInOrder(path = diversityDirectories, pattern = ".*_v_spectratype\\.csv(\\.gz)?$")
     if (length(specFiles) > 0) {
         g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
                              sampleNames,
-                             paste0("FR", i))
-        ggsave(paste0(specOut, mashedNames, "_fr", i, "_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+                             "V domain")
+        ggsave(paste0(specOut, mashedNames, "_v_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    }
+    
+    # we can plot region analysis if there's only one sample
+    #if (length(sampleNames) == 1) {
+    #  # default = top 15
+    #  g <- regionAnalysis(diversityOut, sampleNames[1])
+    #  ggsave(paste0(diversityOut, mashedNames, "_region_analysis.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
+    #}
+  }
+  
+  ###########################################
+  #         PRIMER SPECIFICITY ANALYSIS     #
+  ###########################################
+  if ('primer_specificity' %in% analysis) {
+    primerOut <- paste0(outputDir, "primer_specificity/")
+    dir.create(primerOut)
+    primerDirectories <- unlist(lapply(directories, paste0, "/primer_specificity/"))
+    args <- commandArgs(trailingOnly=TRUE)
+    if (length(args) == 2) {
+      primer5File <- args[1]
+      primer3File <- args[2]
+      primerAnalysis(primer5File, primer3File, primerDirectories, primerOut, combinedNames, mashedNames)
     }
   }
   
-  # entire V-domain
-  specFiles <- listFilesInOrder(path = diversityDirectories, pattern = ".*_v_spectratype\\.csv(\\.gz)?$")
-  if (length(specFiles) > 0) {
-      g <- plotSpectratype(lapply(specFiles, read.csv, stringsAsFactors = FALSE),
-                           sampleNames,
-                           "V domain")
-      ggsave(paste0(specOut, mashedNames, "_v_spectratype.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
-  }
-  
-  # we can plot region analysis if there's only one sample
-  #if (length(sampleNames) == 1) {
-  #  # default = top 15
-  #  g <- regionAnalysis(diversityOut, sampleNames[1])
-  #  ggsave(paste0(diversityOut, mashedNames, "_region_analysis.png"), plot = g, width = V_WIDTH, height = V_HEIGHT)
-  #}
 }
 
 # print warnings
