@@ -238,7 +238,15 @@ class IgRepertoire:
         gc.collect()
         writeParams(self.args, outDir)
 
-    def analyzeProductivity(self, generateReport=True, all=False):
+    def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
+        """
+        Analyzes productivity
+        :param generateReport:
+        :param all:
+        :param inplace: NOTE: if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
+        productive sequences after this method finishes. Set to false to retain all sequences
+        :return:
+        """
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -295,8 +303,11 @@ class IgRepertoire:
         # Diversity analysis can be applied on productive clones only     
         before = int(self.cloneAnnot.shape[0])
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-        cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        self.cloneSeqs = self.cloneSeqs.loc[cloneAnnot.index]
+        if inplace:
+            cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        else:
+            cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
         print("Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
             cloneAnnot.shape[0] * 100.0 / before,
             int(cloneAnnot.shape[0]),
@@ -572,7 +583,7 @@ class IgRepertoire:
                 if self.fr4cut or exists(os.path.join(self.outputDir, 'productivity',
                                                       self.name + '_refined_clones_annot.h5')):
                     print("Using refined clone annotation for primer specificity analysis")
-                    self.analyzeProductivity(all=all)
+                    self.analyzeProductivity(all=all, inplace=False)
                 else:
                     print("Using unrefined clone annotation for primer specificity analysis")
                     self.analyzeAbundance(all)
