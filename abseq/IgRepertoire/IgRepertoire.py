@@ -72,8 +72,7 @@ class IgRepertoire:
         if args.task in ['rsa', 'rsasimple']:
             self.sitesFile = args.sites
 
-        if args.task in ['productivity', 'diversity', 'all']:
-            self.actualQstart = args.actualqstart
+        self.actualQstart = args.actualqstart
 
         self.trim5End = args.trim5
         self.trim3End = args.trim3

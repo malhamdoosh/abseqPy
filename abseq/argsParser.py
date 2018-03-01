@@ -88,16 +88,14 @@ def parseArgs():
             parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
         args.sites = abspath(args.sites)
 
-    # provided actualqstart is converted to 0-base from 1-based index, -1 is checked later on for default value
-    if args.task in ['diversity', 'productivity', 'all']:
-        if args.actualqstart is not None:
-            if args.actualqstart >= 1:
-                args.actualqstart = args.actualqstart - 1
-            else:
-                parser.error("ActualQStart parameter expects 1-based index."
-                             " The provided index has an unexpected value of {}.".format(args.actualqstart))
+    if args.actualqstart is not None:
+        if args.actualqstart >= 1:
+            args.actualqstart = args.actualqstart - 1
         else:
-            args.actualqstart = -1
+            parser.error("ActualQStart parameter expects 1-based index."
+                         " The provided index has an unexpected value of {}.".format(args.actualqstart))
+    else:
+        args.actualqstart = -1
 
     # BUGSQ: if user provided value = 0, what happens?: here, only subtract 1 if args.trim5 isn't default 0, or if user
     # didn't provide 0, since the other file that uses this parameter didn't check for negative values
