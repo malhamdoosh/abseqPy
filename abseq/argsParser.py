@@ -107,8 +107,8 @@ def parseArgs():
     if args.task == 'primer':
         if args.primer3end is None and args.primer5end is None:
             parser.error("At least ond primer file (-p5 or -p3) must be specified for -t primer")
-        args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
-        args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
+    args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
+    args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
     if args.primer5end and not os.path.exists(args.primer5end):
         parser.error("{} file not found!".format(args.primer5end))
     if args.primer3end and not os.path.exists(args.primer3end):
