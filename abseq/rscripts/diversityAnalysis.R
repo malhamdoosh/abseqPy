@@ -59,7 +59,9 @@ diversityAnalysis <- function(diversityDirectories, diversityOut, sampleNames, m
     # MINISECTION:
     # ## SPECTRATYPES ###
     specOut <- paste0(diversityOut, "spectratypes/")
-    dir.create(specOut)
+    if (!file.exists(specOut)) {
+      dir.create(specOut)
+    }
     # CDR 1 - 3
     for (i in 1:3) {
       specFiles <- listFilesInOrder(path = diversityDirectories, pattern = paste0(".*_cdr", i, "_spectratype\\.csv(\\.gz)?$"))

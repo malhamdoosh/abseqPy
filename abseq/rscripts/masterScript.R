@@ -100,7 +100,9 @@ for (i in 1:length(pairings)) {
   ##################################################
   if ('annot' %in% analysis) {
     annotOut <- paste0(outputDir, "annot/")
-    dir.create(annotOut)
+    if (!file.exists(annotOut)) {
+      dir.create(annotOut)
+    }
     annotDirectories <- unlist(lapply(directories, paste0, "/annot/"))
     annotAnalysis(annotDirectories, annotOut, sampleNames, mashedNames)   
   }
@@ -112,7 +114,9 @@ for (i in 1:length(pairings)) {
   ##################################################
   if ('abundance' %in% analysis) {
     abunOut <- paste0(outputDir, "abundance/")
-    dir.create(abunOut)
+    if (!file.exists(abunOut)) {
+      dir.create(abunOut)
+    }
     abundanceDirectories <- unlist(lapply(directories, paste0, "/abundance/"))
     abundanceAnalysis(abundanceDirectories, abunOut, sampleNames, combinedNames, mashedNames)
   }
@@ -124,7 +128,9 @@ for (i in 1:length(pairings)) {
   ##################################################
   if ('productivity' %in% analysis) {
     prodOut <- paste0(outputDir, "productivity/")
-    dir.create(prodOut)
+    if (!file.exists(prodOut)) {
+      dir.create(prodOut)
+    }
     productivityDirectories <- unlist(lapply(directories, paste0, "/productivity/"))
     productivityAnalysis(productivityDirectories, prodOut, sampleNames, combinedNames, mashedNames)
   }
@@ -136,7 +142,9 @@ for (i in 1:length(pairings)) {
   ##################################################
   if ('diversity' %in% analysis) {
     diversityOut <- paste0(outputDir, "diversity/")
-    dir.create(diversityOut)
+    if (!file.exists(diversityOut)) {
+      dir.create(diversityOut)
+    }
     diversityDirectories <- unlist(lapply(directories, paste0, "/diversity/"))
     diversityAnalysis(diversityDirectories, diversityOut, sampleNames, mashedNames)
   }
@@ -148,7 +156,9 @@ for (i in 1:length(pairings)) {
   ##################################################
   if ('primer_specificity' %in% analysis) {
     primerOut <- paste0(outputDir, "primer_specificity/")
-    dir.create(primerOut)
+    if (!file.exists(primerOut)) {
+      dir.create(primerOut)
+    }
     primerDirectories <- unlist(lapply(directories, paste0, "/primer_specificity/"))
     args <- commandArgs(trailingOnly=TRUE)
     if (length(args) == 2) {
