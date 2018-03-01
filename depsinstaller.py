@@ -1,9 +1,9 @@
 from __future__ import print_function
 
-import os
-import sys
 import pip
+import sys
 import glob
+import os
 import platform
 import zipfile
 import struct
@@ -13,12 +13,12 @@ import re
 from subprocess import check_output
 from ftplib import FTP
 from distutils.version import LooseVersion
-from setuptools import setup, find_packages
-from setuptools.command.install import install
+
 
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
+
 
 # VERSIONING:
 # 1. [singleton] ==> minimum version
@@ -48,8 +48,6 @@ class FTPBlast:
     def install_bins(self, binary, installation_dir):
         path = '/blast/executables/igblast/release/{}/'.format(self.version) + binary
         installation_path = (installation_dir + '/' + binary).replace('//', '/')
-        if not os.path.exists(installation_dir):
-            os.makedirs(installation_dir)
         with open(installation_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
 
@@ -62,8 +60,6 @@ class FTPBlast:
 
     def download_edit_imgt_pl(self, download_dir):
         path = '/blast/executables/igblast/release/edit_imgt_file.pl'
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
         download_path = (download_dir + '/edit_imgt_file.pl').replace('//', '/')
         with open(download_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
@@ -121,7 +117,7 @@ def _get_software_version(prog):
 
 def _needs_installation(prog):
     v = versions[prog]
-    software_version = _get_software_version(prog)
+    software_version = _get_software_version(prog) 
     if type(v) == bool or type(software_version) == bool:
         return software_version != v
     if type(v) == list:
@@ -228,8 +224,7 @@ def install_leehom(installation_dir='.'):
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
-    addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-{}.tar.gz'.format(
-        version)
+    addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-{}.tar.gz'.format(version)
     tarname = addr.split('/')[-1].strip()
     old_dir = os.path.abspath('.')
 
@@ -273,6 +268,13 @@ def install_TAMO():
     _ = check_output(['python', 'setup.py', 'install'])
     # remove files (tar?)
     os.chdir(old_dir)
+
+
+# deprecate this with setup.py in the future
+def install_sequential_deps():
+    with open("requirements.txt") as fp:
+        for package in fp:
+            pip.main(['install', package])
 
 
 def download_imgt(download_dir, species, species_layman):
@@ -348,123 +350,67 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
         print(f + ' has been processed.')
 
 
-class ExternalDependencyInstaller(install):
-    def run(self):
-        # although setup() has this, it's installed locally in abseq's installation dir.
-        # By pip.installing here, it's going to be available globally
-        setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66']
-        for pack in setup_requires:
-            pip.main(['install', pack])
-        # create external deps dir
-        d = setup_dir("abseq")
-        d_bin = (d + '/bin').replace('//', '/')
+if __name__ == '__main__':
+    install_sequential_deps()
+    # create external deps dir
+    d = setup_dir(".")
+    d_bin = (d + '/bin').replace('//', '/')
 
-        if _needs_installation('clustalo'):
-            b_clustal = install_clustal_omega(d)
-            _syml(b_clustal, d_bin)
-        else:
-            print("Found clustalo, skipping installation")
+    if _needs_installation('clustalo'):
+        b_clustal = install_clustal_omega(d)
+        _syml(b_clustal, d_bin)
+    else:
+        print("Found clustalo, skipping installation")
 
-        if _needs_installation('fastqc'):
-            b_fastqc = install_fastqc(d)
-            _syml(b_fastqc, d_bin)
-        else:
-            print("Found fastqc, skipping installation")
+    if _needs_installation('fastqc'):
+        b_fastqc = install_fastqc(d)
+        _syml(b_fastqc, d_bin)
+    else:
+        print("Found fastqc, skipping installation")
 
-        if _needs_installation('leehom'):
-            b_leehom = install_leehom(d)
-            _syml(b_leehom, d_bin)
-        else:
-            print("Found leeHom, skipping installation")
+    if _needs_installation('leehom'):
+        b_leehom = install_leehom(d)
+        _syml(b_leehom, d_bin)
+    else:
+        print("Found leeHom, skipping installation")
 
-        if _needs_installation('gs'):
-            install_ghost_script(d)
-        else:
-            print("Found ghostscript, skipping installation")
+    if _needs_installation('gs'):
+        install_ghost_script(d)
+    else:
+        print("Found ghostscript, skipping installation")
 
-        if _needs_installation('igblast'):
-            retvals = install_igblast(d)
-            for b in retvals:
-                _syml(b, d_bin)
-        else:
-            print("Found igblast, skipping installation")
+    if _needs_installation('igblast'):
+        retvals = install_igblast(d)
+        for b in retvals:
+            _syml(b, d_bin)
+    else:
+        print("Found igblast, skipping installation")
 
-        try:
-            import TAMO
-            print("Found TAMO, skipping installation")
-        except ImportError:
-            install_TAMO()
+    try:
+        import TAMO
+        print("Found TAMO, skipping installation")
+    except ImportError:
+        install_TAMO()
 
-        if 'IGDATA' not in os.environ:
-            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-                blast.download_edit_imgt_pl(d)
-                igdata_dir = (d + '/igdata').replace('//', '/')
-                if not os.path.exists(igdata_dir):
-                    os.makedirs(igdata_dir)
-                blast.download_internal_data(igdata_dir)
-                blast.download_optional_file(igdata_dir)
-        else:
-            print("Found IGDATA in ENV, skipping download")
+    if 'IGDATA' not in os.environ:
+        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+            blast.download_edit_imgt_pl(d)
+            igdata_dir = (d + '/igdata').replace('//', '/')
+            os.makedirs(igdata_dir)
+            blast.download_internal_data(igdata_dir)
+            blast.download_optional_file(igdata_dir)
+    else:
+        print("Found IGDATA in ENV, skipping download")
 
-        if 'IGBLASTDB' not in os.environ:
-            # download human and mouse IMGT GeneDB
-            download_imgt(d, "Homo+sapiens", "human")
-            download_imgt(d, "Mus", "mouse")
+    if 'IGBLASTDB' not in os.environ:
+        # download human and mouse IMGT GeneDB
+        download_imgt(d, "Homo+sapiens", "human")
+        download_imgt(d, "Mus", "mouse")
 
-            # create IGBLASTDB's directory
-            if not os.path.exists(d + '/databases/'):
-                os.makedirs(d + '/databases/')
+        # create IGBLASTDB's directory
+        os.makedirs(d + '/databases/')
+        igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
+        igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+    else:
+        print("Found IGBLASTDB in ENV, skipping download")
 
-            # if we don't have edit_imgt_file.pl script, download it!
-            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
-                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-                    blast.download_edit_imgt_pl(d)
-
-            # if we don't have makeblastdb, download it!
-            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
-                retvals = install_igblast(d)
-                for b in retvals:
-                    _syml(b, d_bin)
-
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
-        else:
-            print("Found IGBLASTDB in ENV, skipping download")
-
-        # replace install.run(self)
-        # install.run(self)
-        self.do_egg_install()
-
-
-def readme():
-    with open("README.md") as f:
-        return f.read()
-
-
-setup(name="AbSeq",
-      version="1.1.4",
-      description="Quality control pipeline for antibody libraries",
-      license="placeholder",
-      long_description=readme(),
-      author="CSL",
-      author_email="placeholder",
-      maintainer="CSL",
-      maintainer_email="placeholder",
-      # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
-      # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
-      setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil'],
-      install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn'],
-      packages=find_packages(),
-      # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
-      # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
-      package_data={
-          'abseq': ['rscripts', '3rd_party']
-      },
-      include_package_data=True,
-      cmdclass={
-          'install': ExternalDependencyInstaller,
-      },
-      entry_points={
-          'console_scripts': ['abseq=abseq.abseqQC:main'],
-      })

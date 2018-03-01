@@ -3,18 +3,49 @@
 > This section provides a comprehensive installation guide, including downloading and installing AbSeq
 and all its dependencies without root access. 
 
-To reiterate:
-#### Mandatory dependencies
-* [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
-* [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
-* [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11
-* [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.6
-* [Ghostscript](https://www.ghostscript.com/download/) v9.22
+If you're here because `pip` wants to install AbSeq with root access, have a look [here](https://stackoverflow.com/a/7465532).
+
+# Dependencies
+## Binary dependencies
+In this section, we assume Unix's `make` build tool is readily available.
+If you're (optionally) building for `leeHom` paired-end merger, you will require [`CMake`](https://cmake.org/download/) too.
+
+AbSeq requires a few external packages available in your system, namely:
+
+  * ### Mandatory dependencies
+
+    * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1
+        - Download and extract the tarball or install the pre-compiled binaries
+        - Follow the installation guide [here](http://www.clustal.org/omega/INSTALL)
+    * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) v0.11.5
+        - Download and extract
+        - Follow the installation guide [here](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/INSTALL.txt)
+    * [leeHom](https://github.com/grenaud/leeHom) any version
+        - This is (currently) the default merger used by AbSeq. Only one of `leeHom`, [`FLASh`, and `PEAR`](#optional-dependencies) is required.
+        - Follow the installation guide in their README
+        - As mentioned earlier, leeHom uses `CMake` and `make` as their build tool.
+    * [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.8
+        - There's an amazing setup guide [here](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
+        - Make sure to follow **_every_** step detailed in the guide
+        - **_Important_**: Make sure you export the environment variables `$IGBLASTDB` and `$IGDATA`.
+         See [here](#exporting-environment-variables)
+    * [Ghostscript](https://www.ghostscript.com/download/) v9.22
+        - Download and follow the instructions to install [here](https://www.ghostscript.com/doc/9.22/Install.htm)
          
-#### Optional dependencies
-* [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
-* [leeHom](https://github.com/grenaud/leeHom) any version is only required if `FLASh` and `PEAR` is not installed
-* [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
+  * ### Optional dependencies
+  
+    * [TAMO](http://fraenkel.mit.edu/TAMO/) v1.0 is only required if you specify secretion signal analysis or 5'UTR analysis [(`-t secretion` or `-t 5utr`)](#parameter-definitions)
+        - Click on "Download the package", extract the tarball
+        - Follow the installation guide [here](http://fraenkel.mit.edu/TAMO/INSTALL)
+        - When prompted to install databases, you can safely skip them. AbSeq **doesn't** require any of those
+    * [FLASh](https://sourceforge.net/projects/flashpage/files/) v1.2.11 only required if `leeHom` and `PEAR` is not installed
+        - Download and extract
+        - Execute `make` in root directory of FLASh
+    * [PEAR](https://www.h-its.org/downloads/pear-academic/#release) any version is only required if `FLASh` and `leeHom` is not installed
+        - Follow instructions on their website. __Be sure to read their license agreement before you download their software__.
+    
+> Make sure the above programs are available in your [`$PATH` variable](#exporting-variables). Pay special
+attention to the versions - these versions were used during the development and testing process of AbSeq.
 
 
 # 1. Prepare a directory with read/write access
@@ -60,8 +91,7 @@ the cmake binary over to `/Users/john/mirror/bin`
 # 3. Build, compile sources, and install python packages
 * Download [argtable2](http://argtable.sourceforge.net/) before [Clustal Omega](http://www.clustal.org/omega/)
 
-`Clustal Omega` depends on `argtable2`, so we shall start with `argtable2`; unpack and `cd` into
-`argtable2/`:
+`Clustal Omega` depends on `argtable2`, so we shall start with `argtable2`; unpack and `cd` into `argtable2/`:
 ```bash
 bash$ ./configure --prefix=/Users/john/mirror
 bash$ make
@@ -104,5 +134,51 @@ bash$ make install
 In AbSeq's root directory (where requirements.txt is):
 ```bash
 bash$ pip install -r requirements.txt
+```
+
+## R library dependencies
+The plotting facilities provided by AbSeq uses a few R libraries. You will require `ggplot2`,
+`RcolorBrewer`, `circlize`, `reshape2`, `VennDiagram`, and `plyr`.
+
+**These packages will be _automatically installed_ if they can't be located in your system.**
+
+> Alternatively, you can **avoid R and all its dependencies entirely** if you explicitly tell AbSeq to plot in python only.
+See R vs Python plots in README.
+
+## Exporting variables
+If you chose to install the binaries in some other location, you should make them visible in your `$PATH` variable.
+(You can ignore this if you've followed the instructions above to a tee, we've already done this when
+we appended mirror/bin to our `PATH`)
+
+To make the [installed binaries](#binary-dependencies) available in your `$PATH` variable:
+```bash
+export PATH="/path/to/fastqc:/path/to/leehom/:$PATH"
+```
+in your `.bashrc` or equivalent.
+
+`/path/to/binaries` is the absolute path to the directory where your programs (listed above) are installed,
+each separated by colons. Repeat this for every dependency. Alternatively, move all binaries into one
+folder (eg, `/Users/john/bin/`) and `export PATH="/Users/john/bin/:$PATH"`
+
+## Exporting environment variables
+Make sure `$IGBLASTDB` and `$IGDATA` are exported.
+```bash
+export IGBLASTDB="/path/to/data/igblastDB/databases/"
+export IGDATA="/path/to/data/igblastDB/data/"
+```
+where `igblastDB/databases/` should have all the processed files required for `IgBlast` (this is the output of `makeblastdb`)
+and `igblastDB/data/` should contain 2 sub-folders (you can obtain them from IgBlast's ftp site).
+```bash
+$ ls /path/to/data/igblastDB/databases/
+imgt_human_ighc          imgt_human_igkc          imgt_human_igkv_p.pin    imgt_human_iglv.nsd      imgt_mouse_ighv.nsd
+imgt_human_ighc_p        imgt_human_igkc.nhr      imgt_human_igkv_p.pog    imgt_human_iglv.nsi      imgt_mouse_ighv.nsi
+imgt_human_ighd          imgt_human_igkc.nin      imgt_human_igkv_p.psd    imgt_human_iglv.nsq      imgt_mouse_ighv.nsq
+imgt_human_ighd.nhr      imgt_human_igkc.nog      imgt_human_igkv_p.psi    imgt_human_iglv_p        imgt_mouse_ighv_p
+imgt_human_ighd.nin      imgt_human_igkc.nsd      imgt_human_igkv_p.psq    imgt_human_iglv_p.phr    imgt_mouse_ighv_p.phr
+imgt_human_ighd.nog      imgt_human_igkc.nsi      imgt_human_iglc          imgt_human_iglv_p.pin    imgt_mouse_ighv_p.pin
+imgt_human_ighd.nsd      imgt_human_igkc.nsq  < more entries omited>
+
+$ ls /path/to/data/igblastDB/data/
+internal_data/ optional_file/
 ```
 
