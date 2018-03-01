@@ -59,6 +59,7 @@ primerAnalysis <- function(primer5File, primer3File, primerDirectories, primerOu
         ####################################################################################
         for (j in 1:length(primerNames)) {
           files <- listFilesInOrder(path = primerDirectories, pattern = paste0(".*_", category[c], "_", pend, "end_", primerNames[j],"_igv_dist\\.csv(\\.gz)?$"))
+          # there is a slight chance that the user provided primer has no hit, hence, not dist files (AbSEq (obviously) doesn't plot something empty)
           if (length(files)) {
             subtitle <- paste("Total is", paste(lapply(files, function(x) { as.integer(getTotal(x)) }), collapse = ', '))
             vertical<- checkVert(files[[1]])
@@ -83,6 +84,7 @@ primerAnalysis <- function(primer5File, primer3File, primerDirectories, primerOu
         ####################################################################################
         for (j in 1:length(analysisType)) {
           files <- listFilesInOrder(path = primerDirectories, pattern = paste0(".*_", category[c], "_", pend, "end_", analysisType[j], "_dist\\.csv(\\.gz)?$"))
+          # there is a slight chance that the user provided primer has no hit, hence, not dist files (AbSEq (obviously) doesn't plot something empty)
           if (length(files)) {
             subtitle <- paste("Total is", paste(lapply(files, function(x) { as.integer(getTotal(x)) }), collapse = ', '))
             vertical <- checkVert(files[[1]])
