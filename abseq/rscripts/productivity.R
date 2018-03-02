@@ -41,7 +41,7 @@ productivityPlot <- function(dataframes, sampleNames) {
     facet_grid(~ Productivity)+
     labs(title="Productivity proportions",
          subtitle="Percentage of unproductive reads due to stop codons and frameshifts",
-         x="Round",
+         x="Sample",
          y="Percentage (%)") +
     scale_y_continuous(limits=c(0,100)) +
     geom_text(position = position_stack(vjust = 0.5))
