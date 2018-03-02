@@ -119,7 +119,7 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     
     if (frames == 1) {
       # single sample -> blue colour plot
-      g <- g + geom_text(hjust = -0.15, size = 3) + 
+      g <- g + geom_text(hjust = 0.50, vjust = -0.5, size = 3, angle = -90) + 
         geom_bar(stat='identity', aes(fill = sample), position = 'dodge', fill = BLUEHEX, show.legend = FALSE)
     } else {
       # multiple samples -> multi-coloured plot
