@@ -114,12 +114,20 @@ class PlotManager:
             self.metadata = filter(lambda x: x[1] in requestedSamples, self.metadata)
             canonicalNameChangeMap = {k: v for k, v in canonicalNameChangeMap.items() if k in requestedSamples}
 
-            # remap abseq's infered names to user provided ones
+            # remap abseq's infered names to user provided ones - flatten rscriptArgs
             for userProvidedNames in list(itertools.chain(*self.rscriptArgs)):
                 res = self._findBestMatch(userProvidedNames)[1]
                 # update new name
-                canonicalNameChangeMap[res] = \
-                    self._findBestMatch(userProvidedNames, useProvidedName=True)[1]
+                newName = self._findBestMatch(userProvidedNames, useProvidedName=True)[1]
+                # if user provided confusing names, eg: PCR1_L001 and PCR1 both refer to the same sample,
+                # we raise an exception immediately!
+                if res in canonicalNameChangeMap and canonicalNameChangeMap[res] != res and \
+                        canonicalNameChangeMap[res] != newName:
+                    raise Exception("Misleading -rs argument, {} and {}"
+                                    .format(self._findBestMatch(userProvidedNames, useProvidedName=True)[1],
+                                            canonicalNameChangeMap[res]))
+                canonicalNameChangeMap[res] = newName
+
             self.metadata = map(lambda x: (x[0], canonicalNameChangeMap[x[1]]), self.metadata)
 
         return canonicalNameChangeMap
