@@ -54,17 +54,16 @@ def inferSampleName(fname, merger, fastqc):
     :param fname: filename to infer
     :return: 2-tuple of (args.outdir, args.name)
     """
-    f1name = fname.split("/")[-1]
+    f1name = os.path.basename(fname)
     # read is paired end ==> remove everything after _R1.fast*...
     if f1name.find("_R") != -1 and (merger or fastqc):
         ext = '_' + f1name.split("_")[-1]
     else:
         ext = f1name[f1name.find("."):]
-
     outdir = "/" + f1name.replace(ext, "")
-    f1name = f1name.replace(ext, "")
-    sampleName = f1name.split("_")[0] + "_"
-    sampleName += f1name.split("_")[-1].split(".")[0]
+    sampleName = f1name.replace(ext, "")
+    # sampleName = f1name.split("_")[0] + "_"
+    # sampleName += f1name.split("_")[-1].split(".")[0]
     return outdir, sampleName
 
 # U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)

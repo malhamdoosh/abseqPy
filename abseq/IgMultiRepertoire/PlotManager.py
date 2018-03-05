@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import itertools
 
 from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
 
@@ -29,6 +30,7 @@ class PlotManager:
         # there's no R plotting if user specified that r scripts shouldn't run => python's plotting should run instead
         PlotManager._pythonPlotting = PlotManager.rscriptsOff(self.rscriptArgs)
         self.metadata = []
+        self.remap = {}
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
@@ -107,6 +109,20 @@ class PlotManager:
                         requestedSamples.add(res[1])
         return requestedSamples
 
+    def remapSampleNames(self):
+        if len(self.remap) == 0:
+            for rsNames in list(itertools.chain(*self.rscriptArgs)):
+                # print(rsNames)
+                res = self._findBestMatch(rsNames)[1]
+                self.remap[res] = self._findBestMatch(rsNames, useProvidedName=True)[1]
+
+            self.metadata = map(lambda x: (x[0], self.remap[x[1]]), self.metadata)
+        # else, already remapped!
+
+    def getRemapDict(self):
+        self.remapSampleNames()
+        return self.remap.copy()
+
     def _flushMetadata(self, abSeqRootDir):
         """
         AbSeq's way of communicating with external Rscript. AbSeq's python component supplies R with
@@ -136,15 +152,19 @@ class PlotManager:
                     # this if statement will be false when someone purposely provided a
                     # SINGLE sample as "comparison/pairing" E.G. -rs "PCR1 |" or -rs "PCR1 | ; PCR2" etc..
                     if not (len(pairings) == 1 or '' in pairings):
-                        writeBuffer.append([self._findBestMatch(sampleName) for sampleName in pairings])
-                    # at this point, writeBuffer is a list of list as such:
-                    # writeBuffer = [
-                    #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
-                    #               (self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
-                    #           [ (self.outdir/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001),
-                    #               (self.outdir/PCR5_....., PCR5_L001), ... ]
-                    #           [ ... ]
-                    # ] - each inner list is a set of pairing
+                        writeBuffer.append([self._findBestMatch(sampleName, useProvidedName=True)
+                                            for sampleName in pairings])
+
+                # remap sample names to those provided by user in -rs <arg>
+                self.remapSampleNames()
+                # at this point, writeBuffer is a list of list as such:
+                # writeBuffer = [
+                #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
+                #               (self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001, PCR2_L001), .. ]
+                #           [ (self.outdir/PCR4_BZ123_ACGG_ACGG_L001, PCR4_L001),
+                #               (self.outdir/PCR5_....., PCR5_L001), ... ]
+                #           [ ... ]
+                # ] - each inner list is a set of pairing
 
             # the individual samples has to be plotted too!
             writeBuffer += map(lambda x: [x], self.metadata)
@@ -167,14 +187,17 @@ class PlotManager:
                     # self.outdir/PCR1_BZ123_..._L001,PCR1_L001
                     # self.outdir/PCR2_BZ123_..._L001,PCR2_L001
 
-    def _findBestMatch(self, sampleName):
+    def _findBestMatch(self, sampleName, useProvidedName=False):
         v = float('-inf')
         bestMatch = None
         if sampleName:
             for sampleDir, sampleCName in self.metadata:
                 matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
                 if matchScore > v:
-                    bestMatch = (sampleDir, sampleCName)
+                    if useProvidedName:
+                        bestMatch = (sampleDir, sampleName)
+                    else:
+                        bestMatch = (sampleDir, sampleCName)
                     v = matchScore
         return bestMatch
 
