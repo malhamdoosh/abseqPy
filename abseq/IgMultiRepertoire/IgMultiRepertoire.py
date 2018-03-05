@@ -66,11 +66,16 @@ class IgMultiRepertoire:
             self.buffer = filter(lambda x: x.name in self.plotManager.getRscriptSamples(), self.buffer)
             self.plotManager.metadata = filter(lambda x: x[1] in self.plotManager.getRscriptSamples(), self.plotManager.metadata)
             self.sampleCount = len(self.plotManager.getRscriptSamples())
+
+            # recalculate avg resource.
             avgResource = int(floor(self.resource / self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
-            # recalculate avg resource.
             for sample in self.buffer:
                 sample.threads = avgResource
+
+            # change sampleName to provided -rs name
+            for sample_ in self.buffer:
+                sample_.name = self.plotManager.getRemapDict()[sample_.name]
 
         # silently ignore creation of out directory if already exists
         for sample in self.buffer:
