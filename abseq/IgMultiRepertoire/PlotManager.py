@@ -32,7 +32,7 @@ class PlotManager:
         self.metadata = []
         self.end5File = args.primer5end
         self.end3File = args.primer3end
-        self.remap = {}
+        self.args = args
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
@@ -69,16 +69,6 @@ class PlotManager:
         """
         return PlotManager._pythonPlotting
 
-    def addMetadata(self, sample):
-        """
-        stores metadata about a given sample. More specifically, stores the output directory
-        and canonical name of a sample so that the rscripts that will plot multiple-repertoire
-        comparison will know which (sample) and where to find them
-        :param sample: sample is a tuple type of (sample's directory, sample's canonical name)
-        :return: None
-        """
-        self.metadata.append(sample)
-
     def plot(self):
         """
         plots csv files. If python plotting was on, then this function will have no effect
@@ -109,7 +99,54 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
-    def getRscriptSamples(self):
+    def processInput(self, allFiles):
+        from abseq.IgRepertoire.igRepUtils import inferSampleName
+        canonicalNameChangeMap = {}
+        for sample in allFiles:
+            if type(sample) == tuple:
+                # paired end sample
+                f1name, _ = sample
+                dirName, canonicalName = inferSampleName(f1name, merger=True,
+                                                         fastqc=(self.args.task.lower() == 'fastqc'))
+                outDirName = self.args.outdir + dirName
+                self.metadata.append((outDirName, canonicalName))
+            else:
+                dirName, canonicalName = inferSampleName(sample, merger=False,
+                                                         fastqc=(self.args.task.lower() == 'fastqc'))
+                outDirName = self.args.outdir + dirName
+                self.metadata.append((outDirName, canonicalName))
+            canonicalNameChangeMap[canonicalName] = canonicalName
+
+        # 1st. Filter out all samples that are not required. (by consulting -rs <args>)
+        # 2nd. Post filtering, remap all abseq canonical names to user provided names
+        if self.rscriptArgs and self.rscriptArgs != 'off':
+            # take away samples that are not requested by user if -rs was specified
+            requestedSamples = self._getRscriptSamples()
+            self.metadata = filter(lambda x: x[1] in requestedSamples, self.metadata)
+            canonicalNameChangeMap = {k: v for k, v in canonicalNameChangeMap.items() if k in requestedSamples}
+
+            # remap abseq's infered names to user provided ones - flatten rscriptArgs
+            for userProvidedNames in list(itertools.chain(*self.rscriptArgs)):
+                res = self._findBestMatch(userProvidedNames)[1]
+                # update new name
+                newName = self._findBestMatch(userProvidedNames, useProvidedName=True)[1]
+                # if user provided confusing names, eg: PCR1_L001 and PCR1 both refer to the same sample,
+                # we raise an exception immediately!
+                if res in canonicalNameChangeMap and canonicalNameChangeMap[res] != res and \
+                        canonicalNameChangeMap[res] != newName:
+                    raise Exception("Misleading -rs argument, {} and {}"
+                                    .format(self._findBestMatch(userProvidedNames, useProvidedName=True)[1],
+                                            canonicalNameChangeMap[res]))
+                canonicalNameChangeMap[res] = newName
+
+            self.metadata = map(lambda x: (x[0], canonicalNameChangeMap[x[1]]), self.metadata)
+
+        return canonicalNameChangeMap
+
+    def addMetadata(self, data):
+        self.metadata.append(data)
+
+    def _getRscriptSamples(self):
         # whether or not there was python plotting, see if user explicitly chose samples
         requestedSamples = set()
         if self.rscriptArgs and self.rscriptArgs != 'off':
@@ -119,20 +156,6 @@ class PlotManager:
                     if res:
                         requestedSamples.add(res[1])
         return requestedSamples
-
-    def remapSampleNames(self):
-        if len(self.remap) == 0:
-            for rsNames in list(itertools.chain(*self.rscriptArgs)):
-                # print(rsNames)
-                res = self._findBestMatch(rsNames)[1]
-                self.remap[res] = self._findBestMatch(rsNames, useProvidedName=True)[1]
-
-            self.metadata = map(lambda x: (x[0], self.remap[x[1]]), self.metadata)
-        # else, already remapped!
-
-    def getRemapDict(self):
-        self.remapSampleNames()
-        return self.remap.copy()
 
     def _flushMetadata(self, abSeqRootDir):
         """
@@ -166,8 +189,6 @@ class PlotManager:
                         writeBuffer.append([self._findBestMatch(sampleName, useProvidedName=True)
                                             for sampleName in pairings])
 
-                # remap sample names to those provided by user in -rs <arg>
-                self.remapSampleNames()
                 # at this point, writeBuffer is a list of list as such:
                 # writeBuffer = [
                 #           [ (self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001, PCR1_L001),
@@ -205,10 +226,7 @@ class PlotManager:
             for sampleDir, sampleCName in self.metadata:
                 matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
                 if matchScore > v:
-                    if useProvidedName:
-                        bestMatch = (sampleDir, sampleName)
-                    else:
-                        bestMatch = (sampleDir, sampleCName)
+                    bestMatch = (sampleDir, sampleName if useProvidedName else sampleCName)
                     v = matchScore
         return bestMatch
 
@@ -235,3 +253,6 @@ def _nameMatch(string1, string2, deletionPenalty=-2, insertionPenalty=-2, matchS
                                    matchScore if string1[j - 1] == string2[i - 1] else mismatchScore))
             maxval = max(maxval, matrix[i][j])
     return maxval
+
+
+
