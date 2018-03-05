@@ -20,7 +20,7 @@ plotCirclize <- function(sampleName, path) {
       png(gsub(".csv", ".png", filename))
       
       # circos theme setup
-      if (length(unique(df[[1]]))-1 < 10 && length(unique(df[[2]]))-1 < 10)  {
+      if (length(unique(df[[1]]))-1 < 8 && length(unique(df[[2]]))-1 < 8)  {
           circos.par(gap.after = c(rep(5, length(unique(df[[1]]))-1), 15, 
                                    rep(5, length(unique(df[[2]]))-1), 15))
       }
