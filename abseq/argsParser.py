@@ -136,10 +136,33 @@ def parseArgs():
 
     if PlotManager.rscriptsIsConf(args.rscripts):
         args.rscripts = parseRscriptsFile(args.rscripts)
+        if _hasDumbInput(args.rscripts):
+            parser.error("Incorrect -rs argument detected. You might have a trailing {}"
+                         .format(RSCRIPT_SAMPLE_SEPARATOR))
     elif PlotManager.rscriptsIsPairedStrings(args.rscripts):
         args.rscripts = parseRscriptsStringPair(args.rscripts)
+        if _hasDumbInput(args.rscripts):
+            parser.error("Incorrect -rs argument detected. You might have a trailing {}"
+                         .format(RSCRIPT_SAMPLE_SEPARATOR))
 
     return args
+
+
+def _hasDumbInput(pairings):
+    """
+    -rs "PCR1 | "
+    or
+    $ cat pair.cfg
+    PCR1 |
+
+    yeah, go figure. (-f1 PCR1)
+    :param pairings: parsed rscript arugment
+    :return: True if user provided a less than useful argument.
+    """
+    for pairing in pairings:
+        if '' in pairing:
+            return True
+    return False
 
 
 def parseCommandLineArguments():

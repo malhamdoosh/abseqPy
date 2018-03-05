@@ -19,9 +19,15 @@ class IgMultiRepertoire:
         self.sampleCount = 0
         self.resource = args.threads
         self.plotManager = PlotManager(args)
+
         if os.path.isdir(args.f1):
-            clusterFiles = self.__pairFiles(args.f1, args)
-            self.sampleCount = len(clusterFiles)
+            clusterFiles = self._pairFiles(args.f1, args)
+            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles)
+
+            # get requested samples from -rs (if specified / if any) only
+            self.sampleCount = len(canonicalNameChangeMap)
+
+            # calculate resource (averaged over all samples)
             avgResource = int(floor(self.resource / self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
             for sample in clusterFiles:
@@ -48,12 +54,15 @@ class IgMultiRepertoire:
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
                     modifiedArgs.fmt = detectFileFormat(f1name)
-                modifiedArgs.outdir += retval[0]
-                modifiedArgs.name = retval[1]
-                self.plotManager.addMetadata((modifiedArgs.outdir, modifiedArgs.name))
-                modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
-                modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                self.buffer.append(IgRepertoire(modifiedArgs))
+
+                # if abseq's inferred sample name is in the map ==> sample was specified in -rs
+                # we also need to remap the name
+                if retval[1] in canonicalNameChangeMap:
+                    modifiedArgs.outdir += retval[0]
+                    modifiedArgs.name = canonicalNameChangeMap[retval[1]]
+                    modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
+                    modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
+                    self.buffer.append(IgRepertoire(modifiedArgs))
         else:
             self.plotManager.addMetadata((args.outdir, args.name))
             args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
@@ -61,59 +70,43 @@ class IgMultiRepertoire:
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
 
-        # filter out samples that are not specified in -rs if -rs was specified
-        if self.plotManager.getRscriptSamples():
-            self.buffer = filter(lambda x: x.name in self.plotManager.getRscriptSamples(), self.buffer)
-            self.plotManager.metadata = filter(lambda x: x[1] in self.plotManager.getRscriptSamples(), self.plotManager.metadata)
-            self.sampleCount = len(self.plotManager.getRscriptSamples())
-
-            # recalculate avg resource.
-            avgResource = int(floor(self.resource / self.sampleCount))
-            avgResource = avgResource if avgResource > 0 else 1
-            for sample in self.buffer:
-                sample.threads = avgResource
-
-            # change sampleName to provided -rs name
-            for sample_ in self.buffer:
-                sample_.name = self.plotManager.getRemapDict()[sample_.name]
-
-        # silently ignore creation of out directory if already exists
+        # Finally, silently ignore creation of output directory if already exists
         for sample in self.buffer:
             if not os.path.exists(sample.args.outdir):
                 os.makedirs(sample.args.outdir)
 
     def analyzeAbundance(self, all=False):
-        self.__beginWork(GeneralWorker.ABUN, all=all)
+        self._beginWork(GeneralWorker.ABUN, all=all)
 
     def runFastqc(self):
-        self.__beginWork(GeneralWorker.FASTQC)
+        self._beginWork(GeneralWorker.FASTQC)
 
     def analyzeDiversity(self, all=False):
-        self.__beginWork(GeneralWorker.DIVER, all=all)
+        self._beginWork(GeneralWorker.DIVER, all=all)
 
     def analyzeProductivity(self, generateReport=True, all=False):
-        self.__beginWork(GeneralWorker.PROD, generateReport=generateReport, all=all)
+        self._beginWork(GeneralWorker.PROD, generateReport=generateReport, all=all)
 
     def annotateClones(self, outDirFilter=None, all=False):
-        self.__beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
+        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
 
     def analyzeRestrictionSites(self):
-        self.__beginWork(GeneralWorker.RSA)
+        self._beginWork(GeneralWorker.RSA)
 
     def analyzePrimerSpecificity(self):
-        self.__beginWork(GeneralWorker.PRIM)
+        self._beginWork(GeneralWorker.PRIM)
 
     def analyze5UTR(self):
-        self.__beginWork(GeneralWorker.UTR5)
+        self._beginWork(GeneralWorker.UTR5)
 
     def analyzeRestrictionSitesSimple(self):
-        self.__beginWork(GeneralWorker.RSAS)
+        self._beginWork(GeneralWorker.RSAS)
 
     def analyzeSecretionSignal(self):
-        self.__beginWork(GeneralWorker.SECR)
+        self._beginWork(GeneralWorker.SECR)
 
     def analyzeSeqLen(self, klass=False):
-        self.__beginWork(GeneralWorker.SEQLEN, klass=klass)
+        self._beginWork(GeneralWorker.SEQLEN, klass=klass)
 
     def finish(self):
         """
@@ -127,7 +120,7 @@ class IgMultiRepertoire:
         self.result.join_thread()
         self.plotManager.plot()
 
-    def __pairFiles(self, folder, args):
+    def _pairFiles(self, folder, args):
         """
         given a list of files, attempt to pair them based on prefix name
         :param folder: folder in which these files are found in
@@ -188,7 +181,7 @@ class IgMultiRepertoire:
 
         return distinct(res)
 
-    def __beginWork(self, jobdesc, *args, **kwargs):
+    def _beginWork(self, jobdesc, *args, **kwargs):
 
         # fill self.queue with data from self.buffer
         assert self.queue.empty()
@@ -203,7 +196,7 @@ class IgMultiRepertoire:
 
         # since macOSX doesn't support .qsize(). also, .empty() and .qsize() are
         # unreliable ==> we use poison pills
-        self.__fillPoisonPill(self.resource + 10, self.queue)
+        self._fillPoisonPill(self.resource + 10, self.queue)
 
         try:
             # start workers
@@ -244,6 +237,7 @@ class IgMultiRepertoire:
             for w in workers:
                 w.terminate()
 
-    def __fillPoisonPill(self, n, queue, pill=None):
+    @staticmethod
+    def _fillPoisonPill(n, queue, pill=None):
         for _ in range(n):
             queue.put(pill)
