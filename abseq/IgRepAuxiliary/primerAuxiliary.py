@@ -32,7 +32,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
     records = SeqIO.index(gunzip(readFile), format)
     newColumns = ['queryid'] + list(cloneAnnot.columns)
     try:
-        print("\t " + format + " index created and refinement started ...")
+        print("\t " + format + " index created and primer analysis started ...")
         noSeqs = len(queryIds)
         totalTasks = int(ceil(noSeqs * 1.0 / seqsPerFile))
         tasks = Queue()
@@ -48,7 +48,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
             workers.append(w)
             w.start()
         for i in range(totalTasks):
-            ids = queryIds[i * seqsPerFile:(i+1)*seqsPerFile]
+            ids = queryIds[i * seqsPerFile:(i + 1) * seqsPerFile]
             recs = map(lambda x: records[x], ids)
             qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), ids)
             tasks.put((recs, qsRecs))
@@ -106,52 +106,68 @@ def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
 
 def _addPrimerColumns(cloneAnnot, end5, end3):
     if end5:
-        cloneAnnot['5end'] = str(np.nan)
         cloneAnnot['5endPrimer'] = str(np.nan)
-        cloneAnnot['5endIndel'] = np.nan
+        cloneAnnot['5endMismatchIndex'] = np.nan
+        cloneAnnot['5endIndelIndex'] = np.nan
     if end3:
-        cloneAnnot['3end'] = str(np.nan)
         cloneAnnot['3endPrimer'] = str(np.nan)
-        cloneAnnot['3endIndel'] = np.nan
+        cloneAnnot['3endMismatchIndex'] = np.nan
+        cloneAnnot['3endIndelIndex'] = np.nan
 
 
 def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
+    NA = str(np.nan)
+    PRIMER = str(end) + 'endPrimer'
+    MISMATCH = str(end) + 'endMismatchIndex'
+    INDEL = str(end) + 'endIndelIndex'
 
-    validEnd = Counter(cloneAnnot['{}end'.format(end)].tolist())
+    known = cloneAnnot[cloneAnnot[PRIMER] != NA]
+    integrity = {
+        'Unknown': (len(cloneAnnot) - len(known)),
+        'Indelled': sum(known[INDEL] != 0),
+        'Mismatched': sum(known[MISMATCH] != 0),
+        'Intact': len(known[(known[INDEL] == 0) & (known[MISMATCH] == 0)])
+    }
 
-    plotDist(validEnd, name, fileprefix + 'integrity_dist.png',
+    plotDist(integrity, name, fileprefix + 'integrity_dist.png',
              title='Integrity of {}\'-end Primer Sequence (%s)'.format(end) % (category),
              proportion=True, rotateLabels=False)
 
-    invalidClones = cloneAnnot.index[cloneAnnot['{}end'.format(end)] == 'Indelled'].tolist()
-
+    invalidClones = known.index[known[INDEL] != 0].tolist()
+    valid = known.index[known[INDEL] == 0].tolist()
     print("Example of Indelled {}'-end: {}".format(end, str(invalidClones[1:10])))
-    print("Example of valid {}'-end: {}".format(end,
-          str(cloneAnnot.index[cloneAnnot['{}end'.format(end)] != 'Indelled'].tolist()[1:10])))
+    print("Example of non-indelled {}'-end: {}".format(end, str(valid[1:10])))
 
-    stopcodonInFrameDist = Counter(cloneAnnot['stopcodon'].tolist())
-    plotDist(stopcodonInFrameDist, name,
-             fileprefix + 'stopcodon_dist.png',
-             title='Stop Codons in sequences by {}\'-End ({})'.format(end, category),
-             proportion=False, rotateLabels=False)
+    # todo: what's this for? (if end == '5') ?
+    # stopcodonInFrameDist = Counter(cloneAnnot['stopcodon'].tolist())
+    # plotDist(stopcodonInFrameDist, name,
+    #          fileprefix + 'stopcodon_dist.png',
+    #          title='Stop Codons in sequences by {}\'-End ({})'.format(end, category),
+    #          proportion=False, rotateLabels=False)
 
-    c1 = Counter(cloneAnnot[cloneAnnot['{}end'.format(end)] == 'Indelled']['{}endPrimer'.format(end)].tolist())
+    c1 = Counter(known[known[INDEL] != 0][PRIMER].tolist())
     plotDist(c1, name, fileprefix +
              'indelled_dist.png',
              title='Abundance of Indelled {}\'-end Primers ({})'.format(end, category),
              proportion=False, rotateLabels=False, vertical=False, top=50)
-    c = Counter(cloneAnnot[cloneAnnot['{}end'.format(end)] == 'Indelled']['{}endIndel'.format(end)].tolist())
+
+    c = Counter(known[known[INDEL] != 0][INDEL].tolist())
     plotDist(c, name, fileprefix +
              'indel_pos_dist.png',
              title='Abundance of Indel Positions in {}\'-end Primers ({})'.format(end, category),
              proportion=False, rotateLabels=False, vertical=True,
              sortValues=False, top=50)
-    primers = set(cloneAnnot['{}endPrimer'.format(end)].tolist())
-    # print(c1, primers)
+
+    primers = set(known[PRIMER].tolist())
+
     for primer in primers:
         # print(primer)
-        df = cloneAnnot[cloneAnnot['{}end'.format(end)] == 'Indelled']
-        df = df[df['{}endPrimer'.format(end)] == primer]
+
+        # todo: what's this for? - why only vdist of indelled?
+        # df = known[known[INDEL] != 0]
+        # df = df[df[PRIMER] == primer]
+
+        df = known[known[PRIMER] == primer]
         # print(df.shape)
         germLineDist = compressCountsGeneLevel(Counter(df['vgene'].tolist()))
         plotDist(germLineDist, name, fileprefix + primer +
@@ -164,6 +180,11 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
     nanString = 'NaN'
     # similar with productivity analysis etc ..
     cloneAnnot.fillna(nanString, inplace=True)
+    NA = str(np.nan)
+    PRIMER5 = '5endPrimer'
+    PRIMER3 = '3endPrimer'
+    INDEL5 = '5endIndelIndex'
+    INDEL3 = '3endIndelIndex'
 
     outOfFrameClones = cloneAnnot[cloneAnnot['v-jframe'] == 'Out-of-frame']
     productiveClones = cloneAnnot[(cloneAnnot['v-jframe'] == 'In-frame') & (cloneAnnot['stopcodon'] == 'No')]
@@ -171,15 +192,21 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
     if end5:
         print("5-end analysis of all clones ... ")
         writePrimerStats('5', name, cloneAnnot, outDir + name + '_all_5end_')
-        allInvalid5Clones = cloneAnnot.index[cloneAnnot['5end'] == 'Indelled'].tolist()
+        allInvalid5Clones = cloneAnnot.index[
+            ((cloneAnnot[PRIMER5] != NA) & (cloneAnnot[INDEL5] != 0))
+        ].tolist()
 
         print('5-end analysis of out-of-frame clones ... ')
         writePrimerStats('5', name, outOfFrameClones, outDir + name + '_outframe_5end_', 'Out-of-frame')
-        outFrameInvalid5Clones = outOfFrameClones.index[outOfFrameClones['5end'] == 'Indelled'].tolist()
+        outFrameInvalid5Clones = outOfFrameClones.index[
+            ((outOfFrameClones[PRIMER5] != NA) & (outOfFrameClones[INDEL5] != 0))
+        ].tolist()
 
         print("5-end analysis of productive clones ... ")
         writePrimerStats('5', name, productiveClones, outDir + name + '_productive_5end_', 'Productive')
-        productiveInvalid5Clones = productiveClones.index[productiveClones['5end'] == 'Indelled'].tolist()
+        productiveInvalid5Clones = productiveClones.index[
+            ((productiveClones[PRIMER5] != NA) & (productiveClones[INDEL5] != 0))
+        ].tolist()
 
     if end3:
         print("3-end analysis of all clones ... ")
@@ -192,17 +219,23 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
         writePrimerStats('3', name, productiveClones, outDir + name + "_productive_3end_", 'Productive')
 
         if end5:
-            invalid3Clones = cloneAnnot.index[cloneAnnot['3end'] == 'Indelled'].tolist()
+            invalid3Clones = cloneAnnot.index[
+                ((cloneAnnot[PRIMER3] != NA) & (cloneAnnot[INDEL3] != 0))
+            ].tolist()
             plotVenn({"5'-end": set(allInvalid5Clones), "3'-end": set(invalid3Clones)},
                      outDir + name + '_all_invalid_primers.png')
             del invalid3Clones, allInvalid5Clones
 
-            outFrameInvalid3Clones = outOfFrameClones.index[outOfFrameClones['3end'] == 'Indelled'].tolist()
+            outFrameInvalid3Clones = outOfFrameClones.index[
+                ((outOfFrameClones[PRIMER3] != NA) & (outOfFrameClones[INDEL3] != 0))
+            ].tolist()
             plotVenn({"5'-end": set(outFrameInvalid5Clones), "3'-end": set(outFrameInvalid3Clones)},
                      outDir + name + '_outframe_invalid_primers.png')
             del outFrameInvalid3Clones, outFrameInvalid5Clones
 
-            productiveInvalid3Clones = productiveClones.index[productiveClones['3end'] == 'Indelled'].tolist()
+            productiveInvalid3Clones = productiveClones.index[
+                ((productiveClones[PRIMER3] != NA) & (productiveClones[INDEL3] != 0))
+            ].tolist()
             plotVenn({"5'-end": set(productiveInvalid5Clones), "3'-end": set(productiveInvalid3Clones)},
                      outDir + name + "_productive_invalid_primers.png")
 

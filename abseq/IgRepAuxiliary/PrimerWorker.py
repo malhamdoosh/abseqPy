@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 
 from multiprocessing import Process
 
@@ -48,6 +49,8 @@ class PrimerWorker(Process):
                                                     self.maxPrimer3Length, self.primer5sequences,
                                                     self.primer3sequences))
                 self.resultsQueue.put(recs)
+                self.procCounter.increment(len(recs))
+                sys.stdout.flush()
             except Exception as e:
                 print("An error as occurred while processing " + self.name)
                 print(e)
@@ -84,7 +87,7 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     if primer5seqs:
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
         try:
-            qsRec['5endPrimer'], qsRec['5end'], qsRec['5endIndel'] = findBestMatchedPattern(primer, primer5seqs)
+            qsRec['5endPrimer'], qsRec['5endMismatchIndex'], qsRec['5endIndelIndex'] = findBestMatchedPattern(primer, primer5seqs)
         except Exception as e:
             # print("ARGH: something went wrong!" + str(e.message))
             unexpected5 += 1
@@ -93,7 +96,7 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     if primer3seqs:
         primer = str(vh[-1 * maxPrimer3Length:])
         try:
-            qsRec['3endPrimer'], qsRec['3end'], qsRec['3endIndel'] = findBestMatchedPattern(primer, primer3seqs)
+            qsRec['3endPrimer'], qsRec['3endMismatchIndex'], qsRec['3endIndelIndex'] = findBestMatchedPattern(primer, primer3seqs)
         except Exception as e:
             # print("DEBUG: something went wrong! {}".format(str(e.message)))
             unexpected3 += 1

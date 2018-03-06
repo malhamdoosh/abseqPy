@@ -13,7 +13,7 @@ import sys
 from os.path import exists
 from Bio import SeqIO, AlignIO
 from pandas.core.frame import DataFrame
-from numpy import isnan
+from numpy import isnan, nan
 from Bio.SeqRecord import SeqRecord
 from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
@@ -632,17 +632,24 @@ def calMaxIUPACAlignScores(seqs):
     return scores
 
 
-'''
-    A function to find the best matched pattern in a list of patterns
-    and classify the type of the alignment (intact, indelled, mismatched, unknown)
-'''
-
-
 def findBestMatchedPattern(seq, patterns):
+    """
+    find the best matched pattern in a list of patterns
+    and classify the type of the alignment (intact, indelled, mismatched, unknown)
+    :param seq: Typically the 5' or 3' end of query sequence, cut to the length of max(map(len, primer_seqs))
+                because we are using LED
+    :param patterns: Typically your 5' or 3' primer sequences
+    :return: (primer_id, mismatch_position, indel_position)
+    Note: 0) mismatch_position and indel_position are 1-based index (i.e. starts from 1, not 0) - 0 means no indel/mis
+          1) primer_id = 'nan'        => there was no suitable hit - mismatches and indel_pos will be left 0, but you
+                                         should (obviously) not interpret that as mismatch at pos 0 or indel at pos 0
+          2) mismatch_position = 0    => no mismatches
+          3) indel_position = 0       => no indel_position
+    """
+    NO_MATCH = (str(nan), 0, 0)
     scores = []
     # align the sequence against all possible patterns
     for (id, pattern, maxScore) in patterns:
-        # print(seq, pattern)
         alignments = align.localds(seq.upper(), pattern, subMatIUPAC, -5, -5)
         if len(alignments) > 1:
             localScores = [a[2] for a in alignments]
@@ -654,13 +661,13 @@ def findBestMatchedPattern(seq, patterns):
         if alignment:
             alignLen = alignment[-1] - alignment[-2]
             scores.append((id, alignment))
-            # if the sequence exactly matches one of the patterns ==> intact
+            # if the sequence exactly matches one of the patterns (i.e. got the
+            # max possible score from the matrix) ==> intact, return immediately
             if (alignment[2] == maxScore and
                     alignLen == len(pattern) and
                     '-' not in alignment[0] and
                     '-' not in alignment[1]):
-                # returning (id, "intact", 0)
-                return scores[-1][0], "Intact", 0
+                return scores[-1][0], 0, 0
         else:
             scores.append((id, ('', '', 0)))
 
@@ -671,7 +678,7 @@ def findBestMatchedPattern(seq, patterns):
     elif len(scores) == 1:
         bestInd = 0
     else:
-        return "None", "Unknown", 0
+        return NO_MATCH
 
     best = list(scores[bestInd])
     best[1] = list(best[1])
@@ -681,7 +688,7 @@ def findBestMatchedPattern(seq, patterns):
     SEQ, PTN, SCORE, MSTART, MEND = range(5)
 
     if best[ALIGNMENT][SCORE] == 0:
-        return "None", "Unknown", 0
+        return NO_MATCH
 
     # classify the alignment type ==> insertion, deletion, mismatches
 
@@ -694,41 +701,42 @@ def findBestMatchedPattern(seq, patterns):
         best[ALIGNMENT][SEQ] = best[ALIGNMENT][SEQ][i:]
         best[ALIGNMENT][PTN] = best[ALIGNMENT][PTN][i:]
 
+    # TODO: revise algorithm
     # find the location of insertion or deletion 
     delPos = -1
     if '-' in best[ALIGNMENT][SEQ]:
-        delPos = best[ALIGNMENT][SEQ].index('-') + 1
+        delPos = best[ALIGNMENT][SEQ].index('-')
     # if there is a gap at the beginning ==> happened because of insertion/deletion in the middle
     if '-' in best[ALIGNMENT][PTN] and best[ALIGNMENT][PTN].index('-') > delPos \
             and best[ALIGNMENT][MSTART] > 0 and best[ALIGNMENT][MEND] == len(best[ALIGNMENT][SEQ]):
-        delPos = best[ALIGNMENT][PTN].index('-')
+        # -1 because originally had no +1 (whereas the above and below if statements had +1)
+        delPos = best[ALIGNMENT][PTN].index('-') - 1
     # if a gap at the end ==>  deletion in the middle
     elif '-' in best[ALIGNMENT][PTN] and best[ALIGNMENT][PTN].index('-') + 1 < delPos:  # and best[1][4] < len(best[1][0]):
-        delPos = best[ALIGNMENT][PTN].index('-') + 1
+        delPos = best[ALIGNMENT][PTN].index('-')
 
-    if delPos != -1:
-        return best[ID], "Indelled", delPos  # 1-based
-    else:
-        # if it is Mismatched ==> length of alignment == length of pattern
-        try:
-            assert len(best[ALIGNMENT][SEQ]) == len(patterns[bestInd][1])
-            misPos = 0
-            while misPos < len(best[ALIGNMENT][SEQ]):
-                # 5 is max score in the substitution matrix
-                if subMatIUPAC[(best[ALIGNMENT][SEQ][misPos], patterns[bestInd][ALIGNMENT][misPos])] != 5:
-                    break
-                misPos += 1
-        except Exception as e:
-            raise Exception("Unexpected behaviour {}: ".format(e.message) + seq + " " + str(scores) + " " + str(best))
-        """
-        GGCCATCGGTCTCCCCC 
-        [('alice', ('GGCCATCGGTCTCCCCC', 'GGTCACYG-TCTCYTCA', 43.0, 0, 16)),
-         ('bob', ('--GG-CCATC-GGT-CTCCCCC', 'CAGGTBCAGCTGGTGCA-----', 31.0, 2, 16)),
-         ('con', ('---GGCCATC-GGT-CTCCCCC', 'CARATGCAGCTGGTGCA-----', 21.0, 6, 16)),
-         ('den', ('--GG-CCATC-GGT-CTCCCCC', 'SAGGTCCAGCTGGTACA-----', 31.0, 2, 16)),
-         ('fur', ('GGCCATCGGTCTCCCCC-----', '---CA--GRTCACCTTGAAGGA', 26.0, 3, 14))]
-        """
-        return best[ID], "Mismatched", misPos + 1  # 1-based
+    # find the location of mismatch
+    misPos = -1
+    # if it is Mismatched ==> length of alignment == length of pattern
+    if len(best[ALIGNMENT][SEQ]) == len(patterns[bestInd][1]):
+        misPos = 0
+        while misPos < len(best[ALIGNMENT][SEQ]):
+            # 5 is max score in the substitution matrix
+            if subMatIUPAC[(best[ALIGNMENT][SEQ][misPos], patterns[bestInd][ALIGNMENT][misPos])] != 5:
+                break
+            misPos += 1
+    # TODO: revise algorithm
+
+    # 1-based
+    """
+    GGCCATCGGTCTCCCCC 
+    [('alice', ('GGCCATCGGTCTCCCCC', 'GGTCACYG-TCTCYTCA', 43.0, 0, 16)),
+     ('bob', ('--GG-CCATC-GGT-CTCCCCC', 'CAGGTBCAGCTGGTGCA-----', 31.0, 2, 16)),
+     ('con', ('---GGCCATC-GGT-CTCCCCC', 'CARATGCAGCTGGTGCA-----', 21.0, 6, 16)),
+     ('den', ('--GG-CCATC-GGT-CTCCCCC', 'SAGGTCCAGCTGGTACA-----', 31.0, 2, 16)),
+     ('fur', ('GGCCATCGGTCTCCCCC-----', '---CA--GRTCACCTTGAAGGA', 26.0, 3, 14))]
+    """
+    return best[ID], misPos + 1, delPos + 1
 
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
