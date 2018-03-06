@@ -145,12 +145,14 @@ def extractCDRInfo(blastOutput, chain):
                     line = blast.readline()
                     subregionData = line.split()
                     assert subregionData[0] == 'CDR3'
-                    cloneRecord['cdr3.start'] = to_int(subregionData[3])
-                    cloneRecord['cdr3.end'] = to_int(subregionData[4])
-                    # true FR3 end is at position cdr3.start - 1 (the alignment table only tells us the FR3 germline)
-                    # but since fr3.start always begins in the germline, there's no special field for that
-                    # and is assumed that fr3.start == fr3g.start
-                    cloneRecord['fr3.end'] = cloneRecord['cdr3.start'] - 1
+                    if subregionData[-1].isdigit() and subregionData[-2].isdigit():
+                        cloneRecord['cdr3.start'] = to_int(subregionData[-2])
+                        cloneRecord['cdr3.end'] = to_int(subregionData[-1])
+                        # true FR3 end is at position cdr3.start - 1
+                        # (the alignment table only tells us the FR3 germline)
+                        # but since fr3.start always begins in the germline, there's no special field for that
+                        # and is assumed that fr3.start == fr3g.start
+                        cloneRecord['fr3.end'] = cloneRecord['cdr3.start'] - 1
 
                 # parse Alignment Summary between query and top germline V gene
                 while (line and
