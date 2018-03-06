@@ -1,6 +1,9 @@
 import subprocess
 import sys
 import itertools
+import numpy as np
+
+from collections import defaultdict
 
 from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
 
@@ -33,6 +36,7 @@ class PlotManager:
         self.end5File = args.primer5end
         self.end3File = args.primer3end
         self.args = args
+        self.nameFileMap = {}
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
@@ -120,12 +124,15 @@ class PlotManager:
         # 1st. Filter out all samples that are not required. (by consulting -rs <args>)
         # 2nd. Post filtering, remap all abseq canonical names to user provided names
         if self.rscriptArgs and self.rscriptArgs != 'off':
+            self.mapAll()
+            # for k, v in self.nameFileMap.items():
+            #     print("{:<20}: {:>20}".format(k, v))
             # take away samples that are not requested by user if -rs was specified
             requestedSamples = self._getRscriptSamples()
             self.metadata = filter(lambda x: x[1] in requestedSamples, self.metadata)
             canonicalNameChangeMap = {k: v for k, v in canonicalNameChangeMap.items() if k in requestedSamples}
 
-            # remap abseq's infered names to user provided ones - flatten rscriptArgs
+            # remap abseq's inferred names to user provided ones - flatten rscriptArgs
             for userProvidedNames in list(itertools.chain(*self.rscriptArgs)):
                 res = self._findBestMatch(userProvidedNames)[1]
                 # update new name
@@ -134,8 +141,8 @@ class PlotManager:
                 # we raise an exception immediately!
                 if res in canonicalNameChangeMap and canonicalNameChangeMap[res] != res and \
                         canonicalNameChangeMap[res] != newName:
-                    raise Exception("Misleading -rs argument, {} and {}"
-                                    .format(self._findBestMatch(userProvidedNames, useProvidedName=True)[1],
+                    raise Exception("Misleading -rs argument for {}, {} and {}"
+                                    .format(res, self._findBestMatch(userProvidedNames, useProvidedName=True)[1],
                                             canonicalNameChangeMap[res]))
                 canonicalNameChangeMap[res] = newName
 
@@ -220,18 +227,56 @@ class PlotManager:
                     # self.outdir/PCR2_BZ123_..._L001,PCR2_L001
 
     def _findBestMatch(self, sampleName, useProvidedName=False):
-        v = float('-inf')
-        bestMatch = None
-        if sampleName:
-            for sampleDir, sampleCName in self.metadata:
-                matchScore = max(_nameMatch(sampleDir, sampleName), _nameMatch(sampleCName, sampleName))
-                if matchScore > v:
-                    bestMatch = (sampleDir, sampleName if useProvidedName else sampleCName)
-                    v = matchScore
-        return bestMatch
+        if useProvidedName:
+            tmp = list(self.nameFileMap[sampleName])
+            tmp[1] = sampleName
+            return tuple(tmp)
+        return self.nameFileMap[sampleName]
+
+    def mapAll(self):
+        sampleNameMap = defaultdict(list)
+        fileNameMap = defaultdict(list)
+        namedSamples = list(set(itertools.chain(*self.rscriptArgs)))
+        if self.rscriptArgs and self.rscriptArgs != 'off':
+            for rs in namedSamples:
+                for dirName, sampleName in self.metadata:
+                    sampleNameMap[rs].append(max(_nameMatch(dirName, rs), _nameMatch(dirName, rs)))
+            for dirName, sampleName in self.metadata:
+                for rs in namedSamples:
+                    fileNameMap[sampleName].append(max(_nameMatch(dirName, rs), _nameMatch(dirName, rs)))
+        finalMap = self.nameFileMap
+        taken = set()
+        for rs in namedSamples:
+            bestInd = int(np.argmax(sampleNameMap[rs]))
+            if sampleNameMap[rs].count(sampleNameMap[rs][bestInd]) == 1 and self.metadata[bestInd][1] not in taken:
+                finalMap[rs] = self.metadata[bestInd]
+                taken.add(finalMap[rs][1])
+            else:
+                tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
+                assert len(tieInds) >= 1
+                tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
+                sampleIndex = namedSamples.index(rs)
+
+                # check that either one of the files have MAX score = sample
+                for s in tiedSamples:
+                    if sampleIndex == int(np.argmax(fileNameMap[s])):
+                        break
+                else:
+                    other = namedSamples[int(np.argmax(fileNameMap[s]))]
+                    raise Exception("Your naming scheme for {} is too ambiguous with {} and {}, try a more specific one"
+                                    .format(s, other, rs))
+
+                # check that there's no more tie. You can't have a tie in a tiebreaker algorithm ...
+                if len(set([fileNameMap[s][sampleIndex] for s in tiedSamples])) > 1:
+                    raise Exception("Multiple files match this sample name!")
+
+                bestSampleScoreInd = int(np.argmax([fileNameMap[s][sampleIndex] for s in tiedSamples]))
+                tmp = [i for i, p in enumerate(self.metadata) if p[1] == tiedSamples[bestSampleScoreInd]]
+                assert len(tmp) == 1
+                finalMap[rs] = self.metadata[tmp[0]]
 
 
-def _nameMatch(string1, string2, deletionPenalty=-2, insertionPenalty=-2, matchScore=5, mismatchScore=-3):
+def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchScore=5, mismatchScore=-3):
     """
     returns local edit distance between 2 strings
     :param string1: a string type
