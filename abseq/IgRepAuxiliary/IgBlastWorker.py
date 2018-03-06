@@ -145,7 +145,7 @@ def extractCDRInfo(blastOutput, chain):
                     line = blast.readline()
                     subregionData = line.split()
                     assert subregionData[0] == 'CDR3'
-                    if subregionData[-1].isdigit() and subregionData[-2].isdigit():
+                    if len(subregionData) >= 3 and subregionData[-1].isdigit() and subregionData[-2].isdigit():
                         cloneRecord['cdr3.start'] = to_int(subregionData[-2])
                         cloneRecord['cdr3.end'] = to_int(subregionData[-1])
                         # true FR3 end is at position cdr3.start - 1
