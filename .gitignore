@@ -6,3 +6,7 @@
 /igLibraryQC.pyc
 **/.idea/
 **/*.pyc
+*.eggs/
+/*.egg-info/
+/dist/
+**/3rd_party*/
