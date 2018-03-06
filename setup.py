@@ -442,7 +442,7 @@ def readme():
 
 
 setup(name="AbSeq",
-      version="1.1.5",
+      version="1.1.6",
       description="Quality control pipeline for antibody libraries",
       license="placeholder",
       long_description=readme(),
