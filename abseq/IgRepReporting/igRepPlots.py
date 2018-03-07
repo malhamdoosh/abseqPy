@@ -452,6 +452,9 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         classes = classes[::-1]
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
+    if total == 0:
+        print("Skipping plot for distribution graph {} because there's no distribution.".format(filename))
+        return
     #     if (proportion):
     stats = map(lambda x: ighvDistfam[x] / total * 100, classes)
     #     else:

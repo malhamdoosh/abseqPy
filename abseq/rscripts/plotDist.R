@@ -47,6 +47,9 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     } else {
       dataframes[[i]] <- df[with(df, order(-x)), ]
     }
+    # canonicalize NaN, NA, and N/As to NA.
+    dataframes[[i]][is.na(dataframes[[i]])] <- "NA"
+    dataframes[[i]][dataframes[[i]] == "N/A"] <- "NA"
   }
   
   originals <- list()
@@ -113,7 +116,6 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
       ylabel <- paste(ylabel, "(%)")
     }
   }
-  
   if (!vert) {
     g <- ggplot(df.union, aes(x = reorder(y, x), y = x, label = sprintf(placeholder, x))) + coord_flip()
     

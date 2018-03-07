@@ -47,3 +47,13 @@ listFilesInOrder <- function(path, pattern, expectedRet = c(1)) {
   }
   return (orderedFiles)
 }
+
+inferAnalyzed <- function(sampleDirectory) {
+  return (list.files(sampleDirectory))
+}
+
+capitalize <- function(str) {
+  firstLetter <- substr(str, 1, 1)
+  rest <- substr(str, 2, nchar(str))
+  return (paste0(toupper(firstLetter), rest))
+}
