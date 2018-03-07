@@ -239,24 +239,36 @@ class PlotManager:
         taken = set()
         for rs in namedSamples:
             bestInd = int(np.argmax(sampleNameMap[rs]))
+            # check scores of each (dirName, sampleName), if there's an obvious winner, we're done
+            # also make sure that we've not chosen the winner before, it doesn't make sense to have a one to many rel.s
+            # else, resolve ties
             if sampleNameMap[rs].count(sampleNameMap[rs][bestInd]) == 1 and self.metadata[bestInd][1] not in taken:
                 finalMap[rs] = self.metadata[bestInd]
                 taken.add(finalMap[rs][1])
             else:
+                # if there's a tie:
+                # 1. get sampleName of all tiedIndices
+                # 2. check that at least of of the (dir, sampleName) score has this sample as their max score
+                # 3. if it doesn't, raise ambiguous exception
+                # 4. if it does, make sure there's only one winner, then assign that as the match.
+
+                # 1.
                 tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
                 assert len(tieInds) > 1 or self.metadata[bestInd][1] in taken
                 tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
                 sampleIndex = namedSamples.index(rs)
 
+                # 2.
                 # check that either one of the files have MAX score = sample
                 for s in tiedSamples:
                     if sampleIndex == int(np.argmax(fileNameMap[s])):
                         break
-                else:
+                else:   # 3
                     other = namedSamples[int(np.argmax(fileNameMap[s]))]
                     raise Exception("Your naming scheme for {} is too ambiguous with {} and {}, try a more specific one"
                                     .format(s, other, rs))
 
+                # 4
                 # check that there's no more tie. You can't have a tie in a tiebreaker algorithm ...
                 if len(set([fileNameMap[s][sampleIndex] for s in tiedSamples])) > 1:
                     raise Exception("Multiple files match this sample name!")
