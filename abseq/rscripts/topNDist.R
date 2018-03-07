@@ -38,7 +38,7 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
   # plot!
   # colour suggestion taken from
   # https://stackoverflow.com/questions/9563711/r-color-palettes-for-many-data-classes/41230685 and modified
-  c30 <- c("dodgerblue2","#E31A1C", # red
+  palette <- c("dodgerblue2","#E31A1C", # red
            "green4",
            "#6A3D9A", # purple
            "#FF7F00", # orange
@@ -51,7 +51,11 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
            "maroon","orchid1","deeppink1","blue1","steelblue4",
            "darkturquoise","green1","yellow4","yellow3",
            "aquamarine", "darkorange4", "mediumpurple1", "dimgrey", "darkseagreen1", "lightyellow", "coral2")
-  
+  if (length(unique(df.union$Clonotype)) > 30) {
+    print("WARNING: Too many unique clonotypes are being plotted, the aesthetics of the plot might be ruined.")
+    getPalatte <- colorRampPalette(brewer.pal(12, 'Accent'))
+    palette <- getPalatte(length(unique(df.union$Clonotype)))
+  }
   g <- ggplot(df.union, aes(x=round, y=Count)) +
     geom_bar(stat='identity', aes(fill=Clonotype)) +
     theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=7)) +
@@ -59,10 +63,14 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
          subtitle=paste0("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall."),
          x="round",
          y="Distribution")  +
-    scale_fill_manual(values=c30)
+    scale_fill_manual(values=palette)
   return (g)
 }
 
-#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_full_over.csv.gz", recursive = TRUE, full.names = TRUE)
-#p <- topNDist(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1_L001", "PCR2_L001", "PCR3_L001"))
+#library(ggplot2)
+#library(RColorBrewer)
+#fs <- list.files(pattern = "PCR[123].*_cdr3_clonotypes_all_over.csv.gz", recursive = TRUE, full.names = TRUE)
+#p <- topNDist(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3"))
+#fs <- list.files(pattern = "PCR[12345].*_cdr3_clonotypes_all_over.csv.gz", recursive = TRUE, full.names = TRUE)
+#p <- topNDist(lapply(fs, read.csv, stringsAsFactors = FALSE), c("PCR1", "PCR2", "PCR3", "PCR4", "PCR5"))
 #plot(p)
