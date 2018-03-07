@@ -53,7 +53,7 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
            "aquamarine", "darkorange4", "mediumpurple1", "dimgrey", "darkseagreen1", "lightyellow", "coral2")
   if (length(unique(df.union$Clonotype)) > 30) {
     print("WARNING: Too many unique clonotypes are being plotted, the aesthetics of the plot might be ruined.")
-    getPalatte <- colorRampPalette(brewer.pal(12, 'Accent'))
+    getPalatte <- colorRampPalette(brewer.pal(8, 'Accent'))
     palette <- getPalatte(length(unique(df.union$Clonotype)))
   }
   g <- ggplot(df.union, aes(x=round, y=Count)) +
