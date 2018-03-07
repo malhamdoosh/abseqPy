@@ -114,8 +114,10 @@ class PlotManager:
         # 2nd. Post filtering, remap all abseq canonical names to user provided names
         if self.rscriptArgs and self.rscriptArgs != 'off':
             self.mapAll()
-            # for k, v in self.nameFileMap.items():
-            #     print("{:<20}: {:>20}".format(k, v))
+            print("AbSeq has inferred the following from -rs:")
+            for k, v in self.nameFileMap.items():
+                print("\t{:<20}: {:>20}".format(k, v))
+            sys.stdout.flush()
             # take away samples that are not requested by user if -rs was specified
             requestedSamples = self._getRscriptSamples()
             self.metadata = filter(lambda x: x[1] in requestedSamples, self.metadata)
@@ -242,7 +244,7 @@ class PlotManager:
                 taken.add(finalMap[rs][1])
             else:
                 tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
-                assert len(tieInds) >= 1
+                assert len(tieInds) > 1 or self.metadata[bestInd][1] in taken
                 tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
                 sampleIndex = namedSamples.index(rs)
 
@@ -263,6 +265,7 @@ class PlotManager:
                 tmp = [i for i, p in enumerate(self.metadata) if p[1] == tiedSamples[bestSampleScoreInd]]
                 assert len(tmp) == 1
                 finalMap[rs] = self.metadata[tmp[0]]
+                taken.add(finalMap[rs][1])
 
 
 def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchScore=5, mismatchScore=-3):
