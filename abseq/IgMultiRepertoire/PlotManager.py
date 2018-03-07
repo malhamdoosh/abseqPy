@@ -5,7 +5,7 @@ import numpy as np
 
 from collections import defaultdict
 
-from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT
+from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT, RSCRIPT_PAIRING_SEPARATOR
 
 """
 XXX: IMPORTANT NOTE
@@ -55,13 +55,13 @@ class PlotManager:
     @staticmethod
     def rscriptsIsConf(arg):
         return PlotManager.rscriptsHasArgs(arg) and \
-               len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) == 1 and \
+               len(str(arg).split(RSCRIPT_PAIRING_SEPARATOR)) == 1 and \
                not PlotManager.rscriptsOff(arg)
 
     @staticmethod
     def rscriptsIsPairedStrings(arg):
         return PlotManager.rscriptsHasArgs(arg) and \
-               len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) > 1 and \
+               len(str(arg).split(RSCRIPT_PAIRING_SEPARATOR)) > 1 and \
                not PlotManager.rscriptsOff(arg)
 
     @staticmethod
