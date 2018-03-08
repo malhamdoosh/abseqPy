@@ -52,7 +52,7 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
            "darkturquoise","green1","yellow4","yellow3",
            "aquamarine", "darkorange4", "mediumpurple1", "dimgrey", "darkseagreen1", "lightyellow", "coral2")
   if (length(unique(df.union$Clonotype)) > 30) {
-    print("WARNING: Too many unique clonotypes are being plotted, the aesthetics of the plot might be ruined.")
+    print("WARNING: Too many unique clonotypes are being plotted - extrapolating palette for top10 clonotype dist plot.")
     getPalatte <- colorRampPalette(brewer.pal(8, 'Accent'))
     palette <- getPalatte(length(unique(df.union$Clonotype)))
   }
@@ -60,8 +60,8 @@ topNDist <- function(dataframes, sampleNames, top = 10) {
     geom_bar(stat='identity', aes(fill=Clonotype)) +
     theme(legend.position="bottom", legend.box = "horizontal", legend.title=element_blank(), legend.text=element_text(size=7)) +
     labs(title=paste("Top", top, "clonotype across each sample"),
-         subtitle=paste0("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, ", not overall."),
-         x="round",
+         subtitle=paste0("Colour coded clonotypes, distribution of each clonotype is relative to top ", top, " - not overall."),
+         x="Sample",
          y="Distribution")  +
     scale_fill_manual(values=palette)
   return (g)
