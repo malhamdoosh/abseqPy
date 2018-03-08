@@ -15,7 +15,7 @@ from abseq.IgRepReporting.igRepPlots import plotDist
 from abseq.IgRepertoire.igRepUtils import compressCountsFamilyLevel
 
 
-def generateProductivityReport(cloneAnnot, name, chain, outputDir):
+def generateProductivityReport(cloneAnnot, cloneSeqs, name, chain, outputDir):
     print("Productivity report is being generated ... ")
 
     # since np.nan is considered different objects, canonicalize them using 'NaN' string representation
@@ -33,6 +33,7 @@ def generateProductivityReport(cloneAnnot, name, chain, outputDir):
     writeCDRStats(productive, name, outputDir, suffix = 'productive')
     writeFRStats(productive, name, outputDir, suffix = 'productive')
     writeGeneStats(productive, name, chain, outputDir, suffix = 'productive')
+    writeStopCodonStats(cloneSeqs, name, outputDir)
 
     # now that counting is complete, replace all 'NaN' strings with np.nan again
     cloneAnnot.replace(nanString, nan, inplace=True)
@@ -238,5 +239,10 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
     return productive
     
   
-
-
+def writeStopCodonStats(cloneSeqs, name, outputDir):
+    counter = {}
+    regions = ['FR1', 'CDR1', 'FR2', 'CDR2', 'FR3', 'CDR3', 'FR4']
+    for region in regions:
+        counter[region] = sum(cloneSeqs[region.lower()].str.contains("*", regex=False))
+    plotDist(counter, name, outputDir + name + '_stopcodon_region.png', title="Stop codon in FRs and CDRs",
+             proportion=True)

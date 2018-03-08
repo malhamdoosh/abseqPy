@@ -65,4 +65,24 @@ productivityAnalysis <- function(productivityDirectories, prodOut, sampleNames, 
                                     c(paste0(prodOut, mashedNames, "_igv_dist_productive.png")),
                                     c("igv"))
   
+    
+    # stop codon in FR/CDR region proportion plot
+    #############################################
+    stopCodonRegionFiles <- listFilesInOrder(path = productivityDirectories, pattern = ".*_stopcodon_region\\.csv(\\.gz)?$")
+    vert = checkVert(stopCodonRegionFiles[[1]])
+    if (length(stopCodonRegionFiles) > 0) {
+      subtitle <- paste("Total is", paste(lapply(stopCodonRegionFiles, function(x) {as.integer(getTotal(x)) }), collapse = ", "))
+      stopcodonRegion <- plotDist(
+        lapply(stopCodonRegionFiles, read.csv, skip = 1),
+        sampleNames,
+        paste("Stop codon in FRs and CDRs in ", combinedNames),
+        vert,
+        subs = subtitle
+      )
+      if (vert) {
+        ggsave(paste0(prodOut, mashedNames, "_stopcodon_region.png"), plot = stopcodonRegion, width = V_WIDTH, height = V_HEIGHT)
+      } else {
+        ggsave(paste0(prodOut, mashedNames, "_stopcodon_region.png"), plot = stopcodonRegion, width = H_WIDTH, height = H_HEIGHT)
+      }
+    }
 }
