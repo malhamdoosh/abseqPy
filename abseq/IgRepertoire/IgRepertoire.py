@@ -320,13 +320,16 @@ class IgRepertoire:
 
     def analyzeDiversity(self, all=False):
         outDir = self.outputDir + "diversity/"
-        if (not os.path.isdir(outDir)):
+        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
+            self.analyzeProductivity(self.reportInterim, all)
+        if len(self.cloneAnnot) == 0:
+            print("WARNING: There are no productive sequences found (post-refinement) in {},"
+                  " skipping diversity analysis.".format(self.name))
+            return
+        if not os.path.isdir(outDir):
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
-        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(self.reportInterim, all)
-
         gc.collect()
         # Identify spectratypes 
         spectraTypes = annotateSpectratypes(self.cloneAnnot)
