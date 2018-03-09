@@ -296,7 +296,7 @@ class IgRepertoire:
             print("\tClone sequences were loaded successfully")
         if generateReport:
             # display statistics 
-            generateProductivityReport(self.cloneAnnot, self.name, self.chain, outDir)
+            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir)
             # TODO: analyze productive clones only
         #             self.analyzeIgProtein()
         #             sys.stdout.flush()

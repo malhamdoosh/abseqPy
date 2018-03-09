@@ -138,13 +138,6 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
     print("Example of Indelled {}'-end: {}".format(end, str(invalidClones[1:10])))
     print("Example of non-indelled {}'-end: {}".format(end, str(valid[1:10])))
 
-    # todo: what's this for? (if end == '5') ?
-    # stopcodonInFrameDist = Counter(cloneAnnot['stopcodon'].tolist())
-    # plotDist(stopcodonInFrameDist, name,
-    #          fileprefix + 'stopcodon_dist.png',
-    #          title='Stop Codons in sequences by {}\'-End ({})'.format(end, category),
-    #          proportion=False, rotateLabels=False)
-
     c1 = Counter(known[known[INDEL] != 0][PRIMER].tolist())
     plotDist(c1, name, fileprefix +
              'indelled_dist.png',
@@ -161,18 +154,14 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
     primers = set(known[PRIMER].tolist())
 
     for primer in primers:
-        # print(primer)
+        # get only ighv abundance of indelled primers
+        df = known[known[INDEL] != 0]
+        df = df[df[PRIMER] == primer]
 
-        # todo: what's this for? - why only vdist of indelled?
-        # df = known[known[INDEL] != 0]
-        # df = df[df[PRIMER] == primer]
-
-        df = known[known[PRIMER] == primer]
-        # print(df.shape)
         germLineDist = compressCountsGeneLevel(Counter(df['vgene'].tolist()))
         plotDist(germLineDist, name, fileprefix + primer +
                  '_igv_dist.png',
-                 title='IGV Abundance (%s)' % (category),
+                 title='IGV Abundance of indelled {} ({})'.format(primer, category),
                  proportion=False, vertical=False, top=20, rotateLabels=False)
 
 
@@ -223,22 +212,24 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
                 ((cloneAnnot[PRIMER3] != NA) & (cloneAnnot[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(allInvalid5Clones), "3'-end": set(invalid3Clones)},
-                     outDir + name + '_all_invalid_primers.png')
+                     outDir + name + '_all_invalid_primers.png',
+                     "Intersection of indelled 5' and 3' sequences (All)")
             del invalid3Clones, allInvalid5Clones
 
             outFrameInvalid3Clones = outOfFrameClones.index[
                 ((outOfFrameClones[PRIMER3] != NA) & (outOfFrameClones[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(outFrameInvalid5Clones), "3'-end": set(outFrameInvalid3Clones)},
-                     outDir + name + '_outframe_invalid_primers.png')
+                     outDir + name + '_outframe_invalid_primers.png',
+                     "Intersection of indelled 5' and 3' sequences (Out-of-frame)")
             del outFrameInvalid3Clones, outFrameInvalid5Clones
 
             productiveInvalid3Clones = productiveClones.index[
                 ((productiveClones[PRIMER3] != NA) & (productiveClones[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(productiveInvalid5Clones), "3'-end": set(productiveInvalid3Clones)},
-                     outDir + name + "_productive_invalid_primers.png")
-
+                     outDir + name + "_productive_invalid_primers.png",
+                     "Intersection of indelled 5' and 3' sequences (productive)")
     # similar with abundance analysis etc ..
     cloneAnnot.replace(nanString, np.nan, inplace=True)
     gc.collect()

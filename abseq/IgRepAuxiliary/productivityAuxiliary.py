@@ -168,17 +168,19 @@ def collectRefineResults(resultsQueue, totalTasks,
             sys.stdout.flush()
     print('\t%d/%d records have been collected ... ' % (total, noSeqs))
     return cloneAnnot, transSeqs, flags        
-          
+
+
 def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs):
-    ## print statistics and a few of the flagged clones 
+    # print statistics and a few of the flagged clones
     for f in refineFlagNames:
-        if (len(flags[f]) > 0):
+        if len(flags[f]) > 0:
             print(refineFlagMsgs[f].format(len(flags[f])))
-            examples = random.choice(range(len(flags[f])), min(3, len(flags[f])))
+            examples = random.choice(range(len(flags[f])), min(3, len(flags[f])), replace=False)
             for i in examples:
                 print(">" + flags[f][i])
                 print(str(records[flags[f][i]].seq))
-            print      
+            print
+
              
 def writeRefineFlags(flags, records, refineFlagNames, 
                      refineFlagMsgs, outDir, sampleName):

@@ -64,5 +64,33 @@ productivityAnalysis <- function(productivityDirectories, prodOut, sampleNames, 
                                     "_dist_productive\\.csv(\\.gz)?$",
                                     c(paste0(prodOut, mashedNames, "_igv_dist_productive.png")),
                                     c("igv"))
-  
+    
+    # stop codon in FR/CDR region proportion plot
+    #############################################
+    frameStatus <- c("inframe", "outframe")
+    for (framestat in frameStatus) {
+      stopCodonRegionFiles <- listFilesInOrder(path = productivityDirectories, pattern = paste0(".*_stopcodon_region_", framestat, "\\.csv(\\.gz)?$"))
+      if (length(stopCodonRegionFiles) > 0) {
+        vert = checkVert(stopCodonRegionFiles[[1]])
+        if (framestat == 'inframe') {
+          titlestatus <- "In-frame"
+        } else {
+          titlestatus <- "Out-of-frame"
+        }
+        subtitle <- paste("Total is", paste(lapply(stopCodonRegionFiles, function(x) {as.integer(getTotal(x)) }), collapse = ", "))
+        stopcodonRegion <- plotDist(
+          lapply(stopCodonRegionFiles, read.csv, skip = 1),
+          sampleNames,
+          paste("Stop codon in FRs and CDRs of", titlestatus, "sequences in", combinedNames),
+          vert,
+          subs = subtitle,
+          sortDist = FALSE
+        )
+        if (vert) {
+          ggsave(paste0(prodOut, mashedNames, "_stopcodon_region_", framestat, ".png"), plot = stopcodonRegion, width = V_WIDTH, height = V_HEIGHT)
+        } else {
+          ggsave(paste0(prodOut, mashedNames, "_stopcodon_region_", framestat, ".png"), plot = stopcodonRegion, width = H_WIDTH, height = H_HEIGHT)
+        }
+      }
+    }
 }

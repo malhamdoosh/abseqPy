@@ -44,7 +44,8 @@ productivityPlot <- function(dataframes, sampleNames) {
          x="Sample",
          y="Percentage (%)") +
     scale_y_continuous(limits=c(0,100)) +
-    geom_text(position = position_stack(vjust = 0.5))
+    geom_text(position = position_stack(vjust = 0.5)) +
+    theme(axis.text.x = element_text(angle = 75, hjust = 1))
   return (g)
 }
 
