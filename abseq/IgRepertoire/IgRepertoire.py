@@ -143,6 +143,7 @@ class IgRepertoire:
                            normed=True)
 
     def annotateClones(self, outDirFilter=None, all=False):
+        logger = logging.getLogger(self.name)
         outDir = self.outputDir + "annot/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -193,7 +194,7 @@ class IgRepertoire:
                   cloneAnnotFile.split("/")[-1])
             #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
             self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
-            writeParams(self.args, outDir)
+            writeParams(self.args, outDir, logger)
         print("Number of clones that are annotated is {0:,}".format(
             int(self.cloneAnnot.shape[0])))
         if outDirFilter or all:
@@ -228,7 +229,8 @@ class IgRepertoire:
             self.cloneAnnot = self.cloneAnnot[selectedRows]
 
     def analyzeAbundance(self, all=False):
-        # Estimate the IGV family abundance for each library        
+        # Estimate the IGV family abundance for each library
+        logger = logging.getLogger(self.name)
         outDir = self.outputDir + "abundance/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -239,7 +241,7 @@ class IgRepertoire:
 
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)
         gc.collect()
-        writeParams(self.args, outDir)
+        writeParams(self.args, outDir, logger)
 
     def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
         """
@@ -250,6 +252,7 @@ class IgRepertoire:
         productive sequences after this method finishes. Set to false to retain all sequences
         :return:
         """
+        logger = logging.getLogger(self.name)
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -289,7 +292,7 @@ class IgRepertoire:
             self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w',
                                   complib='blosc')
             sys.stdout.flush()
-            writeParams(self.args, outDir)
+            writeParams(self.args, outDir, logger)
         else:
             print("The refined clone annotation files were found and being loaded ... " +
                   refinedCloneAnnotFile.split('/')[-1])
@@ -322,6 +325,7 @@ class IgRepertoire:
     '''
 
     def analyzeDiversity(self, all=False):
+        logger = logging.getLogger(self.name)
         outDir = self.outputDir + "diversity/"
         if not all or self.cloneAnnot is None or self.cloneSeqs is None:
             self.analyzeProductivity(self.reportInterim, all)
@@ -345,10 +349,11 @@ class IgRepertoire:
         # remove this for now - it's unoptimized and extremely slow
         # writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
 
-        writeParams(self.args, outDir)
+        writeParams(self.args, outDir, logger)
 
     def analyzeRestrictionSitesSimple(self):
         # TODO: parallelize this function to run faster
+        logger = logging.getLogger(self.name)
         outDir = self.outputDir + "restriction_sites/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -385,7 +390,7 @@ class IgRepertoire:
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],
                                self.name, siteHitsFile)
-        writeParams(self.args, outDir)
+        writeParams(self.args, outDir, logger)
 
     def analyzeRestrictionSites(self, all=False):
         #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'

@@ -69,11 +69,17 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
 def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    maxLen=Inf, histtype='bar', dna=True,
                    autoscale=None, maxbins=20, seqName='', normed=False,
-                   removeOutliers=False):
+                   removeOutliers=False, stream=None):
+
     if (exists(outputFile)):
-        print("\tSequence length distribution plot found ... " + outputFile.split('/')[-1])
+        abseq.IgRepertoire.igRepUtils.printto(
+            stream, "\tSequence length distribution plot found ... " + outputFile.split('/')[-1], 'warn'
+        )
         return
-    print("\tThe sequence length distribution is being plotted for " + sampleName)
+    abseq.IgRepertoire.igRepUtils.printto(
+        stream, "\tThe sequence length distribution is being plotted for " + sampleName, 'debug'
+    )
+
     if (type("") == type(counts)):
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
