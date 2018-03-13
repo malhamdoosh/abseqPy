@@ -9,6 +9,8 @@ import os
 import gzip
 import shutil
 import sys
+import logging
+import os
 
 from os.path import exists
 from Bio import SeqIO, AlignIO
@@ -767,7 +769,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             SeqIO.write(records, out, 'fasta')
 
 
-def writeParams(args, outDir):
+def writeParams(args, outDir, stream=None):
     """
     Writes the parameters used for analysis into analysis.params
     :param args: argparse namespace object
@@ -786,4 +788,35 @@ def writeParams(args, outDir):
     #             out.write(arg + " " + str(args[a]) + "\n")
     #     out.write("\nExecuted command line:\n")
     #     out.write(args['cmd'] + "\n")
-    print("The analysis parameters have been written to " + filename.split("/")[-1])
+    printto(stream, "The analysis parameters have been written to " + filename.split("/")[-1])
+
+
+def printto(stream, message, level='debug'):
+    level = level.lower()
+
+    if level not in ['debug', 'info', 'warn', 'error', 'critical']:
+        raise Exception("Unknown logging level")
+
+    if stream:
+        getattr(stream, level, message)(message)
+
+
+def setupLogger(name, logfile, flevel=logging.DEBUG, slevel=logging.ERROR):
+    if not os.path.exists(logfile):
+        with open(logfile, 'a'): pass
+
+    logger = logging.getLogger(name)
+    logger.setLevel(flevel)
+
+    fh = logging.FileHandler(logfile)
+    fh.setLevel(flevel)
+
+    ch = logging.StreamHandler()
+    ch.setLevel(slevel)
+
+    formatter = logging.Formatter("%(asctime)s (%(name)s)[%(levelname)s]: %(message)s")
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(fh)
+    logger.addHandler(ch)

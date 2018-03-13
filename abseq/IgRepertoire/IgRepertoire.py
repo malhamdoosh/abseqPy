@@ -6,6 +6,7 @@
 '''
 import gc
 import os
+import logging
 import sys
 
 from collections import Counter
@@ -21,7 +22,7 @@ from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPl
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeParams, writeCountsCategoriesToFile, \
-    compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
+    compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta, setupLogger, printto
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
 from abseq.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
@@ -52,6 +53,8 @@ class IgRepertoire:
         self.task = args.task
         self.reportInterim = args.report_interim
         self.outputDir = args.outdir
+        if not os.path.exists(self.outputDir):
+            os.makedirs(self.outputDir)
         self.threads = args.threads
         self.primer = args.primer
         self.db = args.database
@@ -97,28 +100,28 @@ class IgRepertoire:
                                   ["abundance/", "productivity/", "diversity/", "restriction_sites/",
                                    "primer_specificity/"]))
 
+        setupLogger(self.name, args.log)
+
     def runFastqc(self):
+        logger = logging.getLogger(self.name)
         if self.format == 'fasta':
-            print("Fasta file extension detected, will not perform fastqc")
+            printto(logger, "Fasta file extension detected, will not perform fastqc", 'warn')
             return
         outDir = self.outputDir + "fastqc/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
         filename = outDir + self.readFile1.split("/")[-1].replace(".fastq", "").replace(".gz", "")
         filename += "_fastqc.html"
-        print(filename)
-        #         print(filename)
-        #         sys.exit()
         if (os.path.exists(filename)):
-            print("fastqc was already performed on this library.")
+            printto(logger, "fastqc was already performed on this library.", 'warn')
             return
         command = "%s -o %s -t %d %s"
-        print("Fastqc is running ... ")
+        printto(logger, "Fastqc is running ... ")
         # check for presence of file2 before concatenating str and None(None when self.readFile2 is empty/not provided)
         os.system(command % (FASTQC, outDir, self.threads,
                              self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
-        writeParams(self.args, outDir)
-        print("Fastqc has completed.")
+        writeParams(self.args, outDir, logger)
+        printto(logger, "Fastqc has completed.")
 
     def mergePairedReads(self, outDir=None):
         if self.merge != 'yes':
