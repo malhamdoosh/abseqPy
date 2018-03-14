@@ -9,6 +9,7 @@ import matplotlib as mpl
 
 
 mpl.use('Agg')  # Agg
+import os
 import matplotlib.mlab as mlab
 import gzip
 import matplotlib.pyplot as plt
@@ -459,7 +460,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
     if total == 0:
-        printto(stream, "Skipping distribution graph {} because there's no distribution.".format(filename),
+        printto(stream, "Will not plot {} because there is no distribution."
+                .format(os.path.basename(filename.rstrip(os.sep))),
                 LEVEL.WARN)
         return
     #     if (proportion):
