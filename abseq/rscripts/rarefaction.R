@@ -66,7 +66,7 @@ plotRarefaction <- function(files, sampleNames, regions = c("CDR3", "V")) {
   }
   
   g <- g + scale_x_continuous(breaks = xticks, limits = c(head(xticks, n = 1), tail(xticks, n = 1))) +
-    geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = compound), alpha = 0.2, show.legend = FALSE) +
+    geom_ribbon(aes(ymin = y - ci, ymax = y + ci, fill = compound), alpha = 0.1, show.legend = FALSE) +
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
     labs(title = paste("Rarefaction of", paste(regions, collapse = ", "), "in", paste(sampleNames, collapse = ", ")),
          subtitle = "Mean number of deduplicated sequences with 95% confidence interval",
