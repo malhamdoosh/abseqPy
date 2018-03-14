@@ -45,9 +45,8 @@ def printto(stream, message, level=LEVEL.DEBUG):
 
 
 def setupLogger(name, task, logfile, stream=sys.stdout, flevel=logging.DEBUG, slevel=logging.WARN):
-    if not os.path.exists(logfile):
-        with open(logfile, 'a') as fp:
-            fp.write(formattedTitle(task) + '\n')
+    with open(logfile, 'a') as fp:
+        fp.write(formattedTitle(task) + '\n')
 
     datetimefmt = "%Y-%m-%d %H:%M:%S"
 

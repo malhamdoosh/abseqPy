@@ -539,9 +539,9 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     plt.close()
 
 
-def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename):
+def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=None):
     if (exists(filename)):
-        print("File found ... " + filename.split('/')[-1])
+        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
         return
     x = data[xyCol[0]].tolist()
     y = data[xyCol[1]].tolist()

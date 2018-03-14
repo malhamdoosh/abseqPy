@@ -46,26 +46,28 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
     
     # plot alignment length vs %identity
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
-                     ['Alignment Length', '%Identity'] , outDir + sampleName + 
-              '_igv_align_quality_identity_hm.png')
+                     ['Alignment Length', '%Identity'], outDir + sampleName +
+              '_igv_align_quality_identity_hm.png', stream=stream)
+
     # plot alignment length vs bitScore
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'bitscore'],
-                     ['Alignment Length', 'bitScore'] , outDir + sampleName + 
-              '_igv_align_quality_bitscore_hm.png')
+                     ['Alignment Length', 'bitScore'], outDir + sampleName +
+              '_igv_align_quality_bitscore_hm.png', stream=stream)
+
     # plot query start vs. subject start
     generateStatsHeatmap(stats, sampleName, ['vqstart', 'vstart'],
-                     ['Query Start', 'Subject Start'] , outDir + sampleName + 
-              '_igv_align_quality_start_hm.png')
+                     ['Query Start', 'Subject Start'], outDir + sampleName +
+              '_igv_align_quality_start_hm.png', stream=stream)
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'vmismatches'],
-                     ['Alignment Length', 'Mismatches'] , outDir + sampleName + 
-              '_igv_align_quality_mismatches_hm.png')
+                     ['Alignment Length', 'Mismatches'], outDir + sampleName +
+              '_igv_align_quality_mismatches_hm.png', stream=stream)
     c = Counter(stats['vmismatches'].tolist())
     plotDist(c, sampleName, outDir + sampleName + 
              '_igv_mismatches_dist.png', title='Number of Mismatches in V gene',
              proportion=True, rotateLabels=False, top=20, stream=stream)
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
-                     ['Alignment Length', 'Gaps'] , outDir + sampleName + 
-              '_igv_align_quality_gaps_hm.png')
+                     ['Alignment Length', 'Gaps'], outDir + sampleName +
+              '_igv_align_quality_gaps_hm.png', stream=stream)
     c = Counter(stats['vgaps'].tolist())
     plotDist(c, sampleName, outDir + sampleName + 
              '_igv_gaps_dist.png', title='Number of Gaps in V gene',
