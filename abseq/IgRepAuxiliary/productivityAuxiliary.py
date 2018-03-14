@@ -185,9 +185,12 @@ def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=Non
 
 
 def writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, outDir, sampleName):
-    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out:
+    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out, \
+         open(outDir + sampleName + "_refinement_flagged.csv", "w") as outCSV:
+        outCSV.write('refinementFlag,count\n')
         for f in refineFlagNames:
-            if (len(flags[f]) > 0):
+            if len(flags[f]) > 0:
+                outCSV.write("{},{}\n".format(f, len(flags[f])))
                 out.write("# " + refineFlagMsgs[f].format(len(flags[f])) + "\n")                
                 for i in range(len(flags[f])):
                     out.write(">" + flags[f][i] + "\n")
