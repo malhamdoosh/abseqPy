@@ -11,12 +11,13 @@ from collections import Counter, defaultdict
 from abseq.IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, \
     compressCountsFamilyLevel
+from abseq.logger import printto, LEVEL
 
 
-def writeVAbundanceToFiles(stats, sampleName, outDir):
+def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igvDist = Counter(stats["vgene"].tolist())
     if (len(igvDist) == 0):
-        print("WARNING: No IGV hits were detected.")
+        printto(stream, "WARNING: No IGV hits were detected.", LEVEL.WARn)
         return
 
     # Write the counts of all IGVs into a text file - variant_level isn't plotted by default.
@@ -73,11 +74,11 @@ def writeVAbundanceToFiles(stats, sampleName, outDir):
     #     summarizeStats(stats, outputDir+sampleName+'_stats_summary.txt')
 
 
-def writeJAbundanceToFiles(stats, sampleName, outDir):
+def writeJAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igjDist = Counter(stats["jgene"].tolist())
     igjDist = {str(k) : igjDist[k] for k in igjDist}
     if (len(igjDist) == 0):
-        print("WARNING: No IGJ hits were detected.")
+        printto(stream, "WARNING: No IGJ hits were detected.", LEVEL.WARN)
         return        
     
     plotDist(igjDist, sampleName, outDir + sampleName +
@@ -96,11 +97,11 @@ def writeJAbundanceToFiles(stats, sampleName, outDir):
              title = 'IGJ Abundance in Sample ' + sampleName )
 
 
-def writeDAbundanceToFiles(stats, sampleName, outDir):
+def writeDAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igdDist = Counter(stats["dgene"].tolist())
     igdDist = Counter({str(k) : igdDist[k] for k in igdDist})
     if (len(igdDist) == 0):
-        print("WARNING: No IGD hits were detected.")
+        printto("WARNING: No IGD hits were detected.", LEVEL.WARN)
         return
 
     # Write the counts of all IGVs into a text file
@@ -124,7 +125,7 @@ def writeDAbundanceToFiles(stats, sampleName, outDir):
              title = 'IGD Abundance in Sample ' + sampleName)
 
 
-def writeVJAssociationToFiles(stats, sampleName, outDir):
+def writeVJAssociationToFiles(stats, sampleName, outDir, stream=None):
     def canonicalFamilyName(v, j):
         vgene, jgene = str(v), str(j)
         if len(vgene) < 5 or len(jgene) < 5:
@@ -152,9 +153,9 @@ def writeVJAssociationToFiles(stats, sampleName, outDir):
         fp.write(writeBuffer)
 
 
-def writeAbundanceToFiles(stats, sampleName, outDir, chain = "hv"):
-    writeVAbundanceToFiles(stats, sampleName, outDir)
-    writeJAbundanceToFiles(stats, sampleName, outDir)
-    writeVJAssociationToFiles(stats, sampleName, outDir)
-    if (chain == "hv"):
-        writeDAbundanceToFiles(stats, sampleName, outDir)
+def writeAbundanceToFiles(stats, sampleName, outDir, chain="hv", stream=None):
+    writeVAbundanceToFiles(stats, sampleName, outDir, stream)
+    writeJAbundanceToFiles(stats, sampleName, outDir, stream)
+    writeVJAssociationToFiles(stats, sampleName, outDir, stream)
+    if chain == "hv":
+        writeDAbundanceToFiles(stats, sampleName, outDir, stream)

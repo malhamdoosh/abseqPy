@@ -5,11 +5,9 @@
     Changes log: check git commits. 
 '''
 
-import os
 import gzip
 import shutil
 import sys
-import logging
 import os
 
 from os.path import exists
@@ -25,6 +23,7 @@ from Bio.SubsMat import MatrixInfo as matlist
 
 from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
 from abseq.IgRepReporting.igRepPlots import plotDist
+from abseq.logger import printto, LEVEL
 
 
 def detectFileFormat(fname, noRaise=False):
@@ -151,39 +150,44 @@ IMGT classification system is used to delineate the V domain
 '''
 
 
-def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA", outputDir=""):
+def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA", outputDir="", stream=None):
     # Run igblast on a fasta file
     # TODO: update $IGDATA for auxiliary_data to correct path
     # TODO: change organism to be fed through parameters
+
     if outputDir:
         head, tail = os.path.split(blastInput)
         blastOutput = outputDir + tail.replace('.' + tail.split('.')[-1], '.out')
     else:
         blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+
     if (exists(blastOutput)):
-        print("\tBlast results were found ... " + blastOutput.split("/")[-1])
+        printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput
-    print('\tRunning igblast ... ' + blastInput.split("/")[-1])
-    if (chain == 'hv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_ighv -germline_db_J "
-                                                        "" + db + "/imgt_human_ighj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
-    elif (chain == 'kv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_igkv -germline_db_J "
-                                                        "" + db + "/imgt_human_igkj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
-    elif (chain == 'lv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_iglv -germline_db_J "
-                                                        "" + db + "/imgt_human_iglj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
+
+    printto(stream, '\tRunning igblast ... ' + blastInput.split("/")[-1])
+
+    if chain == 'hv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_ighv -germline_db_J " \
+                  + db + "/imgt_human_ighj -germline_db_D " + db \
+                  + "/imgt_human_ighd -domain_system imgt " \
+                  + "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
+    elif chain == 'kv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_igkv -germline_db_J " \
+                  + db + "/imgt_human_igkj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt " + \
+                  "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
+    elif chain == 'lv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_iglv -germline_db_J " \
+                  + db + "/imgt_human_iglj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt" + \
+                  "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
     else:
-        print('ERROR: unsupported chain type.')
+        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
         sys.exit()
 
     os.system(command % (blastInput, threads, blastOutput))
@@ -195,33 +199,32 @@ IMGT classification system is used to delineate the V domain
 '''
 
 
-def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir=""):
+def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir="", stream=None):
     # Run igblast on a fasta file        
     blastOutput = outputDir + blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+
     if (exists(blastOutput)):
-        print("\tBlast results were found ... " + blastOutput.split("/")[-1])
+        printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput
-    print('\tRunning igblast ... ' + blastInput.split("/")[-1])
-    if (chain == 'hv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_ighv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
+    printto(stream, '\tRunning igblast ... ' + blastInput.split("/")[-1])
+
+    if chain == 'hv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_ighv_p " + \
+                                                       "-domain_system imgt " + \
+                                                       "-query %s -organism human " + \
+                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
+    elif chain == 'kv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_igkv_p " + \
+                                                       "-domain_system imgt " + \
+                                                       "-query %s -organism human " + \
+                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
+    elif chain == 'lv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_iglv_p " + \
+                                                        "-domain_system imgt " + \
+                                                        "-query %s -organism human " + \
                                                         "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
-    elif (chain == 'kv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_igkv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
-                                                        "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
-    elif (chain == 'lv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_iglv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
-                                                        "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
     else:
-        print('ERROR: unsupported chain type.')
+        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
         sys.exit()
 
     os.system(command % (blastInput, threads, blastOutput))
@@ -791,32 +794,3 @@ def writeParams(args, outDir, stream=None):
     printto(stream, "The analysis parameters have been written to " + filename.split("/")[-1])
 
 
-def printto(stream, message, level='debug'):
-    level = level.lower()
-
-    if level not in ['debug', 'info', 'warn', 'error', 'critical']:
-        raise Exception("Unknown logging level")
-
-    if stream:
-        getattr(stream, level, message)(message)
-
-
-def setupLogger(name, logfile, flevel=logging.DEBUG, slevel=logging.ERROR):
-    if not os.path.exists(logfile):
-        with open(logfile, 'a'): pass
-
-    logger = logging.getLogger(name)
-    logger.setLevel(flevel)
-
-    fh = logging.FileHandler(logfile)
-    fh.setLevel(flevel)
-
-    ch = logging.StreamHandler()
-    ch.setLevel(slevel)
-
-    formatter = logging.Formatter("%(asctime)s (%(name)s)[%(levelname)s]: %(message)s")
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-
-    logger.addHandler(fh)
-    logger.addHandler(ch)

@@ -6,6 +6,8 @@
 '''
 
 import matplotlib as mpl
+
+
 mpl.use('Agg')  # Agg
 import matplotlib.mlab as mlab
 import gzip
@@ -25,8 +27,7 @@ from numpy import Inf, mean, isnan
 
 from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
-
-
+from abseq.logger import printto, LEVEL
 
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf):
@@ -72,11 +73,11 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    removeOutliers=False, stream=None):
 
     if (exists(outputFile)):
-        abseq.IgRepertoire.igRepUtils.printto(
+        printto(
             stream, "\tSequence length distribution plot found ... " + outputFile.split('/')[-1], 'warn'
         )
         return
-    abseq.IgRepertoire.igRepUtils.printto(
+    printto(
         stream, "\tThe sequence length distribution is being plotted for " + sampleName, 'debug'
     )
 

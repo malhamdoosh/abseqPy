@@ -17,15 +17,18 @@ from math import ceil
 
 from abseq.IgRepAuxiliary.IgBlastWorker import analyzeSmallFile, IgBlastWorker
 from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
+from abseq.logger import printto, LEVEL
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
-        if (fastaFile == None):
+
+        if fastaFile is None:
             return Counter()
+
         # Estimate the IGV diversity in a library from igblast output 
-        print('The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
+        printto(stream, 'The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
         with open(fastaFile) as f:
             noSeqs = sum(1 for line in f if line.startswith(">"))
         totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
@@ -33,11 +36,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
             seqsPerFile = int(noSeqs * 1.0 / noWorkers) 
             totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
         noSplit = noSeqs <= igRep.seqsPerFile
-        print("\t{0:,} sequences were found to be distributed into {1:,} file(s)".format(noSeqs,
-                                                                                         (totalFiles
-                                                                                          if not noSplit else 1)))
-#         print(noSeqs, seqsPerFile, totalFiles)
-#         sys.exit()
+        printto(stream, "\t{0:,} sequences were found to be distributed into {1:,} file(s)"
+                .format(noSeqs, (totalFiles if not noSplit else 1)))
         if igRep.primer > 0:
             with safeOpen(fastaFile) as fp:
                 recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
@@ -73,24 +73,23 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
             exitQueue = Queue()              
             cloneAnnot = DataFrame()
             fileteredIDs = []
-            try:    
-                # Initialize workers 
-                workers = []        
+            workers = []
+            try:
+                # Initialize workers
                 for i in range(noWorkers):
                     w = IgBlastWorker(igRep.chain, igRep.db,
-                                      seqType, int(ceil(noWorkers * 1.0/ totalFiles)))
+                                      seqType, int(ceil(noWorkers * 1.0/ totalFiles)), stream=stream)
                     w.tasksQueue = tasks
                     w.resultsQueue = outcomes
                     w.exitQueue = exitQueue      
                     workers.append(w)
                     w.start()       
                     sys.stdout.flush()
+
                 # initialize tasks queue with file names     
-                # if (noSeqs > igRep.seqsPerFile):  (already done the check in the if statement before this else block)
                 for i in range(totalFiles):
-                    tasks.put(filesDir + "/" + prefix + "part"  + `int(i + 1)` + ext)
-                #else:
-                #    tasks.put(fastaFile)
+                    tasks.put(filesDir + "/" + prefix + "part" + str(i + 1) + ext)
+
                 # Add a poison pill for each worker
                 for i in range(noWorkers + 10):
                     tasks.put(None)                  
@@ -103,7 +102,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
                         i += 1
                 
                 # Collect results
-                print("Results are being collated from all workers ...")  
+                printto(stream, "Results are being collated from all workers ...")
                 sys.stdout.flush()
                 while totalFiles:
                     outcome = outcomes.get()
@@ -115,23 +114,19 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir=""):
                     fileteredIDs += fileteredIDsi
                     sys.stdout.flush()
                     gc.collect()
-                print("\tResults were collated successfully.")
-                    
+                printto(stream, "\tResults were collated successfully.")
                     
             except Exception:
-                print("Something went wrong during the annotation process!")
+                printto(stream, "Something went wrong during the annotation process!", LEVEL.CRIT)
                 raise
             finally:
                 for w in workers:
                     w.terminate()
-        #     print("here3")
+
             # Clean folders to save space
-            #TODO: remove .fasta and .out files 
+            # TODO: remove .fasta and .out files
             if (noSeqs > igRep.seqsPerFile and 
                 os.path.exists(filesDir + "/" + prefix + "part1" + ext)): 
-                os.system("rm " + filesDir + "/*" + ext)        
-        return (cloneAnnot, fileteredIDs)
-    
-    
-    
-    
+                os.system("rm " + filesDir + "/*" + ext)
+
+        return cloneAnnot, fileteredIDs

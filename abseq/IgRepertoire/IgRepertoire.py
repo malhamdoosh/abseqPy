@@ -22,7 +22,8 @@ from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPl
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeParams, writeCountsCategoriesToFile, \
-    compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta, setupLogger, printto
+    compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
+from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
 from abseq.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
@@ -105,7 +106,7 @@ class IgRepertoire:
     def runFastqc(self):
         logger = logging.getLogger(self.name)
         if self.format == 'fasta':
-            printto(logger, "Fasta file extension detected, will not perform fastqc", 'warn')
+            printto(logger, "Fasta file extension detected, will not perform fastqc", LEVEL.WARN)
             return
         outDir = self.outputDir + "fastqc/"
         if (not os.path.isdir(outDir)):
@@ -113,7 +114,7 @@ class IgRepertoire:
         filename = outDir + self.readFile1.split("/")[-1].replace(".fastq", "").replace(".gz", "")
         filename += "_fastqc.html"
         if (os.path.exists(filename)):
-            printto(logger, "fastqc was already performed on this library.", 'warn')
+            printto(logger, "fastqc was already performed on this library.", LEVEL.WARN)
             return
         command = "%s -o %s -t %d %s"
         printto(logger, "Fastqc is running ... ")
@@ -145,31 +146,28 @@ class IgRepertoire:
     def annotateClones(self, outDirFilter=None, all=False):
         logger = logging.getLogger(self.name)
         outDir = self.outputDir + "annot/"
+
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
+
         cloneAnnotFile = outDir + self.name
         cloneAnnotFile += "_clones_annot.h5"
-        #         cloneAnnotFile += "_clones_annot.tab"
-        #         print("The IGV clones are being annotated ... ")
-        # merge reads if needed
-        #         print("\tPaired-end reads are being merged using " + self.merger)
-        if (self.readFile is None):
+
+        if self.readFile is None:
             self.mergePairedReads(outDir)
 
         if exists(cloneAnnotFile):
             if self.task == "annotate":
-                print("\tClones annotation file found and no further work needed ... " +
-                      cloneAnnotFile.split('/')[-1])
+                printto(logger, "\tClones annotation file found and no further work needed ... " +
+                        cloneAnnotFile.split('/')[-1])
             else:
-                print("\tClones annotation file found and being loaded ... " +
-                      cloneAnnotFile.split('/')[-1])
-                sys.stdout.flush()
-                #             self.cloneAnnot = read_csv(cloneAnnotFile, sep='\t',
-                #                                        header=0, index_col=0)
+                printto(logger, "\tClones annotation file found and being loaded ... " +
+                        cloneAnnotFile.split('/')[-1])
                 self.cloneAnnot = read_hdf(cloneAnnotFile, "cloneAnnot")
         else:
-            if (not exists(self.readFile)):
+            if not exists(self.readFile):
                 raise Exception(self.readFile + " does not exist!")
+
             # Convert FASTQ file into FASTA format
             if self.format == 'fastq':
                 readFasta = fastq2fasta(self.readFile, self.outputDir)
@@ -181,31 +179,32 @@ class IgRepertoire:
             #             if self.trim3End > 0 or self.trim5End > 0:
             #                 trimSequences(readFasta)
             #                 self.trimmed = True
-            sys.stdout.flush()
+
             # Estimate the IGV family abundance for each library
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
                                                                self.seqType, outdir=outDir)
             sys.stdout.flush()
             gc.collect()
+
             if (len(filteredIDs) > 0):
                 writeListToFile(filteredIDs, outDir + self.name + "_unmapped_clones.txt")
             # export the CDR/FR annotation to a file
-            print("\tClones annotation file is being written to " +
-                  cloneAnnotFile.split("/")[-1])
+            printto(logger, "\tClones annotation file is being written to " +
+                    cloneAnnotFile.split("/")[-1])
             #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
             self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
             writeParams(self.args, outDir, logger)
-        print("Number of clones that are annotated is {0:,}".format(
-            int(self.cloneAnnot.shape[0])))
+        printto(logger, "Number of clones that are annotated is {0:,}".format(
+                int(self.cloneAnnot.shape[0])), LEVEL.INFO)
         if outDirFilter or all:
             if outDirFilter is None:
                 outDirFilter = outDir
             # Filter clones based on bitscore, alignLen, qStart, and sStart
-            print("Clones are being filtered based on the following criteria: ")
-            print("\tBit score: " + repr(self.bitScore))
-            print("\tAlignment length: " + repr(self.alignLen))
-            print("\tSubject V gene start: " + repr(self.sStart))
-            print("\tQuery V gene start: " + repr(self.qStart))
+            printto(logger, "Clones are being filtered based on the following criteria: ", LEVEL.INFO)
+            printto(logger, "\tBit score: " + repr(self.bitScore), LEVEL.INFO)
+            printto(logger, "\tAlignment length: " + repr(self.alignLen), LEVEL.INFO)
+            printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
+            printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
             selectedRows = (
                     (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
                     (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
@@ -222,10 +221,10 @@ class IgRepertoire:
                 filteredIDs.to_csv(outDirFilter + self.name + "_filtered_out_clones.txt",
                                    sep="\t", header=True, index=True)
             retained = len(selectedRows) - len(filteredIDs)
-            print('Percentage of retained clones is {0:,.2f}% ({1:,}/{2:,})'.format(
-                retained * 100.0 / self.cloneAnnot.shape[0],
-                retained,
-                int(self.cloneAnnot.shape[0])))
+            printto(logger, 'Percentage of retained clones is {0:,.2f}% ({1:,}/{2:,})'.format(
+                    retained * 100.0 / self.cloneAnnot.shape[0],
+                    retained,
+                    int(self.cloneAnnot.shape[0]), LEVEL.INFO))
             self.cloneAnnot = self.cloneAnnot[selectedRows]
 
     def analyzeAbundance(self, all=False):
@@ -235,7 +234,8 @@ class IgRepertoire:
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
-            print("WARNING: remove the 'abundance' directory if you changed the filtering criteria.")
+            printto(logger, "WARNING: remove the 'abundance' directory if you changed the filtering criteria.",
+                    LEVEL.WARN)
         if not all or self.cloneAnnot is None:
             self.annotateClones(outDir)
 
