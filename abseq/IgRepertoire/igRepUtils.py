@@ -102,11 +102,12 @@ def gunzip(gzipFile):
     return newFileName
 
 
-def fastq2fasta(fastqFile, outputDir):
+def fastq2fasta(fastqFile, outputDir, stream=None):
     """
     Converts a fastq file into fasta file. Fastq can be compressed if it was provided as such
     :param fastqFile: (un)compressed fastq file. If compressed, will leave original compressed untouched
     :param outputDir: Where to produce the new fasta file
+    :param stream: debugging stream
     :return: fasta filename
     """
     # FASTQ to FASTA
@@ -125,10 +126,10 @@ def fastq2fasta(fastqFile, outputDir):
         filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
 
     if exists(filename):
-        print ("\tThe FASTA file was found!")
+        printto(stream, "\tThe FASTA file was found!", LEVEL.WARN)
         return filename
 
-    print("\t" + fastqFile.split('/')[-1] + " is being converted into FASTA ...")
+    printto(stream, "\t" + fastqFile.split('/')[-1] + " is being converted into FASTA ...")
     command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
                "{print $0}' " + fastqFile + " > " + filename
                )
@@ -231,9 +232,9 @@ def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir="", str
     return blastOutput
 
 
-def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True):
+def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True, stream=None):
     if exists(filename):
-        print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
+        printto(stream, "\tThe clonotype file " + filename.split("/")[-1] + " was found!", LEVEL.WARN)
         return
 
     total = sum(clonoTypes.values()) * 1.0
@@ -252,7 +253,7 @@ def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True):
     # (should change to table format(t) if search is needed for clonotype clustering/comparison)
     # df.to_hdf(filename, "clonotype", mode="w", format="f")
     df.to_csv(filename + ".gz", mode="w", compression="gzip")
-    print("\tA clonotype file has been written to " + filename.split("/")[-1])
+    printto(stream, "\tA clonotype file has been written to " + filename.split("/")[-1])
 
 
 def writeCountsToFile(dist, filename):
@@ -318,7 +319,7 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
 '''
 
 
-def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
+def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False, stream=None):
     if (isnan(start) or isnan(end)):
         return ''
     if (start != -1 and end != -1 and end - start < 1):
@@ -347,27 +348,27 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
             frag = frag[:frag.index('*')]
         return frag
     except:
-        print("ERROR at Extract Protein Fragment", protein, start, end)
+        printto(stream, "ERROR at Extract Protein Fragment {} {} {}".format(protein, start, end), LEVEL.ERR)
         return None
 
 
-def extractCDRsandFRsProtein(protein, qsRec, offset):
+def extractCDRsandFRsProtein(protein, qsRec, offset, stream=None):
     try:
         seqs = []
         newProtein = ""
         # Extract protein sequence of FR1             
-        seqs.append(extractProteinFrag(protein, qsRec['fr1.start'], qsRec['fr1.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr1.start'], qsRec['fr1.end'], offset, stream=stream))
         # Extract protein sequence of CDR1
-        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], offset, stream=stream))
         # Extract protein sequence of FR2
-        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], offset, stream=stream))
         # Extract protein sequence of CDR2
-        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], offset, stream=stream))
         # Extract protein sequence of FR3
-        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], offset, stream=stream))
         # Extract protein sequence of CDR3 and FR4
-        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], offset))
-        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], offset, stream=stream))
+        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], offset, stream=stream))
         # check whether FR and CDR sequences were extracted correctly
         newProtein = ''.join(seqs)
         assert newProtein in protein
@@ -407,7 +408,7 @@ def extractCDRsandFRsDNA(dna, qsRec):
     return seqs
 
 
-def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
+def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", stream=None):
     seqOut = outDir + "seq/"
     if (not os.path.isdir(seqOut)):
         os.system("mkdir " + seqOut)
@@ -417,17 +418,17 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
     if (merger == 'pear'):  ### MERGE using PEAR
         mergedFastq = outputPrefix + '.assembled.fastq'
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = "pear -f %s -r %s -o %s -j %d -v 15 -n 350"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     elif (merger == 'leehom'):
         mergedFastq = outputPrefix + '.fq'
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
@@ -435,19 +436,19 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
             # os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     elif (merger == 'flash'):
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = outputPrefix.split("/")[-1]
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
-                                                      , readFile2.split('/')[-1]))
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
+                                                      , readFile2.split('/')[-1]), LEVEL.WARN)
             # the merger params souldn't be hardcoded
             command = "flash %s %s -t %d -o %s -r 300 -f 450 -s 50"
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
             os.system("mv %s.* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     #     elif (merger == 'seqprep'):
     #         ### MERGE using SeqPrep
     #         mergedFastq = readFile1.replace(readFile1.split('_')[-1], 'merged.fastq.gz')
@@ -461,7 +462,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
     #         mergedFastq = mergedFastq.replace('.gz', '')
     #         ### END MERGE using SeqPrep
     else:
-        raise Exception("Uknowne short reads merger is selected")
+        raise Exception("Unknown short reads merger is selected")
 
     return os.path.abspath(mergedFastq)
 
@@ -549,9 +550,10 @@ def compressCountsFamilyLevel(countsDict):
 '''
 
 
-def alignListOfSeqs(signals, outDir, ignoreNones=False):
+def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
     L = map(len, signals)
-    print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
+    printto(stream,
+            "\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
     tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
@@ -745,11 +747,11 @@ def findBestMatchedPattern(seq, patterns):
 
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
-                   prefix="", ext=".fasta"):
+                   prefix="", ext=".fasta", stream=None):
     if (not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ext) and
             not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ".out")):
         # Split the FASTA file into multiple chunks
-        print("\tThe clones are distributed into multiple workers .. ")
+        printto(stream, "\tThe clones are distributed into multiple workers .. ")
         if (not os.path.isdir(filesDir)):
             os.system("mkdir " + filesDir)
         i = 1
@@ -772,7 +774,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             SeqIO.write(records, out, 'fasta')
 
 
-def writeParams(args, outDir, stream=None):
+def writeParams(args, outDir):
     """
     Writes the parameters used for analysis into analysis.params
     :param args: argparse namespace object
@@ -791,6 +793,5 @@ def writeParams(args, outDir, stream=None):
     #             out.write(arg + " " + str(args[a]) + "\n")
     #     out.write("\nExecuted command line:\n")
     #     out.write(args['cmd'] + "\n")
-    printto(stream, "The analysis parameters have been written to " + filename.split("/")[-1])
-
+    return filename.split("/")[-1]
 

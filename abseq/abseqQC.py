@@ -15,6 +15,7 @@ import warnings
 from abseq.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 from abseq.argsParser import parseArgs
 from abseq.config import VERSION, PriorityPath
+from abseq.logger import formattedTitle
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
@@ -29,87 +30,63 @@ __version__ = VERSION
 #     warnings.simplefilter("ignore")
 #     fxn()
 
-def printFormattedTitle(title):
-    print "-" * 100
-    print "|" + " " * 98 + "|"
-    print "|" + " " * ((98 - len(title)) / 2) + title + " " * ((98 - len(title)) / 2 + (98 - len(title)) % 2) + "|"
-    print "|" + " " * 98 + "|"
-    print "-" * 100
-    sys.stdout.flush()
-
 
 def main():
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
     t = time.time()
-    logFile = None
-    log = "AbSeq.log"
     try:
         with PriorityPath():
             argsVals = parseArgs()
             with IgMultiRepertoire(argsVals) as igRepertoire:
-                print("Abseq output has been logged into " + log)
-                logFile = open(log, 'a')
-                origStdout = sys.stdout
-                sys.stdout = logFile
-                if (argsVals.task == 'all'):
-                    printFormattedTitle("Running the complete QC pipeline")
+
+                # show a pretty banner before beginning analysis
+                print(formattedTitle(argsVals.task))
+
+                if argsVals.task == 'all':
                     igRepertoire.runFastqc()
                     igRepertoire.annotateClones(all=True)
                     igRepertoire.analyzeAbundance(all=True)
                     igRepertoire.analyzeProductivity(all=True)
                     igRepertoire.analyzeDiversity(all=True)
-                if (argsVals.task == 'fastqc'):
-                    printFormattedTitle("Sequencing QC Analysis")
+                if argsVals.task == 'fastqc':
                     igRepertoire.runFastqc()
-                elif (argsVals.task == 'annotate'):
-                    printFormattedTitle("Clone Identification and Classification")
+                elif argsVals.task == 'annotate':
                     igRepertoire.annotateClones()
-                elif (argsVals.task == 'abundance'):
-                    printFormattedTitle("IGV Abundance and QC Plots")
+                elif argsVals.task == 'abundance':
                     igRepertoire.analyzeAbundance()  # estimateIGVDist()
-                elif (argsVals.task == 'productivity'):
-                    printFormattedTitle("Clone Productivity Analysis")
+                elif argsVals.task == 'productivity':
                     igRepertoire.analyzeProductivity()
-                elif (argsVals.task == 'diversity'):
-                    printFormattedTitle("Diversity Analysis")
+                elif argsVals.task == 'diversity':
                     igRepertoire.analyzeDiversity()
-                elif (argsVals.task == 'secretion'):
+                elif argsVals.task == 'secretion':
                     # analyze the sequences upstream of the IGV genes
-                    printFormattedTitle("Secretion signal Analysis")
                     igRepertoire.analyzeSecretionSignal()
-                elif (argsVals.task == '5utr'):
-                    printFormattedTitle("5'UTR analysis")
+                elif argsVals.task == '5utr':
                     igRepertoire.analyze5UTR()
-                elif (argsVals.task == 'rsasimple'):
-                    printFormattedTitle("Simple Restriction Sites Analysis")
+                elif argsVals.task == 'rsasimple':
                     igRepertoire.analyzeRestrictionSitesSimple()
-                elif (argsVals.task == 'rsa'):
-                    printFormattedTitle("Comprehensive Restriction Sites Analysis")
+                elif argsVals.task == 'rsa':
                     igRepertoire.analyzeRestrictionSites()
-                elif (argsVals.task == 'primer'):
-                    printFormattedTitle("Primer Specificity Analysis")
+                elif argsVals.task == 'primer':
                     igRepertoire.analyzePrimerSpecificity()
-                elif (argsVals.task == 'seqlen'):
-                    printFormattedTitle("Sequence Length Distribution")
+                elif argsVals.task == 'seqlen':
                     # calculate the distribution of sequence lengths of a sample
                     igRepertoire.analyzeSeqLen()
-                elif (argsVals.task == 'seqlenclass'):
-                    printFormattedTitle("Class Sequence Length Distribution")
+                elif argsVals.task == 'seqlenclass':
                     # calculate the distribution of sequences in different IGV families
                     # input file must be a file of IGV genes
                     igRepertoire.analyzeSeqLen(klass=True)
-            print ("The analysis started at " + startTimeStr)
-            print "The analysis took %.2f  minutes!!" % ((time.time() - t) / 60)
-            print("Abseq Version " + VERSION)
 
+            print("The analysis started at " + startTimeStr)
+            print("The analysis took %.2f  minutes!!" % ((time.time() - t) / 60))
+            print("Abseq Version " + VERSION)
     except Exception as e:
         print("Unexpected error: " + str(e))
         print '-' * 60
         traceback.print_exc(file=sys.stdout)
         print '-' * 60
     finally:
-        if logFile is not None:
-            logFile.close()
+        pass
 
 # TODO: generate HTML report for each analysis and give name to the report
 '''

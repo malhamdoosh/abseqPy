@@ -101,7 +101,7 @@ class IgRepertoire:
                                   ["abundance/", "productivity/", "diversity/", "restriction_sites/",
                                    "primer_specificity/"]))
 
-        setupLogger(self.name, args.log)
+        setupLogger(self.name, self.task, args.log)
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
@@ -121,27 +121,29 @@ class IgRepertoire:
         # check for presence of file2 before concatenating str and None(None when self.readFile2 is empty/not provided)
         os.system(command % (FASTQC, outDir, self.threads,
                              self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
-        writeParams(self.args, outDir, logger)
+        paramFile = writeParams(self.args, outDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
         printto(logger, "Fastqc has completed.")
 
     def mergePairedReads(self, outDir=None):
+        logger = logging.getLogger(self.name)
         if self.merge != 'yes':
             self.readFile = self.readFile1
         else:
             mergedFastq = mergeReads(self.readFile1, self.readFile2,
-                                     self.threads, self.merger, self.outputDir)
+                                     self.threads, self.merger, self.outputDir, stream=logger)
             self.readFile = mergedFastq
         if outDir is not None:
             # generate plot of clone sequence length distribution
             outputFile = outDir + self.name + '_all_clones_len_dist.png'
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
                            maxbins=40, histtype='bar', removeOutliers=False,
-                           normed=True)
+                           normed=True, stream=logger)
             # generate plot of clone sequence length distribution with outliers removed
             outputFile = outDir + self.name + '_all_clones_len_dist_no_outliers.png'
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
                            maxbins=40, histtype='bar', removeOutliers=True,
-                           normed=True)
+                           normed=True, stream=logger)
 
     def annotateClones(self, outDirFilter=None, all=False):
         logger = logging.getLogger(self.name)
@@ -170,7 +172,7 @@ class IgRepertoire:
 
             # Convert FASTQ file into FASTA format
             if self.format == 'fastq':
-                readFasta = fastq2fasta(self.readFile, self.outputDir)
+                readFasta = fastq2fasta(self.readFile, self.outputDir, stream=None)
             elif self.format == 'fasta':
                 # unzip the fasta file if need be
                 readFasta = gunzip(self.readFile)
@@ -182,7 +184,7 @@ class IgRepertoire:
 
             # Estimate the IGV family abundance for each library
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
-                                                               self.seqType, outdir=outDir)
+                                                               self.seqType, outdir=outDir, stream=logger)
             sys.stdout.flush()
             gc.collect()
 
@@ -193,7 +195,9 @@ class IgRepertoire:
                     cloneAnnotFile.split("/")[-1])
             #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
             self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
-            writeParams(self.args, outDir, logger)
+            paramFile = writeParams(self.args, outDir)
+            printto(logger, "The analysis parameters have been written to " + paramFile)
+
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
         if outDirFilter or all:
@@ -239,9 +243,10 @@ class IgRepertoire:
         if not all or self.cloneAnnot is None:
             self.annotateClones(outDir)
 
-        writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain)
+        writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain, stream=logger)
         gc.collect()
-        writeParams(self.args, outDir, logger)
+        paramFile = writeParams(self.args, outDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
         """
@@ -254,17 +259,20 @@ class IgRepertoire:
         """
         logger = logging.getLogger(self.name)
         outDir = self.outputDir + "productivity/"
+
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
-            print("WARNING: remove the 'productivity' directory if you changed the filtering criteria.")
+            printto(logger, "WARNING: remove the 'productivity' directory if you changed the filtering criteria.",
+                    LEVEL.WARN)
+
         refinedCloneAnnotFile = outDir + self.name
         refinedCloneAnnotFile += "_refined_clones_annot.h5"
 
         cloneSeqFile = outDir + self.name
         cloneSeqFile += "_clones_seq.h5"
 
-        if (not exists(refinedCloneAnnotFile)):
+        if not exists(refinedCloneAnnotFile):
             if not all or self.cloneAnnot is None:
                 self.annotateClones(outDir)
             #             if (self.trimmed):
@@ -278,31 +286,33 @@ class IgRepertoire:
                                                                        self.format, self.actualQstart,
                                                                        self.chain, self.fr4cut,
                                                                        self.trim5End, self.trim3End,
-                                                                       self.seqsPerFile, self.threads)
+                                                                       self.seqsPerFile, self.threads, stream=logger)
             gc.collect()
             # if generateReport:
             # export the CDR/FR annotation to a file                
-            print("The refined clone annotation file is being written to " +
-                  refinedCloneAnnotFile.split("/")[-1])
+            printto(logger, "The refined clone annotation file is being written to " +
+                    refinedCloneAnnotFile.split("/")[-1])
             self.cloneAnnot.to_hdf(refinedCloneAnnotFile, "refinedCloneAnnot", mode='w',
                                    complib='blosc')
             sys.stdout.flush()
-            print("The clone protein sequences are being written to " +
-                  cloneSeqFile.split("/")[-1])
+            printto(logger, "The clone protein sequences are being written to " +
+                    cloneSeqFile.split("/")[-1])
             self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w',
                                   complib='blosc')
             sys.stdout.flush()
-            writeParams(self.args, outDir, logger)
+            paramFile = writeParams(self.args, outDir)
+            printto(logger, "The analysis parameters have been written to " + paramFile)
         else:
-            print("The refined clone annotation files were found and being loaded ... " +
-                  refinedCloneAnnotFile.split('/')[-1])
+            printto(logger, "The refined clone annotation files were found and being loaded ... " +
+                    refinedCloneAnnotFile.split('/')[-1])
             self.cloneAnnot = read_hdf(refinedCloneAnnotFile, "refinedCloneAnnot")
-            print("\tClone annotation was loaded successfully")
+            printto(logger, "\tClone annotation was loaded successfully")
             self.cloneSeqs = read_hdf(cloneSeqFile, "cloneSequences")
-            print("\tClone sequences were loaded successfully")
+            printto(logger, "\tClone sequences were loaded successfully")
         if generateReport:
-            # display statistics 
-            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir)
+            # display statistics
+            printto(logger, "Productivity report is being generated ... ")
+            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir, stream=logger)
             # TODO: analyze productive clones only
         #             self.analyzeIgProtein()
         #             sys.stdout.flush()
@@ -314,11 +324,11 @@ class IgRepertoire:
             self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
         else:
             cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        print("Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
+        printto(logger, "Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
             cloneAnnot.shape[0] * 100.0 / before,
             int(cloneAnnot.shape[0]),
             int(before)
-        ))
+            ), LEVEL.INFO)
 
     '''
     
@@ -327,29 +337,39 @@ class IgRepertoire:
     def analyzeDiversity(self, all=False):
         logger = logging.getLogger(self.name)
         outDir = self.outputDir + "diversity/"
+
         if not all or self.cloneAnnot is None or self.cloneSeqs is None:
             self.analyzeProductivity(self.reportInterim, all)
+
         if len(self.cloneAnnot) == 0:
-            print("WARNING: There are no productive sequences found (post-refinement) in {},"
-                  " skipping diversity analysis.".format(self.name))
+            printto(logger, "WARNING: There are no productive sequences found (post-refinement) in {},"
+                            " skipping diversity analysis.".format(self.name), LEVEL.WARN)
             return
+
         if not os.path.isdir(outDir):
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
-            print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
+            printto(logger, "WARNING: remove the 'diversity' directory if you changed the filtering criteria.",
+                    LEVEL.WARN)
+
         gc.collect()
+
         # Identify spectratypes 
+        printto(logger, "Spectratypes are being calculated ... ")
         spectraTypes = annotateSpectratypes(self.cloneAnnot)
+
         # Identify clonotypes 
+        printto(logger, "Clonotypes are being generated ... ")
         clonoTypes = annotateClonotypes(self.cloneSeqs)
-        # HERE
+
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
-                                self.clonelimit)
+                                self.clonelimit, stream=logger)
 
         # remove this for now - it's unoptimized and extremely slow
         # writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
 
-        writeParams(self.args, outDir, logger)
+        paramFile = writeParams(self.args, outDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeRestrictionSitesSimple(self):
         # TODO: parallelize this function to run faster
@@ -390,7 +410,8 @@ class IgRepertoire:
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],
                                self.name, siteHitsFile)
-        writeParams(self.args, outDir, logger)
+        paramFile = writeParams(self.args, outDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeRestrictionSites(self, all=False):
         #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'

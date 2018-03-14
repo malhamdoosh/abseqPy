@@ -9,10 +9,27 @@ class _Level:
     INFO = 'info'
     WARN = 'warn'
     ERR = 'error'
+    EXCEPT = 'exception'
 
     def __init__(self):
         pass
 
+
+_BANNER = {
+    'all': "Running the complete QC pipeline",
+    'fastq': "Sequencing QC Analysis",
+    'annotate': "Clone Identification and Classification",
+    'abundance': "IGV Abundance and QC Plots",
+    'productivity': "Clone Productivity Analysis",
+    'diversity': "Diversity Analysis",
+    'secretion': "Secretion signal Analysis",
+    '5utr': "5'UTR analysis",
+    'rsasimple': "Simple Restriction Sites Analysis",
+    'rsa': "Comprehensive Restriction Sites Analysis",
+    'primer': "Primer Specificity Analysis",
+    'seqlen': "Sequence Length Distribution",
+    'seqlenclass': "Class Sequence Length Distribution"
+}
 
 LEVEL = _Level()
 
@@ -20,16 +37,19 @@ LEVEL = _Level()
 def printto(stream, message, level=LEVEL.DEBUG):
     level = level.lower()
 
-    if level not in ['debug', 'info', 'warn', 'error', 'critical']:
+    if level not in [_Level.DEBUG, _Level.CRIT, _Level.INFO, _Level.WARN, _Level.ERR, _Level.EXCEPT]:
         raise Exception("Unknown logging level")
 
     if stream:
         getattr(stream, level)(message)
 
 
-def setupLogger(name, logfile, flevel=logging.DEBUG, slevel=logging.WARN):
+def setupLogger(name, task, logfile, stream=sys.stdout, flevel=logging.DEBUG, slevel=logging.WARN):
     if not os.path.exists(logfile):
-        with open(logfile, 'a'): pass
+        with open(logfile, 'a') as fp:
+            fp.write(formattedTitle(task) + '\n')
+
+    datetimefmt = "%Y-%m-%d %H:%M:%S"
 
     logger = logging.getLogger(name)
     logger.setLevel(flevel)
@@ -37,13 +57,25 @@ def setupLogger(name, logfile, flevel=logging.DEBUG, slevel=logging.WARN):
     fh = logging.FileHandler(logfile)
     fh.setLevel(flevel)
 
-    ch = logging.StreamHandler(stream=sys.stdout)
+    ch = logging.StreamHandler(stream=stream)
     ch.setLevel(slevel)
 
-    formatter = logging.Formatter("%(asctime)s (%(name)s)[%(levelname)s]: %(message)s")
+    formatter = logging.Formatter("%(asctime)s (%(name)s)[%(levelname).4s]: %(message)s", datefmt=datetimefmt)
     fh.setFormatter(formatter)
     ch.setFormatter(formatter)
 
     logger.addHandler(fh)
     logger.addHandler(ch)
 
+
+def formattedTitle(task):
+    title = _BANNER.get(task, None)
+    if title is None:
+        raise Exception("Unknown task requested. Available tasks are: {}".format(','.join(_BANNER.keys())))
+    string = "-" * 100 + '\n'
+    string += "|" + " " * 98 + "|\n"
+    string += "|" + " " * ((98 - len(title)) / 2) + title + " " * (
+            (98 - len(title)) / 2 + (98 - len(title)) % 2) + "|\n"
+    string += "|" + " " * 98 + "|\n"
+    string += "-" * 100 + '\n'
+    return string

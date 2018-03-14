@@ -23,7 +23,7 @@ from abseq.config import MEM_GB
 
 
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
-                  trim3end, actualQstart, end5, end3, end5offset, threads):
+                  trim3end, actualQstart, end5, end3, end5offset, threads, stream=None):
     print("Primer specificity analysis has begun ...")
     queryIds = cloneAnnot.index
     seqsPerFile = 100
@@ -38,7 +38,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
         tasks = Queue()
         exitQueue = Queue()
         resultsQueue = Queue()
-        procCounter = ProcCounter(noSeqs)
+        procCounter = ProcCounter(noSeqs, stream=stream)
         threads = min(threads, totalTasks)
         if MEM_GB < 16:
             threads = 2

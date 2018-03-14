@@ -329,8 +329,7 @@ class IgBlastWorker(Process):
 #                 print("process has completed analysis... " + self.name) 
                 self.resultsQueue.put(result)            
             except Exception as e:
-                printto(self.stream, "An error occurred while processing " + nextTask.split('/')[-1], LEVEL.CRIT)
-                printto(self.stream, e, LEVEL.CRIT)
+                printto(self.stream, "An error occurred while processing " + nextTask.split('/')[-1], LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
 #                 raise
 #                 sys.exit()

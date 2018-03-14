@@ -56,7 +56,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
         # in igRep.seqsPerFile, we can just analyze the file without splitting it
         if (noWorkers == 1 or noSplit):
             (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
-                                                  seqType, noWorkers, outdir)
+                                                  seqType, noWorkers, outdir, stream=stream)
             sys.stdout.flush()
         else:
             # split FASTA file into smaller files 
@@ -65,7 +65,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             prefix = fastaFile.split('/')[-1].split('.')[0]
             prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
             splitFastaFile(fastaFile, totalFiles, seqsPerFile, 
-                           filesDir, prefix, ext)               
+                           filesDir, prefix, ext, stream=stream)
 
             # # Prepare the multiprocessing queues     
             tasks = Queue()    

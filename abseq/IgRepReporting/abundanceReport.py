@@ -17,7 +17,7 @@ from abseq.logger import printto, LEVEL
 def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igvDist = Counter(stats["vgene"].tolist())
     if (len(igvDist) == 0):
-        printto(stream, "WARNING: No IGV hits were detected.", LEVEL.WARn)
+        printto(stream, "WARNING: No IGV hits were detected.", LEVEL.WARN)
         return
 
     # Write the counts of all IGVs into a text file - variant_level isn't plotted by default.
@@ -32,7 +32,7 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
 #             ksub = k.split('*')[0]
 #             igvDistSub[ksub] = igvDistSub.get(ksub, 0) + igvDist[k]
     plotDist(igvDistSub, sampleName, outDir + sampleName +
-             '_igv_dist_gene_level.png', rotateLabels=False, vertical=False)
+             '_igv_dist_gene_level.png', rotateLabels=False, vertical=False, stream=stream)
     
     # Group IGVs based on the families and then write into a text file
     igvDistfam = compressCountsFamilyLevel(igvDistSub)
@@ -42,7 +42,7 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
 
     # Plot the family level distribution
     plotDist(igvDistfam, sampleName, outDir + sampleName + 
-             '_igv_dist_family_level.png')
+             '_igv_dist_family_level.png', stream=stream)
     
     # plot alignment length vs %identity
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
@@ -62,14 +62,14 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
     c = Counter(stats['vmismatches'].tolist())
     plotDist(c, sampleName, outDir + sampleName + 
              '_igv_mismatches_dist.png', title='Number of Mismatches in V gene',
-             proportion=True, rotateLabels=False, top=20) 
+             proportion=True, rotateLabels=False, top=20, stream=stream)
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
                      ['Alignment Length', 'Gaps'] , outDir + sampleName + 
               '_igv_align_quality_gaps_hm.png')
     c = Counter(stats['vgaps'].tolist())
     plotDist(c, sampleName, outDir + sampleName + 
              '_igv_gaps_dist.png', title='Number of Gaps in V gene',
-             proportion=True, rotateLabels=False, top=20) 
+             proportion=True, rotateLabels=False, top=20, stream=stream)
     #     print(np.percentile(stats, [0, 100], 0))
     #     summarizeStats(stats, outputDir+sampleName+'_stats_summary.txt')
 
@@ -82,7 +82,7 @@ def writeJAbundanceToFiles(stats, sampleName, outDir, stream=None):
         return        
     
     plotDist(igjDist, sampleName, outDir + sampleName +
-                  '_igj_dist_variant_level.png', rotateLabels=False, vertical=False)
+                  '_igj_dist_variant_level.png', rotateLabels=False, vertical=False, stream=stream)
     
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igjDistSub = compressCountsGeneLevel(igjDist)
@@ -94,14 +94,14 @@ def writeJAbundanceToFiles(stats, sampleName, outDir, stream=None):
     # Plot the family level distribution
     plotDist(igjDistfam, sampleName, outDir + sampleName + 
              '_igj_dist_family_level.png',
-             title = 'IGJ Abundance in Sample ' + sampleName )
+             title = 'IGJ Abundance in Sample ' + sampleName, stream=stream)
 
 
 def writeDAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igdDist = Counter(stats["dgene"].tolist())
     igdDist = Counter({str(k) : igdDist[k] for k in igdDist})
     if (len(igdDist) == 0):
-        printto("WARNING: No IGD hits were detected.", LEVEL.WARN)
+        printto(stream, "WARNING: No IGD hits were detected.", LEVEL.WARN)
         return
 
     # Write the counts of all IGVs into a text file
@@ -115,14 +115,14 @@ def writeDAbundanceToFiles(stats, sampleName, outDir, stream=None):
     igdDistSub = compressCountsGeneLevel(igdDist)
     plotDist(igdDistSub, sampleName, outDir + sampleName +
              '_igd_dist_gene_level.png', rotateLabels=False, vertical=False,
-             title = 'IGD Abundance in Sample ' + sampleName )
+             title = 'IGD Abundance in Sample ' + sampleName, stream=stream)
     
     # Group IGVs based on the families and then write into a text file
     igdDistfam = compressCountsFamilyLevel(igdDistSub)
     # Plot the family level distribution
     plotDist(igdDistfam, sampleName, outDir + sampleName + 
              '_igd_dist_family_level.png',
-             title = 'IGD Abundance in Sample ' + sampleName)
+             title = 'IGD Abundance in Sample ' + sampleName, stream=stream)
 
 
 def writeVJAssociationToFiles(stats, sampleName, outDir, stream=None):

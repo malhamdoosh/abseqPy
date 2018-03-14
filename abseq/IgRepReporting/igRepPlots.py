@@ -73,13 +73,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    removeOutliers=False, stream=None):
 
     if (exists(outputFile)):
-        printto(
-            stream, "\tSequence length distribution plot found ... " + outputFile.split('/')[-1], 'warn'
-        )
+        printto(stream, "\tSequence length distribution plot found ... " + outputFile.split('/')[-1], LEVEL.WARN)
         return
-    printto(
-        stream, "\tThe sequence length distribution is being plotted for " + sampleName, 'debug'
-    )
+    printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
     if (type("") == type(counts)):
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
@@ -153,9 +149,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     return histcals
 
 
-def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False):
+def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, stream=None):
     if (exists(filename)):
-        print('\tFile found ... ' + filename.split('/')[-1])
+        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -228,9 +224,9 @@ In ecology, rarefaction is a technique to assess species richness from the resul
 '''
 
 
-def plotSeqRarefaction(seqs, labels, filename, weights=None, title=''):
+def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=None):
     if (exists(filename)):
-        print('\tFile found ... ' + filename.split('/')[-1])
+        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -308,9 +304,9 @@ XXX: Note to whoever is using this function - there will be NO R plot for this f
 """
 
 
-def plotSeqRecapture(seqs, labels, filename, weights=None, title=''):
+def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
     if (exists(filename)):
-        print('\tFile found ... ' + filename.split('/')[-1])
+        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -366,9 +362,9 @@ Uses sampling without replacement and gives equal properties to all clones
 '''
 
 
-def plotSeqRecaptureNew(seqs, labels, filename, title=''):
+def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
     if (exists(filename)):
-        print('\tFile found ... ' + filename.split('/')[-1])
+        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -440,9 +436,9 @@ def plotVenn(sets, filename, title=''):
 
 
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
-             rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False):
+             rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False, stream=None):
     if (exists(filename)):
-        print("File found ... " + filename.split('/')[-1])
+        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
         return
 
     # This function creates bar plot for the distribution counts/proportions
@@ -463,7 +459,8 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
     if total == 0:
-        print("Skipping plot for distribution graph {} because there's no distribution.".format(filename))
+        printto(stream, "Skipping distribution graph {} because there's no distribution.".format(filename),
+                LEVEL.WARN)
         return
     #     if (proportion):
     stats = map(lambda x: ighvDistfam[x] / total * 100, classes)
@@ -727,9 +724,9 @@ Amino acids are colored based on their physiochemical properties
 '''
 
 
-def barLogo(counts, title, filename, removeOutliers=False, scaled=False):
+def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=None):
     if (exists(filename)):
-        print("File found ... " + filename.split('/')[-1])
+        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
         return
     totals = np.array([sum(ct.values()) for ct in counts])
     if removeOutliers:
@@ -767,9 +764,9 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False):
     fig.savefig(filename, dpi=300)
 
 
-def generateCumulativeLogo(seqs, weights, region, filename):
+def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
     if exists(filename):
-        print("\t" + region + " Cumulative Logo was found ")
+        printto(stream, "\t" + region + " Cumulative Logo was found ", LEVEL.WARN)
     else:
         m = maxlen(seqs)
         if m > 30:
@@ -787,11 +784,11 @@ def generateCumulativeLogo(seqs, weights, region, filename):
             # Generate a cumulative bar plot
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
-                filename, removeOutliers=(region != "cdr3"))
+                filename, removeOutliers=(region != "cdr3"), stream=stream)
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
                 filename.replace(".png", "_scaled.png"),
-                scaled=True)
+                scaled=True, stream=stream)
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):
