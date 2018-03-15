@@ -290,7 +290,7 @@ def parseCommandLineArguments():
     optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene."
                                                  " If a (fasta) file was provided instead, will use "
                                                  "sequence(s) in the file to determine FR4 end position." 
-                                                 "That is, the sequences will be trimmed at the 3' end based "
+                                                 " That is, the sequences will be trimmed at the 3' end based "
                                                  "on sequence(s) provided in the file. -f4c/--fr4cut is automatically"
                                                  " disabled if this flag is specified."
                                                  " [default=0]", default=None)
