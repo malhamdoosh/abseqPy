@@ -8,11 +8,15 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-from config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR, RSCRIPT_SAMPLE_SEPARATOR
+
 from numpy import Inf
+from Bio import SeqIO
 from os.path import abspath
+
 from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
+from abseq.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR,\
+    RSCRIPT_SAMPLE_SEPARATOR
 
 
 def parseArgs():
@@ -24,13 +28,17 @@ def parseArgs():
 
     parser, args = parseCommandLineArguments()
 
-    # canonicalize all values
+    # --------------------------------------------------------------------------------------------------------
+    #                                       Canonicalize all values
+    # --------------------------------------------------------------------------------------------------------
     args.task = args.task.lower()
     args.seqtype = args.seqtype.lower()
     args.chain = args.chain.lower()
     args.merger = args.merger.lower() if args.merger is not None else args.merger
 
-    # check for f1, f2 file existence and expand path
+    # --------------------------------------------------------------------------------------------------------
+    #                              Check for -f1, -f2 file existence and expand path
+    # --------------------------------------------------------------------------------------------------------
     if not os.path.exists(args.f1):
         parser.error("-f1 file not found!")
     else:
@@ -68,6 +76,9 @@ def parseArgs():
             parser.error("-rs / --rscripts argument is either empty or "
                          "'off' when -f1 is not a directory - there is nothing to pair with!")
 
+    # --------------------------------------------------------------------------------------------------------
+    #                                    Parse clone limit option
+    # --------------------------------------------------------------------------------------------------------
     if args.clonelimit is None:
         args.clonelimit = DEFAULT_TOP_CLONE_VALUE
     elif args.clonelimit.lower() == 'inf':
@@ -75,9 +86,7 @@ def parseArgs():
     else:
         args.clonelimit = int(args.clonelimit)
 
-    # setting default value of bitscores if not provided, else extract the string ranges provided
-    args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
-
+    # MISC
     # setting default values for upstream
     if args.task in ['secretion', '5utr']:
         args.upstream = [1, Inf] if args.upstream is None else extractRanges(args.upstream, 1)[0]
@@ -97,9 +106,40 @@ def parseArgs():
     else:
         args.actualqstart = -1
 
-    # BUGSQ: if user provided value = 0, what happens?: here, only subtract 1 if args.trim5 isn't default 0, or if user
-    # didn't provide 0, since the other file that uses this parameter didn't check for negative values
-    args.trim5 -= args.trim5 > 0  # again, transform args.trim5 to 0-based if provided value is > 0, else 0
+    # --------------------------------------------------------------------------------------------------------
+    #                                       Trim5 and Trim3 logic check
+    # --------------------------------------------------------------------------------------------------------
+    if args.trim5 < 0:
+        parser.error("--trim5 cannot be a negative value")
+
+    # args.trim3 is a little more complicated
+    if args.trim3 is None:
+        # default, don't cut anything
+        args.trim3 = 0
+    else:
+        if type(args.trim3) == str:
+            args.fr4cut = False
+            try:
+                # user provided int
+                args.trim3 = int(args.trim3)
+                if args.trim3 < 0:
+                    parser.error('--trim3 cannot be a negative value')
+            except ValueError:
+                # user provided sequence file
+                if not os.path.exists(args.trim3):
+                    parser.error("Can't find file {} for --trim3 argument".format(args.trim3))
+                else:
+                    trim3file = os.path.abspath(args.trim3)
+                    with safeOpen(trim3file) as fp:
+                        args.trim3 = [str(seq.seq) for seq in SeqIO.parse(fp, 'fasta')]
+                        print("Your seqs: {}".format(args.trim3))
+
+        else:
+            parser.error("Unrecognized option for --trim3 {}".format(args.trim3))
+
+    # --------------------------------------------------------------------------------------------------------
+    #                                   Primer task check
+    # --------------------------------------------------------------------------------------------------------
 
     # retrieve filenames for primer analysis on 5' and 3' end
     if args.task == 'primer':
@@ -112,12 +152,20 @@ def parseArgs():
     if args.primer3end and not os.path.exists(args.primer3end):
         parser.error("{} file not found!".format(args.primer3end))
 
+    # --------------------------------------------------------------------------------------------------------
+    #                      Ranges for query, subject start / bitscore / align len filters
+    # --------------------------------------------------------------------------------------------------------
+    # setting default value of ranges if not provided, else extract the string ranges provided
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
     args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
     args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
+    args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
+
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
-    # -rs / --rscripts sanity check!
+    # --------------------------------------------------------------------------------------------------------
+    #                                   -rs / --rscripts sanity check!
+    # --------------------------------------------------------------------------------------------------------
 
     # -rs / --rscripts: if it was a conf file, make sure it exists!
     if PlotManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
@@ -149,6 +197,7 @@ def parseArgs():
             parser.error("Incorrect -rs argument detected. You might have a trailing {}"
                          .format(RSCRIPT_SAMPLE_SEPARATOR))
 
+    # done
     return args
 
 
@@ -238,8 +287,13 @@ def parseCommandLineArguments():
                                                    " analysis. Index starts from 1 [default=[1, inf)]", default=None)
     optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
                           default=0, type=int)
-    optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene [default=0]",
-                          default=0, type=int)
+    optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene."
+                                                 " If a (fasta) file was provided instead, will use "
+                                                 "sequence(s) in the file to determine FR4 end position." 
+                                                 "That is, the sequences will be trimmed at the 3' end based "
+                                                 "on sequence(s) provided in the file. -f4c/--fr4cut is automatically"
+                                                 " disabled if this flag is specified."
+                                                 " [default=0]", default=None)
     optional.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset [default=0]",
                           default=0, type=int)
     optional.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
