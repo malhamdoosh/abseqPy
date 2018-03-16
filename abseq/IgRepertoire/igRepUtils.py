@@ -287,16 +287,8 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     #           ||||||||||
     #     ----CAGTACGTACGT
     # although alignment starts at pos 6, we still consider FR4 to start at pos 4
-    start = 0
-    while start < len(alignments[best][1]) and alignments[best][1][start] == '-':
-        start += 1
+    start = extend5align(alignments[best]) + offset + 1     # 1-based start
 
-    # if there are no leading '-'s, just take the provided start index.
-    if start == 0:
-        start = int(offset + alignments[best][-2])
-
-    # 1-based start
-    start += 1
     end = int(offset + alignments[best][-1])
 
     gapped = False
@@ -632,12 +624,14 @@ def calMaxIUPACAlignScores(seqs):
     return scores
 
 
-def findBestMatchedPattern(seq, patterns):
+def findBestMatchedPattern(seq, patterns, extend5end=False):
     """
     find the best matched pattern in a list of patterns
     and classify the type of the alignment (intact, indelled, mismatched, unknown)
     :param seq: nucleotide sequence
     :param patterns: zip iterator (or list) of (pattern_id, pattern_seq, pattern_max_IUPAC_score)
+    :param extend5end: since this function uses Local edit distance, it will not favor mismatches and gaps earlier
+    than the alignment. Use this flag to get the 'absolute beginning' of match
     :return: tuple of (pattern_id, mismatch_position, indel_position, start_pos (inclusive), end_pos (exclusive)).
     for example: (Oligo1H, 0, 0, 0, 15) means pattern id Oligo1H has the best match with 0 indel/mismatches and
     alignment starts from index 0 until 15: primer_seq[0:15]. If no alignment is ideal, returns (str(nan), 0, 0, -1, -1)
@@ -738,7 +732,17 @@ def findBestMatchedPattern(seq, patterns):
      ('den', ('--GG-CCATC-GGT-CTCCCCC', 'SAGGTCCAGCTGGTACA-----', 31.0, 2, 16)),
      ('fur', ('GGCCATCGGTCTCCCCC-----', '---CA--GRTCACCTTGAAGGA', 26.0, 3, 14))]
     """
+    if extend5end:
+        return best[ID], misPos + 1, delPos + 1, extend5align(best[ALIGNMENT]), best[ALIGNMENT][MEND]
+    # don't need to extend 5'end
     return best[ID], misPos + 1, delPos + 1, best[ALIGNMENT][MSTART], best[ALIGNMENT][MEND]
+
+
+def extend5align(localAlignment):
+    start = 0
+    while start < len(localAlignment[1]) and localAlignment[1][start] == '-':
+        start += 1
+    return start if start > 0 else localAlignment[-2]
 
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
