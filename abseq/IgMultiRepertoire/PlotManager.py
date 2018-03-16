@@ -310,7 +310,7 @@ def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchS
         for j in xrange(1, len(string1) + 1):
             matrix[i][j] = max(matrix[i][j - 1] + deletionPenalty, matrix[i - 1][j] + insertionPenalty,
                                matrix[i - 1][j - 1] + (
-                                   matchScore if string1[j - 1] == string2[i - 1] else mismatchScore))
+                                   matchScore if string1[j - 1] == string2[i - 1] else mismatchScore), 0)
             maxval = max(maxval, matrix[i][j])
     return maxval
 

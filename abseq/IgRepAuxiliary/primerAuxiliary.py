@@ -20,11 +20,12 @@ from abseq.IgRepReporting.igRepPlots import plotDist, plotVenn
 from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
 from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
 from abseq.config import MEM_GB
+from abseq.logger import printto, LEVEL
 
 
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
-                  trim3end, actualQstart, end5, end3, end5offset, threads):
-    print("Primer specificity analysis has begun ...")
+                  trim3end, actualQstart, end5, end3, end5offset, threads, stream=None):
+    printto(stream, "Primer specificity analysis has begun ...")
     queryIds = cloneAnnot.index
     seqsPerFile = 100
     _addPrimerColumns(cloneAnnot, end5, end3)
@@ -32,19 +33,19 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
     records = SeqIO.index(gunzip(readFile), format)
     newColumns = ['queryid'] + list(cloneAnnot.columns)
     try:
-        print("\t " + format + " index created and primer analysis started ...")
+        printto(stream, "\t " + format + " index created and primer analysis started ...")
         noSeqs = len(queryIds)
         totalTasks = int(ceil(noSeqs * 1.0 / seqsPerFile))
         tasks = Queue()
         exitQueue = Queue()
         resultsQueue = Queue()
-        procCounter = ProcCounter(noSeqs)
+        procCounter = ProcCounter(noSeqs, stream=stream)
         threads = min(threads, totalTasks)
         if MEM_GB < 16:
             threads = 2
         for _ in range(threads):
             w = PrimerWorker(procCounter, fr4cut, trim5end, trim3end, actualQstart, end5,
-                             end3, end5offset, tasks, exitQueue, resultsQueue)
+                             end3, end5offset, tasks, exitQueue, resultsQueue, stream=stream)
             workers.append(w)
             w.start()
         for i in range(totalTasks):
@@ -61,12 +62,12 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
         while i < threads:
             m = exitQueue.get()
             i += (m == 'exit')
-        print("All workers have completed their tasks successfully.")
-        print("Results are being collated from all workers ...")
-        cloneAnnotList = _collectPrimerResults(newColumns, resultsQueue, totalTasks, noSeqs)
-        print("Results were collated successfully.")
+        printto(stream, "All workers have completed their tasks successfully.")
+        printto(stream, "Results are being collated from all workers ...")
+        cloneAnnotList = _collectPrimerResults(newColumns, resultsQueue, totalTasks, noSeqs, stream=stream)
+        printto(stream, "Results were collated successfully.")
     except Exception as e:
-        print("Something went wrong during the primer specificity analysis!")
+        printto(stream, "Something went wrong during the primer specificity analysis!", LEVEL.EXCEPT)
         raise e
     finally:
         for w in workers:
@@ -79,7 +80,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
     return primerAnnot
 
 
-def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
+def _collectPrimerResults(columns, queue, totalTasks, noSeqs, stream=None):
     processed = 0
     cloneAnnot = []
     totalUnexpected5 = totalUnexpected3 = 0
@@ -95,12 +96,12 @@ def _collectPrimerResults(columns, queue, totalTasks, noSeqs):
             cloneAnnot.append([entry[col] for col in columns])
         processed = len(cloneAnnot)
         if processed % 50000 == 0:
-            print("\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
+            printto(stream, "\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
             sys.stdout.flush()
 
-    print("\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
-    print("\tThere were {} unexpected 5' alignment and {} unexpected 3' alignment".format(totalUnexpected5,
-                                                                                          totalUnexpected3))
+    printto(stream, "\t{:,}/{:,} records have been collected ... ".format(processed, noSeqs))
+    printto(stream, "\tThere were {} unexpected 5' alignment and {} unexpected 3' alignment"
+            .format(totalUnexpected5, totalUnexpected3), LEVEL.WARN)
     return cloneAnnot
 
 
@@ -115,7 +116,7 @@ def _addPrimerColumns(cloneAnnot, end5, end3):
         cloneAnnot['3endIndelIndex'] = np.nan
 
 
-def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
+def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All", stream=None):
     NA = str(np.nan)
     PRIMER = str(end) + 'endPrimer'
     MISMATCH = str(end) + 'endMismatchIndex'
@@ -135,8 +136,8 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
 
     invalidClones = known.index[known[INDEL] != 0].tolist()
     valid = known.index[known[INDEL] == 0].tolist()
-    print("Example of Indelled {}'-end: {}".format(end, str(invalidClones[1:10])))
-    print("Example of non-indelled {}'-end: {}".format(end, str(valid[1:10])))
+    printto(stream, "Example of Indelled {}'-end: {}".format(end, str(invalidClones[1:10])), LEVEL.INFO)
+    printto(stream, "Example of non-indelled {}'-end: {}".format(end, str(valid[1:10])), LEVEL.INFO)
 
     c1 = Counter(known[known[INDEL] != 0][PRIMER].tolist())
     plotDist(c1, name, fileprefix +
@@ -165,7 +166,7 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All"):
                  proportion=False, vertical=False, top=20, rotateLabels=False)
 
 
-def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
+def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
     nanString = 'NaN'
     # similar with productivity analysis etc ..
     cloneAnnot.fillna(nanString, inplace=True)
@@ -179,33 +180,33 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3):
     productiveClones = cloneAnnot[(cloneAnnot['v-jframe'] == 'In-frame') & (cloneAnnot['stopcodon'] == 'No')]
 
     if end5:
-        print("5-end analysis of all clones ... ")
-        writePrimerStats('5', name, cloneAnnot, outDir + name + '_all_5end_')
+        printto(stream, "5-end analysis of all clones ... ")
+        writePrimerStats('5', name, cloneAnnot, outDir + name + '_all_5end_', stream=stream)
         allInvalid5Clones = cloneAnnot.index[
             ((cloneAnnot[PRIMER5] != NA) & (cloneAnnot[INDEL5] != 0))
         ].tolist()
 
-        print('5-end analysis of out-of-frame clones ... ')
-        writePrimerStats('5', name, outOfFrameClones, outDir + name + '_outframe_5end_', 'Out-of-frame')
+        printto(stream, '5-end analysis of out-of-frame clones ... ')
+        writePrimerStats('5', name, outOfFrameClones, outDir + name + '_outframe_5end_', 'Out-of-frame', stream=stream)
         outFrameInvalid5Clones = outOfFrameClones.index[
             ((outOfFrameClones[PRIMER5] != NA) & (outOfFrameClones[INDEL5] != 0))
         ].tolist()
 
-        print("5-end analysis of productive clones ... ")
-        writePrimerStats('5', name, productiveClones, outDir + name + '_productive_5end_', 'Productive')
+        printto(stream, "5-end analysis of productive clones ... ")
+        writePrimerStats('5', name, productiveClones, outDir + name + '_productive_5end_', 'Productive', stream=stream)
         productiveInvalid5Clones = productiveClones.index[
             ((productiveClones[PRIMER5] != NA) & (productiveClones[INDEL5] != 0))
         ].tolist()
 
     if end3:
-        print("3-end analysis of all clones ... ")
-        writePrimerStats('3', name, cloneAnnot, outDir + name + '_all_3end_')
+        printto(stream, "3-end analysis of all clones ... ")
+        writePrimerStats('3', name, cloneAnnot, outDir + name + '_all_3end_', stream=stream)
 
-        print("3-end analysis of out-of-frame clones ... ")
-        writePrimerStats('3', name, outOfFrameClones, outDir + name + '_outframe_3end_', 'Out-of-frame')
+        printto(stream, "3-end analysis of out-of-frame clones ... ")
+        writePrimerStats('3', name, outOfFrameClones, outDir + name + '_outframe_3end_', 'Out-of-frame', stream=stream)
 
-        print('3-end analysis of productive clones ... ')
-        writePrimerStats('3', name, productiveClones, outDir + name + "_productive_3end_", 'Productive')
+        printto(stream, '3-end analysis of productive clones ... ')
+        writePrimerStats('3', name, productiveClones, outDir + name + "_productive_3end_", 'Productive', stream=stream)
 
         if end5:
             invalid3Clones = cloneAnnot.index[

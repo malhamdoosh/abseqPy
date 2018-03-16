@@ -5,10 +5,10 @@
     Changes log: check git commits. 
 '''
 
-import os
 import gzip
 import shutil
 import sys
+import os
 
 from os.path import exists
 from Bio import SeqIO, AlignIO
@@ -23,6 +23,7 @@ from Bio.SubsMat import MatrixInfo as matlist
 
 from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
 from abseq.IgRepReporting.igRepPlots import plotDist
+from abseq.logger import printto, LEVEL
 
 
 def detectFileFormat(fname, noRaise=False):
@@ -101,11 +102,12 @@ def gunzip(gzipFile):
     return newFileName
 
 
-def fastq2fasta(fastqFile, outputDir):
+def fastq2fasta(fastqFile, outputDir, stream=None):
     """
     Converts a fastq file into fasta file. Fastq can be compressed if it was provided as such
     :param fastqFile: (un)compressed fastq file. If compressed, will leave original compressed untouched
     :param outputDir: Where to produce the new fasta file
+    :param stream: debugging stream
     :return: fasta filename
     """
     # FASTQ to FASTA
@@ -124,10 +126,10 @@ def fastq2fasta(fastqFile, outputDir):
         filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
 
     if exists(filename):
-        print ("\tThe FASTA file was found!")
+        printto(stream, "\tThe FASTA file was found!", LEVEL.WARN)
         return filename
 
-    print("\t" + fastqFile.split('/')[-1] + " is being converted into FASTA ...")
+    printto(stream, "\t" + fastqFile.split('/')[-1] + " is being converted into FASTA ...")
     command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
                "{print $0}' " + fastqFile + " > " + filename
                )
@@ -149,39 +151,44 @@ IMGT classification system is used to delineate the V domain
 '''
 
 
-def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA", outputDir=""):
+def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA", outputDir="", stream=None):
     # Run igblast on a fasta file
     # TODO: update $IGDATA for auxiliary_data to correct path
     # TODO: change organism to be fed through parameters
+
     if outputDir:
         head, tail = os.path.split(blastInput)
         blastOutput = outputDir + tail.replace('.' + tail.split('.')[-1], '.out')
     else:
         blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+
     if (exists(blastOutput)):
-        print("\tBlast results were found ... " + blastOutput.split("/")[-1])
+        printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput
-    print('\tRunning igblast ... ' + blastInput.split("/")[-1])
-    if (chain == 'hv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_ighv -germline_db_J "
-                                                        "" + db + "/imgt_human_ighj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
-    elif (chain == 'kv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_igkv -germline_db_J "
-                                                        "" + db + "/imgt_human_igkj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
-    elif (chain == 'lv'):
-        command = (IGBLASTN + " -germline_db_V " + db + "/imgt_human_iglv -germline_db_J "
-                                                        "" + db + "/imgt_human_iglj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt "
-                                                                                                            "-query %s -organism human -auxiliary_data " + igdata + "/optional_file/human_gl.aux "
-                                                                                                                                                                    "-show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-                   )
+
+    printto(stream, '\tRunning igblast ... ' + blastInput.split("/")[-1])
+
+    if chain == 'hv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_ighv -germline_db_J " \
+                  + db + "/imgt_human_ighj -germline_db_D " + db \
+                  + "/imgt_human_ighd -domain_system imgt " \
+                  + "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
+    elif chain == 'kv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_igkv -germline_db_J " \
+                  + db + "/imgt_human_igkj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt " + \
+                  "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
+    elif chain == 'lv':
+        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_iglv -germline_db_J " \
+                  + db + "/imgt_human_iglj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt" + \
+                  "-query %s -organism human -auxiliary_data " + igdata \
+                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
+
     else:
-        print('ERROR: unsupported chain type.')
+        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
         sys.exit()
 
     os.system(command % (blastInput, threads, blastOutput))
@@ -193,42 +200,41 @@ IMGT classification system is used to delineate the V domain
 '''
 
 
-def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir=""):
+def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir="", stream=None):
     # Run igblast on a fasta file        
     blastOutput = outputDir + blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+
     if (exists(blastOutput)):
-        print("\tBlast results were found ... " + blastOutput.split("/")[-1])
+        printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput
-    print('\tRunning igblast ... ' + blastInput.split("/")[-1])
-    if (chain == 'hv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_ighv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
+    printto(stream, '\tRunning igblast ... ' + blastInput.split("/")[-1])
+
+    if chain == 'hv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_ighv_p " + \
+                                                       "-domain_system imgt " + \
+                                                       "-query %s -organism human " + \
+                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
+    elif chain == 'kv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_igkv_p " + \
+                                                       "-domain_system imgt " + \
+                                                       "-query %s -organism human " + \
+                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
+    elif chain == 'lv':
+        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_iglv_p " + \
+                                                        "-domain_system imgt " + \
+                                                        "-query %s -organism human " + \
                                                         "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
-    elif (chain == 'kv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_igkv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
-                                                        "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
-    elif (chain == 'lv'):
-        command = (IGBLASTP + " -germline_db_V " + db + "/imgt_human_iglv_p "
-                                                        "-domain_system imgt "
-                                                        "-query %s -organism human "
-                                                        "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-                   )
     else:
-        print('ERROR: unsupported chain type.')
+        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
         sys.exit()
 
     os.system(command % (blastInput, threads, blastOutput))
     return blastOutput
 
 
-def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True):
+def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True, stream=None):
     if exists(filename):
-        print("\tThe clonotype file " + filename.split("/")[-1] + " was found!")
+        printto(stream, "\tThe clonotype file " + filename.split("/")[-1] + " was found!", LEVEL.WARN)
         return
 
     total = sum(clonoTypes.values()) * 1.0
@@ -247,7 +253,7 @@ def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True):
     # (should change to table format(t) if search is needed for clonotype clustering/comparison)
     # df.to_hdf(filename, "clonotype", mode="w", format="f")
     df.to_csv(filename + ".gz", mode="w", compression="gzip")
-    print("\tA clonotype file has been written to " + filename.split("/")[-1])
+    printto(stream, "\tA clonotype file has been written to " + filename.split("/")[-1])
 
 
 def writeCountsToFile(dist, filename):
@@ -287,16 +293,8 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     #           ||||||||||
     #     ----CAGTACGTACGT
     # although alignment starts at pos 6, we still consider FR4 to start at pos 4
-    start = 0
-    while start < len(alignments[best][1]) and alignments[best][1][start] == '-':
-        start += 1
+    start = extend5align(alignments[best]) + offset + 1     # 1-based start
 
-    # if there are no leading '-'s, just take the provided start index.
-    if start == 0:
-        start = int(offset + alignments[best][-2])
-
-    # 1-based start
-    start += 1
     end = int(offset + alignments[best][-1])
 
     gapped = False
@@ -313,7 +311,7 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
 '''
 
 
-def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
+def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False, stream=None):
     if (isnan(start) or isnan(end)):
         return ''
     if (start != -1 and end != -1 and end - start < 1):
@@ -342,27 +340,27 @@ def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False):
             frag = frag[:frag.index('*')]
         return frag
     except:
-        print("ERROR at Extract Protein Fragment", protein, start, end)
+        printto(stream, "ERROR at Extract Protein Fragment {} {} {}".format(protein, start, end), LEVEL.ERR)
         return None
 
 
-def extractCDRsandFRsProtein(protein, qsRec, offset):
+def extractCDRsandFRsProtein(protein, qsRec, offset, stream=None):
     try:
         seqs = []
         newProtein = ""
         # Extract protein sequence of FR1             
-        seqs.append(extractProteinFrag(protein, qsRec['fr1.start'], qsRec['fr1.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr1.start'], qsRec['fr1.end'], offset, stream=stream))
         # Extract protein sequence of CDR1
-        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr1.start'], qsRec['cdr1.end'], offset, stream=stream))
         # Extract protein sequence of FR2
-        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr2.start'], qsRec['fr2.end'], offset, stream=stream))
         # Extract protein sequence of CDR2
-        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr2.start'], qsRec['cdr2.end'], offset, stream=stream))
         # Extract protein sequence of FR3
-        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['fr3.start'], qsRec['fr3.end'], offset, stream=stream))
         # Extract protein sequence of CDR3 and FR4
-        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], offset))
-        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], offset))
+        seqs.append(extractProteinFrag(protein, qsRec['cdr3.start'], qsRec['cdr3.end'], offset, stream=stream))
+        seqs.append(extractProteinFrag(protein, qsRec['fr4.start'], qsRec['fr4.end'], offset, stream=stream))
         # check whether FR and CDR sequences were extracted correctly
         newProtein = ''.join(seqs)
         assert newProtein in protein
@@ -402,7 +400,7 @@ def extractCDRsandFRsDNA(dna, qsRec):
     return seqs
 
 
-def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
+def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", stream=None):
     seqOut = outDir + "seq/"
     if (not os.path.isdir(seqOut)):
         os.system("mkdir " + seqOut)
@@ -412,17 +410,17 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
     if (merger == 'pear'):  ### MERGE using PEAR
         mergedFastq = outputPrefix + '.assembled.fastq'
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = "pear -f %s -r %s -o %s -j %d -v 15 -n 350"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     elif (merger == 'leehom'):
         mergedFastq = outputPrefix + '.fq'
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
@@ -430,19 +428,19 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
             # os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     elif (merger == 'flash'):
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = outputPrefix.split("/")[-1]
         if (not exists(mergedFastq)):
-            print("%s and %s are being merged ..." % (readFile1.split('/')[-1]
-                                                      , readFile2.split('/')[-1]))
+            printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
+                                                      , readFile2.split('/')[-1]), LEVEL.WARN)
             # the merger params souldn't be hardcoded
             command = "flash %s %s -t %d -o %s -r 300 -f 450 -s 50"
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
             os.system("mv %s.* %s" % (outputPrefix, seqOut))
         else:
-            print("\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!')
+            printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
     #     elif (merger == 'seqprep'):
     #         ### MERGE using SeqPrep
     #         mergedFastq = readFile1.replace(readFile1.split('_')[-1], 'merged.fastq.gz')
@@ -456,15 +454,15 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./"):
     #         mergedFastq = mergedFastq.replace('.gz', '')
     #         ### END MERGE using SeqPrep
     else:
-        raise Exception("Uknowne short reads merger is selected")
+        raise Exception("Unknown short reads merger is selected")
 
     return os.path.abspath(mergedFastq)
 
 
-def writeTableIntoFile(table, filename):
+def writeTableIntoFile(table, filename, stream=None):
     df = DataFrame(table)
     df.to_csv(filename, sep='\t', header=True, index=True)
-    print("Text file has been written to " + filename)
+    printto(stream, "Text file has been written to " + filename)
 
 
 def writeListToFile(items, filename):
@@ -544,9 +542,10 @@ def compressCountsFamilyLevel(countsDict):
 '''
 
 
-def alignListOfSeqs(signals, outDir, ignoreNones=False):
+def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
     L = map(len, signals)
-    print("\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
+    printto(stream,
+            "\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
     tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
@@ -632,21 +631,25 @@ def calMaxIUPACAlignScores(seqs):
     return scores
 
 
-def findBestMatchedPattern(seq, patterns):
+def findBestMatchedPattern(seq, patterns, extend5end=False):
     """
     find the best matched pattern in a list of patterns
     and classify the type of the alignment (intact, indelled, mismatched, unknown)
-    :param seq: Typically the 5' or 3' end of query sequence, cut to the length of max(map(len, primer_seqs))
-                because we are using LED
-    :param patterns: Typically your 5' or 3' primer sequences
-    :return: (primer_id, mismatch_position, indel_position)
+    :param seq: nucleotide sequence
+    :param patterns: zip iterator (or list) of (pattern_id, pattern_seq, pattern_max_IUPAC_score)
+    :param extend5end: since this function uses Local edit distance, it will not favor mismatches and gaps earlier
+    than the alignment. Use this flag to get the 'absolute beginning' of match
+    :return: tuple of (pattern_id, mismatch_position, indel_position, start_pos (inclusive), end_pos (exclusive)).
+    for example: (Oligo1H, 0, 0, 0, 15) means pattern id Oligo1H has the best match with 0 indel/mismatches and
+    alignment starts from index 0 until 15: primer_seq[0:15]. If no alignment is ideal, returns (str(nan), 0, 0, -1, -1)
+
     Note: 0) mismatch_position and indel_position are 1-based index (i.e. starts from 1, not 0) - 0 means no indel/mis
           1) primer_id = 'nan'        => there was no suitable hit - mismatches and indel_pos will be left 0, but you
                                          should (obviously) not interpret that as mismatch at pos 0 or indel at pos 0
           2) mismatch_position = 0    => no mismatches
           3) indel_position = 0       => no indel_position
     """
-    NO_MATCH = (str(nan), 0, 0)
+    NO_MATCH = (str(nan), 0, 0, -1, -1)
     scores = []
     # align the sequence against all possible patterns
     for (id, pattern, maxScore) in patterns:
@@ -657,7 +660,7 @@ def findBestMatchedPattern(seq, patterns):
         elif len(alignments) > 0:
             alignment = alignments[0]
         else:
-            raise Exception("Couldn't align ... ", seq, patterns)
+            return NO_MATCH
         if alignment:
             alignLen = alignment[-1] - alignment[-2]
             scores.append((id, alignment))
@@ -667,7 +670,7 @@ def findBestMatchedPattern(seq, patterns):
                     alignLen == len(pattern) and
                     '-' not in alignment[0] and
                     '-' not in alignment[1]):
-                return scores[-1][0], 0, 0
+                return scores[-1][0], 0, 0, alignment[-2], alignment[-1]
         else:
             scores.append((id, ('', '', 0)))
 
@@ -736,15 +739,25 @@ def findBestMatchedPattern(seq, patterns):
      ('den', ('--GG-CCATC-GGT-CTCCCCC', 'SAGGTCCAGCTGGTACA-----', 31.0, 2, 16)),
      ('fur', ('GGCCATCGGTCTCCCCC-----', '---CA--GRTCACCTTGAAGGA', 26.0, 3, 14))]
     """
-    return best[ID], misPos + 1, delPos + 1
+    if extend5end:
+        return best[ID], misPos + 1, delPos + 1, extend5align(best[ALIGNMENT]), best[ALIGNMENT][MEND]
+    # don't need to extend 5'end
+    return best[ID], misPos + 1, delPos + 1, best[ALIGNMENT][MSTART], best[ALIGNMENT][MEND]
+
+
+def extend5align(localAlignment):
+    start = 0
+    while start < len(localAlignment[1]) and localAlignment[1][start] == '-':
+        start += 1
+    return start if start > 0 else localAlignment[-2]
 
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
-                   prefix="", ext=".fasta"):
+                   prefix="", ext=".fasta", stream=None):
     if (not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ext) and
             not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ".out")):
         # Split the FASTA file into multiple chunks
-        print("\tThe clones are distributed into multiple workers .. ")
+        printto(stream, "\tThe clones are distributed into multiple workers .. ")
         if (not os.path.isdir(filesDir)):
             os.system("mkdir " + filesDir)
         i = 1
@@ -786,4 +799,5 @@ def writeParams(args, outDir):
     #             out.write(arg + " " + str(args[a]) + "\n")
     #     out.write("\nExecuted command line:\n")
     #     out.write(args['cmd'] + "\n")
-    print("The analysis parameters have been written to " + filename.split("/")[-1])
+    return filename.split("/")[-1]
+

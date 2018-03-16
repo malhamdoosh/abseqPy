@@ -74,7 +74,7 @@ def calcRSAOverlapOrder2(order1, sites):
     return overlap
 
 
-def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, threads):
+def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, threads, stream=None):
     sitesInfo = loadRestrictionSites(sitesFile)
     seqsPerWorker = len(sitesInfo)
     workers = []   
@@ -91,7 +91,7 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
         tasks = Queue()      
         exitQueue = Queue()
         resultsQueue = Queue()
-        procCounter = ProcCounter(noSeqs, desc="sequences") 
+        procCounter = ProcCounter(noSeqs, desc="sequences", stream=stream)
         if (threads > totalTasks):
             threads = totalTasks     
         if MEM_GB < 16:

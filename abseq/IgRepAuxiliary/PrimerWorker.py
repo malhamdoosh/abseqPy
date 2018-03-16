@@ -7,12 +7,13 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 from abseq.IgRepertoire.igRepUtils import findBestMatchedPattern, calMaxIUPACAlignScores
+from abseq.logger import printto, LEVEL
 
 
 class PrimerWorker(Process):
     def __init__(self, procCounter, fr4cut, trim5end,
                  trim3end, actualQstart, end5, end3,
-                 end5offset, tasks, exitQueue, resultsQueue):
+                 end5offset, tasks, exitQueue, resultsQueue, stream=None):
         super(PrimerWorker, self).__init__()
         self.procCounter = procCounter
         self.fr4cut = fr4cut
@@ -26,21 +27,22 @@ class PrimerWorker(Process):
         self.exitQueue = exitQueue
         self.resultsQueue = resultsQueue
         self.firstJobTaken = False
-        self.maxPrimer5Length, self.primer5sequences = _parsePrimerFile(self.end5)
-        self.maxPrimer3Length, self.primer3sequences = _parsePrimerFile(self.end3)
+        self.maxPrimer5Length, self.primer5sequences = _parsePrimerFile(self.end5, stream=stream)
+        self.maxPrimer3Length, self.primer3sequences = _parsePrimerFile(self.end3, stream=stream)
+        self.stream = stream
 
     def run(self):
         while True:
             nextTask = self.taskQueue.get()
             if nextTask is None:
-                print(self.name + " process has stopped.")
+                printto(self.stream, self.name + " process has stopped.")
                 self.exitQueue.put("exit")
                 break
 
             try:
                 recs = []
                 if not self.firstJobTaken:
-                    print(self.name + " process commenced a new task ... ")
+                    printto(self.stream, self.name + " process commenced a new task ... ")
                     self.firstJobTaken = True
                 for record, qsRec in zip(nextTask[0], nextTask[1]):
                     qsRec['queryid'] = record.id
@@ -52,8 +54,7 @@ class PrimerWorker(Process):
                 self.procCounter.increment(len(recs))
                 sys.stdout.flush()
             except Exception as e:
-                print("An error as occurred while processing " + self.name)
-                print(e)
+                printto(self.stream, "An error as occurred while processing " + self.name, LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
                 continue
         return
@@ -63,31 +64,16 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
                         maxPrimer5Length, maxPrimer3Length, primer5seqs, primer3seqs):
     if qsRec['strand'] == 'reversed':
         record = SeqRecord(record.seq.reverse_complement(), id=record.id, name="", description="")
-    record = record[trim5end:(len(record) - trim3end)]
 
-    if actualQstart > -1:
-        # zero based (argparse converted it for us)
-        offset = actualQstart
-    else:
-        # NOTE: primers always start at the beginning of the sequence, regardless of the V germline alignment!
-        offset = 0          # int(qsRec['vqstart'] - qsRec['vstart'])
-
-    offset = max(0, offset)
-
-    vh = record.seq[offset:]
-
-    # TODO: is this necessary?
-    # if len(vh) % 3 != 0:
-    #     vh = vh[:-1 * (len(vh) % 3)]
-
-    if fr4cut and not np.isnan(qsRec['fr4.end']):
-        vh = record.seq[offset:int(qsRec['fr4.end'])]
+    vh = record.seq
 
     unexpected5 = unexpected3 = 0
+
     if primer5seqs:
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
         try:
-            qsRec['5endPrimer'], qsRec['5endMismatchIndex'], qsRec['5endIndelIndex'] = findBestMatchedPattern(primer, primer5seqs)
+            qsRec['5endPrimer'], qsRec['5endMismatchIndex'], qsRec['5endIndelIndex'], _, _ = \
+                findBestMatchedPattern(primer, primer5seqs)
         except Exception as e:
             # print("ARGH: something went wrong!" + str(e.message))
             unexpected5 += 1
@@ -96,16 +82,18 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     if primer3seqs:
         primer = str(vh[-1 * maxPrimer3Length:])
         try:
-            qsRec['3endPrimer'], qsRec['3endMismatchIndex'], qsRec['3endIndelIndex'] = findBestMatchedPattern(primer, primer3seqs)
+            qsRec['3endPrimer'], qsRec['3endMismatchIndex'], qsRec['3endIndelIndex'], _, _ = \
+                findBestMatchedPattern(primer, primer3seqs)
         except Exception as e:
             # print("DEBUG: something went wrong! {}".format(str(e.message)))
             unexpected3 += 1
             pass
-    return qsRec, unexpected5, unexpected3
+
     # finish
+    return qsRec, unexpected5, unexpected3
 
 
-def _parsePrimerFile(primerFile):
+def _parsePrimerFile(primerFile, stream=None):
     if primerFile:
         primerids = []
         primerLengths = []
@@ -118,8 +106,9 @@ def _parsePrimerFile(primerFile):
         maxScores = calMaxIUPACAlignScores(primerSequences)
 
         if len(set(primerLengths)) != 1:
-            print("WARNING: Provided primer file {} has primers with different length. Analysis assumes uniform length"
-                  .format(primerFile))
+            printto(stream, "WARNING: Provided primer file {} has primers with different length. "
+                            "Analysis assumes uniform primer length"
+                  .format(primerFile), LEVEL.WARN)
         return max(primerLengths), zip(primerids, primerSequences, maxScores)
 
     return None, None
