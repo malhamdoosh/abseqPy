@@ -27,7 +27,7 @@ def loadRefineFlagInfo():
              'partitioning',
              'updatedInFrame' , 'updatedInFrameNA', 'updatedInFrameConc',
              'updatedInFrameNo3or4', 'updatedInFrame3x' ,
-             'updatedInFrameIndel']
+             'updatedInFrameIndel', 'FR4PredictedError', 'FR4AbruptEnd', 'FR4cutEarly']
     refineFlagMsgs = {}
     refineFlagMsgs['fr1NotAtBegin'] = "{:,} clones have FR1 start not equal to query start (Excluded)" 
     refineFlagMsgs['endsWithStopCodon'] = "{:,} clones contain a stop codon "
@@ -42,13 +42,18 @@ def loadRefineFlagInfo():
     refineFlagMsgs['updatedInFrameIndel'] = "{:,} clones have indels in one of the FRs or CDRs"
     refineFlagMsgs['CDR3dna'] = "The CDR3 of {:,} clones was determined using DNA consensus"
     refineFlagMsgs['partitioning'] = "{:,} clones were partitioned incorrectly."
+    refineFlagMsgs['FR4PredictedError'] = "{:,} clones have incorrectly predicted FR4 end region"
+    refineFlagMsgs['FR4AbruptEnd'] = "{:,} clones' J gene ends abruptly. Sequence ends before end of J gene"
+    refineFlagMsgs['FR4cutEarly'] = "{:,} clones have --trim3 sequence(s) match earlier than expected. Matched" \
+                                    " before J germline ends, expected after."
+    refineFlagMsgs['FR4Endless'] = "{:,} clones do not align with provided trim3 sequences"
     return (refineFlagNames, refineFlagMsgs)
 
 
 def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, format, 
                             actualQstart, chain, fr4cut, 
                             trim5End, trim3End,
-                            seqsPerFile, threads, stream=None):
+                            seqsPerFile, threads, igdb, stream=None):
         printto(stream, "Clone annotation and in-frame prediction are being refined ...")
         seqsPerFile = 100
         cloneAnnot = cloneAnnotOriginal.copy()        
@@ -79,7 +84,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             # Initialize workers 
             workers = []        
             for i in range(threads):
-                w = RefineWorker(procCounter, chain, actualQstart, 
+                w = RefineWorker(procCounter, igdb, chain, actualQstart,
                                  fr4cut, trim5End, trim3End, refineFlagNames, stream=stream)
                 w.tasksQueue = tasks
                 w.exitQueue = exitQueue  

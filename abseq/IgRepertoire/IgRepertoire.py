@@ -286,7 +286,8 @@ class IgRepertoire:
                                                                        self.format, self.actualQstart,
                                                                        self.chain, self.fr4cut,
                                                                        self.trim5End, self.trim3End,
-                                                                       self.seqsPerFile, self.threads, stream=logger)
+                                                                       self.seqsPerFile, self.threads, self.db,
+                                                                       stream=logger)
             gc.collect()
             # if generateReport:
             # export the CDR/FR annotation to a file                
@@ -365,7 +366,7 @@ class IgRepertoire:
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outDir,
                                 self.clonelimit, stream=logger)
 
-        # remove this for now - it's unoptimized and extremely slow
+        # todo: remove this for now - it's unoptimized and extremely slow
         # writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outDir)
 
         paramFile = writeParams(self.args, outDir)
@@ -612,8 +613,8 @@ class IgRepertoire:
             # Load self.cloneAnnot for further analysis.
             # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
             if not all or self.cloneAnnot is None:
-                if self.fr4cut or exists(os.path.join(self.outputDir, 'productivity',
-                                                      self.name + '_refined_clones_annot.h5')):
+                if exists(os.path.join(self.outputDir, 'productivity',
+                                       self.name + '_refined_clones_annot.h5')):
                     print("Using refined clone annotation for primer specificity analysis")
                     self.analyzeProductivity(all=all, inplace=False)
                 else:
@@ -634,10 +635,9 @@ class IgRepertoire:
             self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
             print("\tPrimer clone annotation was loaded successfully")
 
-        generatePrimerPlots(self.cloneAnnot, outDir + '/', self.name, self.end5, self.end3)
         # TODO: Fri Feb 23 17:13:09 AEDT 2018
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
-        # TODO: check wht's == Indelled, ... etc (see what's the output to the dataframe in primeraux
+        generatePrimerPlots(self.cloneAnnot, outDir + '/', self.name, self.end5, self.end3)
 
     def extractUpstreamSeqs(self, upstreamFile, all=False):
         if not all or self.cloneAnnot is None:

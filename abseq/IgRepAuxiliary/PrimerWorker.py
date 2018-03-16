@@ -63,31 +63,16 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
                         maxPrimer5Length, maxPrimer3Length, primer5seqs, primer3seqs):
     if qsRec['strand'] == 'reversed':
         record = SeqRecord(record.seq.reverse_complement(), id=record.id, name="", description="")
-    record = record[trim5end:(len(record) - trim3end)]
 
-    if actualQstart > -1:
-        # zero based (argparse converted it for us)
-        offset = actualQstart
-    else:
-        # NOTE: primers always start at the beginning of the sequence, regardless of the V germline alignment!
-        offset = 0          # int(qsRec['vqstart'] - qsRec['vstart'])
-
-    offset = max(0, offset)
-
-    vh = record.seq[offset:]
-
-    # TODO: is this necessary?
-    # if len(vh) % 3 != 0:
-    #     vh = vh[:-1 * (len(vh) % 3)]
-
-    if fr4cut and not np.isnan(qsRec['fr4.end']):
-        vh = record.seq[offset:int(qsRec['fr4.end'])]
+    vh = record.seq
 
     unexpected5 = unexpected3 = 0
+
     if primer5seqs:
         primer = str(vh[max(0, end5offset):max(0, end5offset) + maxPrimer5Length])
         try:
-            qsRec['5endPrimer'], qsRec['5endMismatchIndex'], qsRec['5endIndelIndex'] = findBestMatchedPattern(primer, primer5seqs)
+            qsRec['5endPrimer'], qsRec['5endMismatchIndex'], qsRec['5endIndelIndex'], _, _ = \
+                findBestMatchedPattern(primer, primer5seqs)
         except Exception as e:
             # print("ARGH: something went wrong!" + str(e.message))
             unexpected5 += 1
@@ -96,13 +81,15 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     if primer3seqs:
         primer = str(vh[-1 * maxPrimer3Length:])
         try:
-            qsRec['3endPrimer'], qsRec['3endMismatchIndex'], qsRec['3endIndelIndex'] = findBestMatchedPattern(primer, primer3seqs)
+            qsRec['3endPrimer'], qsRec['3endMismatchIndex'], qsRec['3endIndelIndex'], _, _ = \
+                findBestMatchedPattern(primer, primer3seqs)
         except Exception as e:
             # print("DEBUG: something went wrong! {}".format(str(e.message)))
             unexpected3 += 1
             pass
-    return qsRec, unexpected5, unexpected3
+
     # finish
+    return qsRec, unexpected5, unexpected3
 
 
 def _parsePrimerFile(primerFile):

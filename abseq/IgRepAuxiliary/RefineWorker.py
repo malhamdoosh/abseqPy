@@ -6,32 +6,37 @@
 '''
 
 import sys
+import os
 
 from multiprocessing import Process
 from Bio.SeqRecord import SeqRecord
-from numpy import isnan
+from Bio import SeqIO
+from numpy import isnan, nan
 
 from abseq.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
-from abseq.IgRepertoire.igRepUtils import extractProteinFrag,\
-    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA
+from abseq.IgRepertoire.igRepUtils import extractProteinFrag, \
+    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA, calMaxIUPACAlignScores, findBestMatchedPattern
 from abseq.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
 from abseq.logger import LEVEL, printto
 
 
 class RefineWorker(Process):
-    def __init__(self, procCounter, chain, actualQstart, 
+    def __init__(self, procCounter, igdb, chain, actualQstart,
                  fr4cut, trim5End, trim3End, refineFlagNames, stream=None):
         super(RefineWorker, self).__init__()
         self.procCounter = procCounter
+        # we could have done the J gene length map reading earlier, but this encapsulates it better.
+        # you'll only be reading N number of times where N = num.threads
+        self.jGeneLengthMap = _generateJMap(igdb, chain)
         self.chain = chain
         self.actualQstart = actualQstart
         self.fr4cut = fr4cut
         self.trim5End = trim5End
-        self.trim3End = trim3End
+        self.trim3End = trim3End if type(trim3End) == int else _parse3EndSeqs(trim3End)
         self.refineFlagNames = refineFlagNames
         self.tasksQueue = None
         self.exitQueue = None
-        self.resultsQueue = None   
+        self.resultsQueue = None
         self.firstJobTaken = False
         self.stream = stream
 
@@ -57,7 +62,7 @@ class RefineWorker(Process):
                     seqs = refineCloneAnnotation(qsRec, record, 
                                                  self.actualQstart, self.fr4cut,
                                                  self.trim5End, self.trim3End,
-                                                 self.chain, flags, stream=self.stream)
+                                                 self.chain, self.jGeneLengthMap, flags, stream=self.stream)
                     # out-of-frame clones are excluded
                     if qsRec['v-jframe'] != 'Out-of-frame':
                         refineInFramePrediction(qsRec, record, self.actualQstart, flags, stream=self.stream)
@@ -79,14 +84,18 @@ class RefineWorker(Process):
 
 
 def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
-                          trim5End, trim3End, chain, flags, stream=None):
+                          trim5End, trim3End, chain, jGeneLengthMap, flags, stream=None):
     seqs = [record.id, qsRec['vgene']]
 
     try:
         if qsRec['strand'] == "reversed":
             record = SeqRecord(record.seq.reverse_complement(), id=record.id,
                                name="", description="")
-        record = record[trim5End:(len(record) - trim3End)]
+
+        record = record[trim5End:]
+        # if trim3End was a user provided int, use it to cut the sequence, or else it will be a list of seqs
+        if type(trim3End) == int:
+            record = record[:(len(record) - trim3End)]
 
         # grab the beginning of the VH clone
         if actualQstart > -1:
@@ -111,46 +120,62 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 
         # Identification of FR4 so that CDR3 can be defined
         if isnan(qsRec['fr4.end']):
-            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1, -1,
-                                              offset,
-                                              trimAtStop=False,
-                                              stream=stream)
+            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1, -1, offset, trimAtStop=False, stream=stream)
             if searchRegion is None:
                 raise Exception("ERROR: undefined search region to find FR3 consensus.")
+
             qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
-            fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
-                                                         FR4_CONSENSUS[chain])# , show=True
-#             print ("Protein", searchRegion, fr4start, fr4end)                 
+
+            fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS[chain])
+
             if not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start:
+                # FR4 start
                 qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
+
                 # CDR3                
                 qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-                # Check whether to cut the Ig sequence after FR4 or not
-                if not fr4cut: 
-                    qsRec['fr4.end'] = len(record.seq)  # fr4end * 3 + qsRec['fr3.end']
-                else:
-                    qsRec['fr4.end'] = qsRec['fr3.end'] + fr4end * 3
-            else:                
+            else:
                 # try to use the DNA consensus
                 searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
-                fr4start, fr4end, gapped = findBestAlignment(searchRegion, 
-                                                             FR4_CONSENSUS_DNA[chain],
-                                                             True)  # , show=True
+                fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS_DNA[chain], True)
 #                 print ("DNA", searchRegion, fr4start, fr4end)  
                 if fr4start != -1 and fr4end != -1 and fr4end > fr4start:
+                    # FR4 start
                     qsRec['fr4.start'] = qsRec['fr3.end'] + fr4start
+
                     # CDR3                
                     qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
-                    if not fr4cut: 
-                        qsRec['fr4.end'] = len(record.seq) 
-                    else:
-                        qsRec['fr4.end'] = qsRec['fr3.end'] + fr4end
                     flags['CDR3dna'] += [record.id]
                 else:
                     # TODO: check this case
                     qsRec['cdr3.end'] = qsRec['jqend']
-#                     qsRec['fr4.end'] = len(record.seq) 
-#                     qsRec['fr4.start'] =  len(record.seq)
+                    # qsRec['fr4.end'] = len(record.seq)
+                    # qsRec['fr4.start'] =  len(record.seq)
+
+            # FR4 end
+            # Check whether to cut the Ig sequence after FR4 or not
+            if not fr4cut:
+                # if trim3End wasn't of type int, it was a file with seqs to match
+                if type(trim3End) != int:
+                    _, _, _, relativeFR4EndPosition, _ = \
+                        findBestMatchedPattern(str(record.seq)[int(qsRec['cdr3.end']):], trim3End, extend5end=True)
+                    if relativeFR4EndPosition == -1:
+                        # bad alignment - flag it and fall back to Jend
+                        flags['FR4endless'] += [record.id]
+                        qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+                    else:
+                        qsRec['fr4.end'] = qsRec['cdr3.end'] + relativeFR4EndPosition
+                        if qsRec['fr4.end'] < qsRec['jqend']:
+                            # if FR4 is somehow misaligned, flag it and fall back to Jend
+                            # this may happen if: for example, the provided sequence happen to also appear
+                            # before J germline ends, and it matches that first.
+                            flags['FR4cutEarly'] += [record.id]
+                            qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+                else:
+                    qsRec['fr4.end'] = len(record.seq)
+            else:
+                qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+
         # Extract the CDR and FR protein sequences
         (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset, stream=stream)
         seqs += tmp
@@ -190,7 +215,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
             qsRec['vqstart'] -= mismatches
         # TODO: update gaps and mismatches in FR4 and CDR3 based on D and J germlines
         # TODO: update the start and end fields based on the trim5End
-    except Exception as e:    
+    except Exception as e:
         if "partitioning" in str(e):
             flags['partitioning'] += [record.id]            
 #         print("ERROR: exception in the Clone Annotation Refinement method")
@@ -253,6 +278,56 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags, stream=None):
         if not inframe:
             qsRec['v-jframe'] =  'Out-of-frame'
             flags['updatedInFrame'] += [record.id]
-        
 
 
+def _generateJMap(database, chain, species='human'):
+    lengthMap = {}
+    pathToDB = os.path.join(os.path.abspath(os.path.expandvars(database)), 'imgt_{}_ig{}j'.format(species, chain[0]))
+    for rec in SeqIO.parse(pathToDB, 'fasta'):
+        lengthMap[rec.id.strip()] = len(rec.seq.strip())
+    return lengthMap
+
+
+def _parse3EndSeqs(seqs):
+    """
+    transform list of seqs to expected format by findBestMatchedPattern
+    :param seqs: raw string sequences
+    :return: zippped(ids, seqs, maxUIPACScores)
+    """
+    targetids = [str(i) for i in range(len(seqs))]
+    maxScores = calMaxIUPACAlignScores(seqs)
+    return zip(targetids, seqs, maxScores)
+
+
+def _predictFR4end(jGeneLengthMap, qsRec, flags, record):
+    """
+    predict FR4end by extending J germline end index
+    :param jGeneLengthMap: map of J gene name to its length
+    :param qsRec: cloneAnnot row in type dict
+    :param flags: refinement flags
+    :param record: original sequence (raw)
+    :return: predicted FR4.end in nt position 1-based index, else np.nan if cannot predict.
+    """
+    # FR4end = num of remaining unmapped J nt + queryJEnd
+    #        = (JGeneLength - subjectJEnd) + queryJEnd
+    #        = (JGeneLength - (subjectJStart + (number of mapped J nt) - 1) ) + queryJEnd
+    #        = (JGeneLength - (subjectJStart + (queryJEnd - queryJStart + 1) - 1) ) + queryJEnd
+    #        = (JGeneLength - subjectJStart -(queryJEnd - queryJStart + 1) + 1) + queryJEnd
+    #        = (JGeneLength - subjectJStart - queryJEnd + queryJStart - 1 + 1) + queryJEnd
+    #        = JGeneLength - subjectJStart - queryJEnd + queryJStart + queryJEnd
+    #        = JGeneLength - subjectJStart + queryJStart
+    # why FR4end = num unmapped J nt + queryJend? - igblast rather cut J gene instead of allowing
+    # mismatches => no "extend 3' end" option. So we add remaining unmapped j nt to jqueryend to get
+    # end of FR4 (end of whole J gene)
+    if type(qsRec['jgene']) == str and qsRec['jgene'] != '' and qsRec['jgene'].strip() in jGeneLengthMap:
+        # if jgene is not nan, we can assume that jstart(subject), jqend, jqstart are all defined
+        predictedFR4End = jGeneLengthMap[qsRec['jgene'].strip()] - qsRec['jstart'] + qsRec['jqstart']
+        if predictedFR4End < 0 or predictedFR4End < qsRec['jqend']:
+            predictedFR4End = qsRec['jqend']
+            # this usually doesn't happen
+            flags['FR4PredictedError'] += [record.id]
+        if predictedFR4End > len(record.seq):
+            # this will happen if your sequences end before J gene ends
+            flags['FR4AbruptEnd'] += [record.id]
+        return min(len(record.seq), predictedFR4End)
+    return nan
