@@ -12,8 +12,8 @@ class GeneralWorker(Process):
                                                                           'analyzeSecretionSignal',\
                                                                           'analyze5UTR', \
                                                                           'analyzeRestrictionSitesSimple', \
-                                                                          'analyzePrimerSpecificity', \
                                                                           'analyzeRestrictionSites', \
+                                                                          'analyzePrimerSpecificity', \
                                                                           'analyzeSeqLen'
 
     def __init__(self, jobQueue, resultQueue, jobDescription, *args, **kwargs):

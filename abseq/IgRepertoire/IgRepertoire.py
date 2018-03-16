@@ -17,6 +17,7 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
+from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeParams, writeCountsCategoriesToFile, \
@@ -63,19 +64,22 @@ class IgRepertoire:
         self.format = args.fmt
         self.chain = args.chain
         self.name = args.name
+        self.fr4cut = args.fr4cut
+
         if args.task in ['secretion', '5utr']:
             self.upstream = args.upstream
+
         if args.task in ['rsa', 'rsasimple']:
             self.sitesFile = args.sites
-        if args.task in ['productivity', 'diversity', 'all']:
-            self.actualQstart = args.actualqstart
-            self.fr4cut = args.fr4cut
+
+        self.actualQstart = args.actualqstart
+
         self.trim5End = args.trim5
         self.trim3End = args.trim3
-        if args.task == 'primer':
-            self.end5 = args.primer5end
-            self.end3 = args.primer3end
-            self.end5offset = args.primer5endoffset
+
+        self.end5 = args.primer5end
+        self.end3 = args.primer3end
+        self.end5offset = args.primer5endoffset
 
         self.readFile1 = args.f1
         self.readFile2 = args.f2
@@ -90,7 +94,8 @@ class IgRepertoire:
         # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
         # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
         self.warnOldDir = any(map(lambda x: exists(self.outputDir + x),
-                                  ["abundance/", "productivity/", "diversity/", "restriction_sites/"]))
+                                  ["abundance/", "productivity/", "diversity/", "restriction_sites/",
+                                   "primer_specificity/"]))
 
     def runFastqc(self):
         if self.format == 'fasta':
@@ -233,7 +238,15 @@ class IgRepertoire:
         gc.collect()
         writeParams(self.args, outDir)
 
-    def analyzeProductivity(self, generateReport=True, all=False):
+    def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
+        """
+        Analyzes productivity
+        :param generateReport:
+        :param all:
+        :param inplace: NOTE: if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
+        productive sequences after this method finishes. Set to false to retain all sequences
+        :return:
+        """
         outDir = self.outputDir + "productivity/"
         if (not os.path.isdir(outDir)):
             os.system("mkdir " + outDir)
@@ -283,18 +296,21 @@ class IgRepertoire:
             print("\tClone sequences were loaded successfully")
         if generateReport:
             # display statistics 
-            generateProductivityReport(self.cloneAnnot, self.name, self.chain, outDir)
+            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir)
             # TODO: analyze productive clones only
         #             self.analyzeIgProtein()
         #             sys.stdout.flush()
         # Diversity analysis can be applied on productive clones only     
         before = int(self.cloneAnnot.shape[0])
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-        self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        if inplace:
+            cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        else:
+            cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
         print("Percentage of productive clones {0:,.2f}% ({1:,}/{2:,})".format(
-            self.cloneAnnot.shape[0] * 100.0 / before,
-            int(self.cloneAnnot.shape[0]),
+            cloneAnnot.shape[0] * 100.0 / before,
+            int(cloneAnnot.shape[0]),
             int(before)
         ))
 
@@ -304,13 +320,16 @@ class IgRepertoire:
 
     def analyzeDiversity(self, all=False):
         outDir = self.outputDir + "diversity/"
-        if (not os.path.isdir(outDir)):
+        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
+            self.analyzeProductivity(self.reportInterim, all)
+        if len(self.cloneAnnot) == 0:
+            print("WARNING: There are no productive sequences found (post-refinement) in {},"
+                  " skipping diversity analysis.".format(self.name))
+            return
+        if not os.path.isdir(outDir):
             os.system("mkdir " + outDir)
         elif self.warnOldDir:
             print("WARNING: remove the 'diversity' directory if you changed the filtering criteria.")
-        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(self.reportInterim, all)
-
         gc.collect()
         # Identify spectratypes 
         spectraTypes = annotateSpectratypes(self.cloneAnnot)
@@ -548,8 +567,48 @@ class IgRepertoire:
             self.analyzeSequences(upstreamFile, self.name, [expectLength, expectLength],
                                   startCodon=False, type='5utr', clusterMotifs=True)
 
-    def analyzePrimerSpecificity(self):
-        pass
+    def analyzePrimerSpecificity(self, all=False):
+        outDir = os.path.normpath(self.outputDir + 'primer_specificity/')
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+        elif self.warnOldDir:
+            print("WARNING: remove the 'primer_specificity' directory if you changed the filtering criteria.")
+        # the naming convention obeys previous h5 dataframes:
+        # if self.cloneAnnot was refined, primer_annot will be named samplename_primer_annot_refined.h5
+        # else if self.cloneAnnot was not refined, primer_annot will be named samplename_primer_annot.h5
+        primerAnnotFile = os.path.join(outDir, self.name + "_primer_annot{}.h5".format('_refined' if self.fr4cut else ''))
+
+        # if we can't find hdf file, create it, else read it
+        if not exists(primerAnnotFile):
+            # Load self.cloneAnnot for further analysis.
+            # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
+            if not all or self.cloneAnnot is None:
+                if self.fr4cut or exists(os.path.join(self.outputDir, 'productivity',
+                                                      self.name + '_refined_clones_annot.h5')):
+                    print("Using refined clone annotation for primer specificity analysis")
+                    self.analyzeProductivity(all=all, inplace=False)
+                else:
+                    print("Using unrefined clone annotation for primer specificity analysis")
+                    self.analyzeAbundance(all)
+            # add additional primer related data to the dataframe generated by either abundance/productivity analysis
+            # before we begin primer analysis
+            self.cloneAnnot = addPrimerData(self.cloneAnnot, self.readFile, self.format, self.fr4cut,
+                                            self.trim5End, self.trim3End, self.actualQstart,
+                                            self.end5, self.end3, self.end5offset, self.threads)
+            # save new "extended dataframe" into primer_specificity directory
+            self.cloneAnnot.to_hdf(primerAnnotFile,
+                                   "primerCloneAnnot", mode='w', complib='blosc')
+
+        else:
+            print("The{}primer clone annotation files were found and being loaded ... "
+                  .format(' refined ' if self.fr4cut else ' '))
+            self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
+            print("\tPrimer clone annotation was loaded successfully")
+
+        generatePrimerPlots(self.cloneAnnot, outDir + '/', self.name, self.end5, self.end3)
+        # TODO: Fri Feb 23 17:13:09 AEDT 2018
+        # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
+        # TODO: check wht's == Indelled, ... etc (see what's the output to the dataframe in primeraux
 
     def extractUpstreamSeqs(self, upstreamFile, all=False):
         if not all or self.cloneAnnot is None:
@@ -856,49 +915,6 @@ class IgRepertoire:
             print("Protein sequences have been already analyzed ... ")
         else:
             self.analyzeAbundance()
-
-    def write5EndPrimerStats(self, cdrInfo, fileprefix, category="All"):
-        # sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
-        # sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-
-        valid5End = Counter(cdrInfo['5end'].tolist())
-        plotDist(valid5End, self.name, fileprefix + 'integrity_dist.png',
-                 title='Integrity of 5`-end Primer Sequence (%s)' % (category),
-                 proportion=True, rotateLabels=False)
-        invalid5Clones = cdrInfo.index[cdrInfo['5end'] == 'Indelled'].tolist()
-        print("Example of Indelled 5`-end:", invalid5Clones[1:10])
-        print("Example of valid 5`-end:", cdrInfo.index[cdrInfo['5end'] != 'Indelled'].tolist()[1:10])
-
-        stopcodonInFrameDist = Counter(cdrInfo['stopcodon'].tolist())
-        plotDist(stopcodonInFrameDist, self.name,
-                 fileprefix + 'stopcodon_dist.png',
-                 title='Stop Codons in 5`-End (%s)' % (category),
-                 proportion=False, rotateLabels=False)
-
-        c1 = Counter(cdrInfo[cdrInfo['5end'] == 'Indelled']['5endPrimer'].tolist())
-        plotDist(c1, self.name, fileprefix +
-                 'indelled_dist.png',
-                 title='Abundance of Indelled 5`-end Primers (%s)' % (category),
-                 proportion=False, rotateLabels=False, vertical=False, top=50)
-        c = Counter(cdrInfo[cdrInfo['5end'] == 'Indelled']['5endIndel'].tolist())
-        plotDist(c, self.name, fileprefix +
-                 'indel_pos_dist.png',
-                 title='Abundance of Indel Positions in 5`-end Primers (%s)' % (category),
-                 proportion=False, rotateLabels=False, vertical=True,
-                 sortValues=False, top=50)
-        primers = set(cdrInfo['5endPrimer'].tolist())
-        # print(c1, primers)
-        for primer in primers:
-            # print(primer)
-            df = cdrInfo[cdrInfo['5end'] == 'Indelled']
-            df = df[df['5endPrimer'] == primer]
-            # print(df.shape)
-            germLineDist = compressCountsGeneLevel(Counter(df['vgene'].tolist()))
-            plotDist(germLineDist, self.name, fileprefix + primer +
-                     '_igv_dist.png',
-                     title='IGV Abundance (%s)' % (category),
-                     proportion=False, vertical=False, top=20, rotateLabels=False)
-        gc.collect()
 
 #     def extractProductiveRNAs(self):
 # #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'

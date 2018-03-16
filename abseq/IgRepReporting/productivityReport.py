@@ -8,14 +8,14 @@
 import gc
 import pandas as pd
 
-from collections import Counter
+from collections import Counter, OrderedDict
 from numpy import nan
 
 from abseq.IgRepReporting.igRepPlots import plotDist
 from abseq.IgRepertoire.igRepUtils import compressCountsFamilyLevel
 
 
-def generateProductivityReport(cloneAnnot, name, chain, outputDir):
+def generateProductivityReport(cloneAnnot, cloneSeqs, name, chain, outputDir):
     print("Productivity report is being generated ... ")
 
     # since np.nan is considered different objects, canonicalize them using 'NaN' string representation
@@ -26,13 +26,15 @@ def generateProductivityReport(cloneAnnot, name, chain, outputDir):
     productiveFamilyDist = compressCountsFamilyLevel(Counter(productive['vgene'].tolist()))
     plotDist(productiveFamilyDist, name, outputDir + name + 
              '_igv_dist_productive.png',
-              title='IGV Abundance of Productive Clones',
+             title='IGV Abundance of Productive Clones',
              proportion=True)
     del productiveFamilyDist
     writeProdStats(cloneAnnot, name, outputDir)
-    writeCDRStats(productive, name, outputDir, suffix = 'productive')
-    writeFRStats(productive, name, outputDir, suffix = 'productive')
-    writeGeneStats(productive, name, chain, outputDir, suffix = 'productive')
+    writeCDRStats(productive, name, outputDir, suffix='productive')
+    writeFRStats(productive, name, outputDir, suffix='productive')
+    writeGeneStats(productive, name, chain, outputDir, suffix='productive')
+    writeStopCodonStats(cloneAnnot, cloneSeqs, name, outputDir, inframe=True)
+    writeStopCodonStats(cloneAnnot, cloneSeqs, name, outputDir, inframe=False)
 
     # now that counting is complete, replace all 'NaN' strings with np.nan again
     cloneAnnot.replace(nanString, nan, inplace=True)
@@ -227,7 +229,7 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
     stopcodFamily = compressCountsFamilyLevel(stopcodFamily)
     plotDist(stopcodFamily, name, outputDir + name + 
              '_igv_dist_inframe_unproductive.png',
-              title='IGV Abundance of In-frame Unproductive Clones',
+             title='IGV Abundance of In-frame Unproductive Clones',
              proportion=True)
     del stopcodonInFrameDist, stopcodFamily
 #         print(stopcodFamily)
@@ -238,5 +240,28 @@ def extractProductiveClones(cloneAnnot, name, outputDir):
     return productive
     
   
+def writeStopCodonStats(cloneAnnot, cloneSeqs, name, outputDir, inframe):
+    """
+    This function maintains the hypothesis that a stop codon is independent of
+    previous stop codons. It increments the counter for each region as long as there's
+    AT LEAST ONE stop codon in the specified region. This is especially true if the sequence
+    is in-frame.
+    :param cloneAnnot: .*_clone_annot.h5
+    :param cloneSeqs: .*_clones_seq.h5
+    :param name: sample name
+    :param outputDir: output directory
+    :param inframe: True if only for inframe sequences, false if only for out-of-frame sequences
+    :return:
+    """
+    regions = ['FR1', 'CDR1', 'FR2', 'CDR2', 'FR3', 'CDR3', 'FR4']
 
-
+    counter = {}
+    frameStatus = 'In-frame' if inframe else 'Out-of-frame'
+    cloneSeqs = cloneSeqs.loc[cloneAnnot[cloneAnnot['v-jframe'] == frameStatus].index]
+    for region in regions:
+        counter[region] = sum(cloneSeqs[region.lower()].str.contains("*", regex=False))
+    orderedCounter = OrderedDict((reg, counter[reg]) for reg in regions)
+    plotDist(orderedCounter, name, outputDir + name
+             + '_stopcodon_region_{}.png'.format('inframe' if inframe else 'outframe'),
+             title="Stop codon in FRs and CDRs of {} sequences".format(frameStatus),
+             proportion=True, sortValues=False, maintainx=True)

@@ -433,7 +433,7 @@ def plotVenn(sets, filename, title=''):
 
 
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
-             rotateLabels=True, vertical=True, sortValues=True, top=15):
+             rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False):
     if (exists(filename)):
         print("File found ... " + filename.split('/')[-1])
         return
@@ -441,9 +441,12 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
     # This function creates bar plot for the distribution counts/proportions
     if sortValues:
         classes = sorted(ighvDistfam, key=ighvDistfam.get, reverse=True)
-    else:
+    elif not maintainx:
         classes = ighvDistfam.keys()
         classes.sort()
+    else:
+        # do not do anything to x-axis at all
+        classes = ighvDistfam.keys()
 
     allClasses = classes[:]
     if (len(classes) > top):
@@ -452,6 +455,9 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         classes = classes[::-1]
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
+    if total == 0:
+        print("Skipping plot for distribution graph {} because there's no distribution.".format(filename))
+        return
     #     if (proportion):
     stats = map(lambda x: ighvDistfam[x] / total * 100, classes)
     #     else:

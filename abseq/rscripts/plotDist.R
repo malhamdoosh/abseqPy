@@ -1,4 +1,4 @@
-plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE, subs = "") {
+plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "", ylabel = "", perc = TRUE, subs = "", sortDist = TRUE) {
   # Plots a dodging histogram for all sample in dataframes. If length(sampleNames) == 1, then the bars will
   # also have y-values (or x if horizontal plot) labels on them. Use 'perc' to control if the values are percentages.
   # Args:
@@ -11,6 +11,7 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
   #   perc: Boolean type. True if data's axis is a % proportion (instead of 0-1)
   #         only meaningful if length(sampleNames) == 1
   #   subs: subtitle. defaults to empty
+  #   sortDist: sorts plot by descending distribution order, True by default
   # Returns:
   #   ggplot().
   
@@ -42,11 +43,19 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     
     # sort the values by descending order (strictly speaking,
     # not necessary because it's already sorted - but better be safe than sorry)
-    if (vert) {
-      dataframes[[i]] <- df[with(df, order(-y)), ]
+    if (sortDist) {
+      if (vert) {
+        dataframes[[i]] <- df[with(df, order(-y)), ]
+      } else {
+        dataframes[[i]] <- df[with(df, order(-x)), ]
+      }
     } else {
-      dataframes[[i]] <- df[with(df, order(-x)), ]
+      dataframes[[i]] <- df
     }
+    
+    # canonicalize NaN, NA, and N/As to NA.
+    dataframes[[i]][is.na(dataframes[[i]])] <- "NA"
+    dataframes[[i]][dataframes[[i]] == "N/A"] <- "NA"
   }
   
   originals <- list()
@@ -113,9 +122,13 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
       ylabel <- paste(ylabel, "(%)")
     }
   }
-  
   if (!vert) {
-    g <- ggplot(df.union, aes(x = reorder(y, x), y = x, label = sprintf(placeholder, x))) + coord_flip()
+    if (sortDist) {
+      g <- ggplot(df.union, aes(x = reorder(y, x), y = x, label = sprintf(placeholder, x))) + coord_flip()
+    } else {
+      df.union$y <- factor(df.union$y, levels = unique(df.union$y))
+      g <- ggplot(df.union, aes(x = y, y = x, label = sprintf(placeholder, x))) + coord_flip()
+    }
     
     if (frames == 1) {
       # single sample -> blue colour plot
@@ -127,7 +140,12 @@ plotDist <- function(dataframes, sampleNames, plotTitle, vert = TRUE, xlabel = "
     }
     
   } else {
-    g <- ggplot(df.union, aes(x = reorder(x, -y), y = y, label = sprintf(placeholder, y)))
+    if (sortDist) {
+      g <- ggplot(df.union, aes(x = reorder(x, -y), y = y, label = sprintf(placeholder, y)))
+    } else {
+      df.union$x <- factor(df.union$x, levels = unique(df.union$x))
+      g <- ggplot(df.union, aes(x = x, y = y, label = sprintf(placeholder, y)))
+    }
     
     if (frames == 1) {
       # single sample -> blue colour plot

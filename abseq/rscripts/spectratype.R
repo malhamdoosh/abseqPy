@@ -52,9 +52,9 @@ plotSpectratype <- function(dataframes, sampleNames, region, title = "Spectratyp
   g <- ggplot(df.union, aes(length, percent))
   
   if (nsample == 1) {
-    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge", show.legend = FALSE, fill = BLUEHEX)
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), position = "dodge", show.legend = FALSE, fill = BLUEHEX)
   } else {
-    g <- g + geom_bar(stat = "identity", aes(fill = sample), width = 0.5, position = "dodge")
+    g <- g + geom_bar(stat = "identity", aes(fill = sample), position = "dodge")
   }
   g <- g + labs(title = plotTitle, subtitle = plotSubTitle, x = xlabel, y = ylabel)
     #geom_smooth(aes(colour=round), se=F, method="glm", formula=y~ns(x, 3), lwd=0.7)+

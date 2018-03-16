@@ -86,17 +86,11 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
                 w.start()       
                 sys.stdout.flush()          
             # adding jobs to the tasks queue with subsets of query IDs
-            if (totalTasks > 1): 
-                for i in range(totalTasks):
-                    ids = queryIds[i*seqsPerFile:(i+1)*seqsPerFile]
-#                     print(ids)
-#                     print(records[0])
-                    recs = map(lambda x: records[x], ids)
-                    qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), ids)
-                    tasks.put((recs, qsRecs))                
-            else:                
-                recs = map(lambda x: records[x], queryIds)
-                qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), queryIds)
+            assert(totalTasks >= 1)
+            for i in range(totalTasks):
+                ids = queryIds[i*seqsPerFile:(i+1)*seqsPerFile]
+                recs = map(lambda x: records[x], ids)
+                qsRecs = map(lambda x: cloneAnnot.loc[x].to_dict(), ids)
                 tasks.put((recs, qsRecs))
             # Add a poison pill for each worker
             for i in range(threads + 10):
@@ -174,17 +168,19 @@ def collectRefineResults(resultsQueue, totalTasks,
             sys.stdout.flush()
     print('\t%d/%d records have been collected ... ' % (total, noSeqs))
     return cloneAnnot, transSeqs, flags        
-          
+
+
 def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs):
-    ## print statistics and a few of the flagged clones 
+    # print statistics and a few of the flagged clones
     for f in refineFlagNames:
-        if (len(flags[f]) > 0):
+        if len(flags[f]) > 0:
             print(refineFlagMsgs[f].format(len(flags[f])))
-            examples = random.choice(range(len(flags[f])), min(3, len(flags[f])))
+            examples = random.choice(range(len(flags[f])), min(3, len(flags[f])), replace=False)
             for i in examples:
                 print(">" + flags[f][i])
                 print(str(records[flags[f][i]].seq))
-            print      
+            print
+
              
 def writeRefineFlags(flags, records, refineFlagNames, 
                      refineFlagMsgs, outDir, sampleName):

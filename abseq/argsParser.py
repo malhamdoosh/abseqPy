@@ -88,16 +88,14 @@ def parseArgs():
             parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
         args.sites = abspath(args.sites)
 
-    # provided actualqstart is converted to 0-base from 1-based index, -1 is checked later on for default value
-    if args.task in ['diversity', 'productivity', 'all']:
-        if args.actualqstart is not None:
-            if args.actualqstart >= 1:
-                args.actualqstart = args.actualqstart - 1
-            else:
-                parser.error("ActualQStart parameter expects 1-based index."
-                             " The provided index has an unexpected value of {}.".format(args.actualqstart))
+    if args.actualqstart is not None:
+        if args.actualqstart >= 1:
+            args.actualqstart = args.actualqstart - 1
         else:
-            args.actualqstart = -1
+            parser.error("ActualQStart parameter expects 1-based index."
+                         " The provided index has an unexpected value of {}.".format(args.actualqstart))
+    else:
+        args.actualqstart = -1
 
     # BUGSQ: if user provided value = 0, what happens?: here, only subtract 1 if args.trim5 isn't default 0, or if user
     # didn't provide 0, since the other file that uses this parameter didn't check for negative values
@@ -105,8 +103,14 @@ def parseArgs():
 
     # retrieve filenames for primer analysis on 5' and 3' end
     if args.task == 'primer':
-        args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
-        args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
+        if args.primer3end is None and args.primer5end is None:
+            parser.error("At least ond primer file (-p5 or -p3) must be specified for -t primer")
+    args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
+    args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
+    if args.primer5end and not os.path.exists(args.primer5end):
+        parser.error("{} file not found!".format(args.primer5end))
+    if args.primer3end and not os.path.exists(args.primer3end):
+        parser.error("{} file not found!".format(args.primer3end))
 
     args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
     args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
