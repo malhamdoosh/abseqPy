@@ -459,10 +459,10 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
     return os.path.abspath(mergedFastq)
 
 
-def writeTableIntoFile(table, filename):
+def writeTableIntoFile(table, filename, stream=None):
     df = DataFrame(table)
     df.to_csv(filename, sep='\t', header=True, index=True)
-    print("Text file has been written to " + filename)
+    printto(stream, "Text file has been written to " + filename)
 
 
 def writeListToFile(items, filename):

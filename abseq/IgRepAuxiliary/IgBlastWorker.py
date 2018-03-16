@@ -35,8 +35,8 @@ def getAnnotationFields(chain):
     elif (chain in ['kv', 'lv']):
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
-        print('ERROR: unsupported chain type.')     
-        sys.exit() 
+        # should never happen (argparse takes care of this for us)
+        raise Exception("Unsupported chain type")
 
 
 def createCloneRecord(chain):

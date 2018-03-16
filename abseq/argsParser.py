@@ -136,7 +136,6 @@ def parseArgs():
                     trim3file = os.path.abspath(args.trim3)
                     with safeOpen(trim3file) as fp:
                         args.trim3 = [str(seq.seq) for seq in SeqIO.parse(fp, 'fasta')]
-                        print("Your seqs: {}".format(args.trim3))
 
         else:
             parser.error("Unrecognized option for --trim3 {}".format(args.trim3))

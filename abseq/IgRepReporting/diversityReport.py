@@ -221,7 +221,7 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType="protein", stream=N
                           protein=True, weights=weights, outDir=outDir, stream=stream)
 
 
-def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir):
+def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir, stream=None):
     """
     For a given set of similar CDR3 clonotypes, it may be classified as a different clonotype if the entire V region
     is considered. This writes the unique counts of other region aside form CDR3s to see if the clonotype will differ
@@ -230,11 +230,12 @@ def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir):
     :param clonoTypes: DataFrame of clonotypes per read. Requires the CDRs and FRs columns
     :param sampleName: Sample name for output file
     :param outDir: Out directory for output file
+    :param stream: debug stream
     :return: None. Produces an output gzipped csv file
     """
     fname = outDir + sampleName + "_clonotype_diversity_region_analysis.csv.gz"
     if os.path.exists(fname):
-        print("\t File found {}".format(fname))
+        printto(stream, "\t File found {}".format(fname), LEVEL.WARN)
         return
 
     # regions of analysis
