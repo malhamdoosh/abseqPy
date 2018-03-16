@@ -107,8 +107,12 @@ def parseArgs():
         args.actualqstart = -1
 
     # --------------------------------------------------------------------------------------------------------
-    #                                       Trim5 and Trim3 logic check
+    #                                noFR4Cut, Trim5 and Trim3 logic check
     # --------------------------------------------------------------------------------------------------------
+
+    # negate flag
+    args.fr4cut = not args.nofr4cut
+
     if args.trim5 < 0:
         parser.error("--trim5 cannot be a negative value")
 
@@ -282,19 +286,23 @@ def parseCommandLineArguments():
     optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="Query sequence's starting index (1-based indexing). Subsequence before specified "
                                "index is ignored during analysis. By default, each individual sequence's "
-                               "offset is inferred automatically.", default=None, type=int)
+                               "offset is inferred automatically. This argument has no effect when aligning"
+                               " 5' primer during primer specificity analysis.", default=None, type=int)
     optional.add_argument('-u', '--upstream', help="Range of upstream sequences, secretion signal analysis and 5UTR"
                                                    " analysis. Index starts from 1 [default=[1, inf)]", default=None)
-    optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V gene [default=0]",
+    optional.add_argument('-t5', '--trim5', help="Number of nucleotides to trim on the 5'end of V domain."
+                                                 " This argument has no effect when aligning 5' primer during"
+                                                 " primer specificity analysis. [default=0]",
                           default=0, type=int)
-    optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V gene."
-                                                 " If a (fasta) file was provided instead, will use "
-                                                 "sequence(s) in the file to determine FR4 end position." 
-                                                 " That is, the sequences will be trimmed at the 3' end based "
-                                                 "on sequence(s) provided in the file. -f4c/--fr4cut is automatically"
-                                                 " disabled if this flag is specified."
+    optional.add_argument('-t3', '--trim3', help="Number of nucleotides to trim on the 3'end of V domain. "
+                                                 " If a (fasta) file was provided instead, AbSeq will use"
+                                                 " sequence(s) in the file to determine where to start trimming." 
+                                                 " That is, the sequences will be trimmed at the 3' end based"
+                                                 " on sequence(s) provided in the file. This argument has no effect "
+                                                 " when aligning 3' primer during primer specificity analysis."
                                                  " [default=0]", default=None)
-    optional.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset [default=0]",
+    optional.add_argument('-p5off', '--primer5endoffset', help="Number of nucleotides for 5' end offset before aligning"
+                                                               " primer sequences. [default=0]",
                           default=0, type=int)
     optional.add_argument('-p', '--primer', help="Not implemented yet [default=-1]", default=-1, type=int)
     optional.add_argument('-d', '--database', help="Specify fully qualified path to germline database "
@@ -321,12 +329,15 @@ def parseCommandLineArguments():
     optional.add_argument('-r', '--report-interim', help="Specify this flag to generate report."
                                                          " Not implemented yet [default= no report]",
                           dest="report_interim", action='store_true')
-    optional.add_argument('-f4c', '--fr4cut', help="Specify this flag to cut(remove) subsequence after framework 4 "
-                                                   "region [default = no cuts]", dest='fr4cut', action='store_true')
+    optional.add_argument('-nf4c', '--nofr4cut', help="When specified, the end of sequence (FR4 end) is either "
+                                                      "the end of the read if no --trim3 is provided or"
+                                                      " trimmed to --trim3 argument if provided. "
+                                                      " [default = sequence (FR4 end) ends where J germline ends]",
+                          dest='nofr4cut', action='store_true')
     optional.add_argument('-st', '--sites', help="Fully qualified pathname to restriction sites file, required if"
                                                  " --task rsa or --task rsasimple is specified", default=None)
-    optional.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file", default=None)
-    optional.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file", default=None)
+    optional.add_argument('-p3', '--primer3end', help="Fully qualified path to primer 3' end file.", default=None)
+    optional.add_argument('-p5', '--primer5end', help="Fully qualified path to primer 5' end file.", default=None)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
     return parser, parser.parse_args()
@@ -365,7 +376,7 @@ PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
                       '-f1', '-f2', '-fmt', '-o', '-merge', '-merger',
                       '-seqtype', '-threads', '-db',
                       '-bitscore', '-alignlen', '-sstart', '-actualqstart',
-                      '-trim5', '-trim3', '-fr4cut',
+                      '-trim5', '-trim3', '-nofr4cut',
                       '-sites',
                       '-primer',
                       '-5end', '-3end',
