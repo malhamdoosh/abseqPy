@@ -635,10 +635,10 @@ class IgRepertoire:
                                    "primerCloneAnnot", mode='w', complib='blosc')
 
         else:
-            print("The{}primer clone annotation files were found and being loaded ... "
-                  .format(' refined ' if self.fr4cut else ' '))
+            printto(logger, "The{}primer clone annotation files were found and being loaded ... "
+                  .format(' refined ' if self.fr4cut else ' '), LEVEL.WARN)
             self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
-            print("\tPrimer clone annotation was loaded successfully")
+            printto(logger, "\tPrimer clone annotation was loaded successfully")
 
         # TODO: Fri Feb 23 17:13:09 AEDT 2018
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
