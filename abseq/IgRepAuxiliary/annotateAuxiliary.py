@@ -117,7 +117,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
                 printto(stream, "\tResults were collated successfully.")
                     
             except Exception:
-                printto(stream, "Something went wrong during the annotation process!", LEVEL.CRIT)
+                printto(stream, "Something went wrong during the annotation process!", LEVEL.EXCEPT)
                 raise
             finally:
                 for w in workers:
