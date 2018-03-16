@@ -172,7 +172,7 @@ class IgRepertoire:
 
             # Convert FASTQ file into FASTA format
             if self.format == 'fastq':
-                readFasta = fastq2fasta(self.readFile, self.outputDir, stream=None)
+                readFasta = fastq2fasta(self.readFile, self.outputDir, stream=logger)
             elif self.format == 'fasta':
                 # unzip the fasta file if need be
                 readFasta = gunzip(self.readFile)
