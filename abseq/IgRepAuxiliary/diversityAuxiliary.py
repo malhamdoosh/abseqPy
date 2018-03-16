@@ -13,7 +13,6 @@ from collections import Counter
 def annotateSpectratypes(cloneAnnot):
     #TODO: add annotation to clonotypes, e.g., germline genes
     #TODO: add nucleotide level calculations 
-    print("Spectratypes are being calculated ... ")
     spectraTypes = {}
     # CDR1
     spectraType = ((cloneAnnot['cdr1.end'] - cloneAnnot['cdr1.start'] + 1) / 3).astype(int)
@@ -54,7 +53,6 @@ def annotateSpectratypes(cloneAnnot):
 def annotateClonotypes(cloneSeqs):
     #TODO: add annotation to clonotypes, e.g., germline genes
     #TODO: add nucleotide level calculations
-    print("Clonotypes are being generated ... ")
     clonoTypes = {}
     # CDR1
     seqs = cloneSeqs['cdr1'].tolist()

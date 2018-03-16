@@ -70,11 +70,6 @@ class IgMultiRepertoire:
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))
 
-        # Finally, silently ignore creation of output directory if already exists
-        for sample in self.buffer:
-            if not os.path.exists(sample.args.outdir):
-                os.makedirs(sample.args.outdir)
-
     def __enter__(self):
         return self
 

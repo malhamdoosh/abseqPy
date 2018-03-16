@@ -18,6 +18,7 @@ from abseq.IgRepAuxiliary.RefineWorker import RefineWorker
 from abseq.IgRepertoire.igRepUtils import gunzip
 from abseq.IgRepAuxiliary.IgBlastWorker import getAnnotationFields
 from abseq.config import MEM_GB
+from abseq.logger import LEVEL, printto
 
 
 def loadRefineFlagInfo():
@@ -48,11 +49,12 @@ def loadRefineFlagInfo():
     refineFlagMsgs['FR4Endless'] = "{:,} clones do not align with provided trim3 sequences"
     return (refineFlagNames, refineFlagMsgs)
 
+
 def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, format, 
                             actualQstart, chain, fr4cut, 
                             trim5End, trim3End,
-                            seqsPerFile, threads, igdb):
-        print("Clone annotation and in-frame prediction are being refined ...")        
+                            seqsPerFile, threads, igdb, stream=None):
+        printto(stream, "Clone annotation and in-frame prediction are being refined ...")
         seqsPerFile = 100
         cloneAnnot = cloneAnnotOriginal.copy()        
         queryIds = cloneAnnot.index#[4200000:]
@@ -67,14 +69,14 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             # if the readFile is gzipped, we need to unzip it in the same directory before passing into
             # SeqIO.index because it doesn't accept gzipped nor opened files
             records = SeqIO.index(gunzip(readFile), format)
-            print("\t " +  format + " index created and refinement started ...")
-            ### Parallel implementation of the refinement
+            printto(stream, "\t " + format + " index created and refinement started ...")
+            # Parallel implementation of the refinement
             noSeqs = len(queryIds)
             totalTasks = int(ceil(noSeqs * 1.0 / seqsPerFile)) 
             tasks = Queue()      
             exitQueue = Queue()
             resultsQueue = Queue()        
-            procCounter = ProcCounter(noSeqs)    
+            procCounter = ProcCounter(noSeqs, stream=stream)
             if (threads > totalTasks):
                 threads = totalTasks     
             if MEM_GB < 16:
@@ -83,7 +85,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             workers = []        
             for i in range(threads):
                 w = RefineWorker(procCounter, igdb, chain, actualQstart,
-                                 fr4cut, trim5End, trim3End, refineFlagNames)
+                                 fr4cut, trim5End, trim3End, refineFlagNames, stream=stream)
                 w.tasksQueue = tasks
                 w.exitQueue = exitQueue  
                 w.resultsQueue = resultsQueue    
@@ -106,23 +108,24 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
                 m = exitQueue.get()
                 if m == "exit":
                     i += 1
-            print("All workers have completed their tasks successfully.")
+            printto(stream, "All workers have completed their tasks successfully.")
             # Collect results
-            print("Results are being collated from all workers ...")  
+            printto(stream, "Results are being collated from all workers ...")
             # invoking the result collection method   
             cloneAnnotList, transSeqs, flags = collectRefineResults(resultsQueue, totalTasks, 
-                       noSeqs, refineFlagNames)
-            ### End of parallel implementation                  
+                                                                    noSeqs, refineFlagNames, stream=stream)
+            # End of parallel implementation
             sys.stdout.flush()           
 
-            print("\tResults were collated successfully.")
+            printto(stream, "\tResults were collated successfully.")
             # print refine flags 
-            printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs)
-            writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, 
+            printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=stream)
+            printto(stream, "Flagged sequences are being written to an output file ... ")
+            writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs,
                              outDir, sampleName)
 #             sys.exit()
         except Exception as e:
-            print("Something went wrong during the refinement process!")
+            printto(stream, "Something went wrong during the refinement process!", LEVEL.EXCEPT)
             raise e
         finally:
             if workers:
@@ -130,6 +133,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
                     w.terminate()
             if records:
                 records.close()
+
         # Create new data frame of clone annotation
         cloneAnnot = DataFrame(cloneAnnotList, columns=getAnnotationFields(chain))
         cloneAnnot.index = cloneAnnot.queryid
@@ -142,10 +146,10 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             cloneSeqs.loc[:, col] = cloneSeqs[col].map(str)
         cloneSeqs.index = cloneSeqs.queryid
         del cloneSeqs['queryid']        
-        return (cloneAnnot, cloneSeqs)
+        return cloneAnnot, cloneSeqs
+
         
-def collectRefineResults(resultsQueue, totalTasks, 
-                       noSeqs, refineFlagNames):    
+def collectRefineResults(resultsQueue, totalTasks, noSeqs, refineFlagNames, stream=None):
     total = 0
     cloneAnnot = []
     transSeqs = []
@@ -169,30 +173,29 @@ def collectRefineResults(resultsQueue, totalTasks,
 #         if (len(qsRecsOrdered) < 100):
 #             print(len(qsRecsOrdered))
         if (total % 50000 == 0):
-            print('\t%d/%d records have been collected ... ' % (total, noSeqs))
-            sys.stdout.flush()
-    print('\t%d/%d records have been collected ... ' % (total, noSeqs))
+            printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
+    printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
     return cloneAnnot, transSeqs, flags        
 
 
-def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs):
+def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=None):
     # print statistics and a few of the flagged clones
     for f in refineFlagNames:
         if len(flags[f]) > 0:
-            print(refineFlagMsgs[f].format(len(flags[f])))
+            printto(stream, refineFlagMsgs[f].format(len(flags[f])), LEVEL.INFO)
             examples = random.choice(range(len(flags[f])), min(3, len(flags[f])), replace=False)
             for i in examples:
-                print(">" + flags[f][i])
-                print(str(records[flags[f][i]].seq))
-            print
+                printto(stream, ">" + flags[f][i], LEVEL.INFO)
+                printto(stream, str(records[flags[f][i]].seq), LEVEL.INFO)
 
-             
-def writeRefineFlags(flags, records, refineFlagNames, 
-                     refineFlagMsgs, outDir, sampleName):
-    print("Flagged sequences are being written to an output file ... ")
-    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out:
+
+def writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, outDir, sampleName):
+    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out, \
+         open(outDir + sampleName + "_refinement_flagged.csv", "w") as outCSV:
+        outCSV.write('refinementFlag,count\n')
         for f in refineFlagNames:
-            if (len(flags[f]) > 0):
+            if len(flags[f]) > 0:
+                outCSV.write("{},{}\n".format(f, len(flags[f])))
                 out.write("# " + refineFlagMsgs[f].format(len(flags[f])) + "\n")                
                 for i in range(len(flags[f])):
                     out.write(">" + flags[f][i] + "\n")
@@ -201,19 +204,19 @@ def writeRefineFlags(flags, records, refineFlagNames,
      
      
 class ProcCounter(object):
-    def __init__(self, noSeqs, initval=0, desc = "records"):
+    def __init__(self, noSeqs, initval=0, desc="records", stream=None):
         self.val = Value('i', initval)
         self.desc = desc
         self.noSeqs = noSeqs
         self.lock = Lock()
+        self.stream = stream
 
     def increment(self, val=1):
         with self.lock:
             self.val.value += val
-            if (self.val.value % 50000 == 0 or self.noSeqs == self.val.value):
-                print('\t%d/%d %s have been processed ... ' % (self.val.value, self.noSeqs,
-                                                               self.desc))
-                sys.stdout.flush()
+            if self.val.value % 50000 == 0 or self.noSeqs == self.val.value:
+                printto(self.stream, '\t%d/%d %s have been processed ... ' % (self.val.value, self.noSeqs,
+                                                                              self.desc))
 
     def value(self):
         with self.lock:

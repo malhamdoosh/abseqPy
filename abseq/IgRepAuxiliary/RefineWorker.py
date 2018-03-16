@@ -17,11 +17,12 @@ from abseq.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
 from abseq.IgRepertoire.igRepUtils import extractProteinFrag, \
     findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA, calMaxIUPACAlignScores, findBestMatchedPattern
 from abseq.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
+from abseq.logger import LEVEL, printto
 
 
 class RefineWorker(Process):
     def __init__(self, procCounter, igdb, chain, actualQstart,
-                 fr4cut, trim5End, trim3End, refineFlagNames):
+                 fr4cut, trim5End, trim3End, refineFlagNames, stream=None):
         super(RefineWorker, self).__init__()
         self.procCounter = procCounter
         # we could have done the J gene length map reading earlier, but this encapsulates it better.
@@ -37,19 +38,20 @@ class RefineWorker(Process):
         self.exitQueue = None
         self.resultsQueue = None
         self.firstJobTaken = False
+        self.stream = stream
 
     def run(self):
-        print(self.name + " process is now ready to start a new job ...")
+        printto(self.stream, self.name + " process is now ready to start a new job ...")
         while True:            
             nextTask = self.tasksQueue.get()
             # poison pill check            
             if (nextTask is None):
-                print(self.name + " process has stopped." )
+                printto(self.stream, self.name + " process has stopped." )
                 self.exitQueue.put("exit")
                 break
             try:
                 if not self.firstJobTaken: 
-                    print(self.name + " process commenced a new task ... ")
+                    printto(self.stream, self.name + " process commenced a new task ... ")
                     self.firstJobTaken = True
                 qsRecs = []
                 seqsAll = []
@@ -58,12 +60,12 @@ class RefineWorker(Process):
                     flags[f] = []
                 for (record, qsRec) in zip(nextTask[0], nextTask[1]):  
                     seqs = refineCloneAnnotation(qsRec, record, 
-                                                  self.actualQstart, self.fr4cut, 
-                                                  self.trim5End, self.trim3End,
-                                                  self.chain, self.jGeneLengthMap, flags)
+                                                 self.actualQstart, self.fr4cut,
+                                                 self.trim5End, self.trim3End,
+                                                 self.chain, self.jGeneLengthMap, flags, stream=self.stream)
                     # out-of-frame clones are excluded
                     if qsRec['v-jframe'] != 'Out-of-frame':
-                        refineInFramePrediction(qsRec, record, self.actualQstart, flags)
+                        refineInFramePrediction(qsRec, record, self.actualQstart, flags, stream=self.stream)
                     
                     # append the FR and CDR protein clones
                     qsRec['queryid'] = record.id
@@ -74,16 +76,15 @@ class RefineWorker(Process):
 #                 print('\t%d clones have been processed ... ' % (len(nextTask)))
                 sys.stdout.flush()        
             except Exception as e:
-                print("An error occurred while processing " + self.name)
-                print(e)
+                printto(self.stream, "An error occurred while processing " + self.name, LEVEL.EXEPT)
                 self.resultsQueue.put(None)
                 continue                       
 #             print("process has completed a run... " + self.name) 
         return
 
 
-def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut, 
-                          trim5End, trim3End, chain, jGeneLengthMap, flags):
+def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
+                          trim5End, trim3End, chain, jGeneLengthMap, flags, stream=None):
     seqs = [record.id, qsRec['vgene']]
 
     try:
@@ -119,8 +120,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 
         # Identification of FR4 so that CDR3 can be defined
         if isnan(qsRec['fr4.end']):
-            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1, -1, offset, trimAtStop=False)
-
+            searchRegion = extractProteinFrag(protein, qsRec['fr3.end'] + 1, -1, offset, trimAtStop=False, stream=stream)
             if searchRegion is None:
                 raise Exception("ERROR: undefined search region to find FR3 consensus.")
 
@@ -177,7 +177,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
                 qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
 
         # Extract the CDR and FR protein sequences
-        (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset)
+        (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset, stream=stream)
         seqs += tmp
         if seqs[-1][:4] != FR4_CONSENSUS[chain][:4]:
             flags['fr4NotAsExpected'] += [record.id]
@@ -228,32 +228,37 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
     return seqs
 
 
-def refineInFramePrediction(qsRec, record, actualQstart, flags):
-        inframe = True    
+def refineInFramePrediction(qsRec, record, actualQstart, flags, stream=None):
+        inframe = True
+
         # check the the v-jframe value is not NA       
         if (qsRec['v-jframe'] == 'N/A' or
-            (type(qsRec['v-jframe']) != type('str') and isnan(qsRec['v-jframe']))):
+           (type(qsRec['v-jframe']) != type('str') and isnan(qsRec['v-jframe']))):
             flags['updatedInFrameNA'] += [record.id]
             inframe = False
+
         # the query clone is not in concordance with the start of the germline gene
-        offset = qsRec['vqstart'] - qsRec['vstart'] + 1 # 1-based 
-        if (inframe and (offset < 1 or 
+        offset = qsRec['vqstart'] - qsRec['vstart'] + 1 # 1-based
+        if (inframe and (offset < 1 or
             (actualQstart != -1 and (offset - 1 - actualQstart) % 3 != 0))):            
             inframe = False
-            flags['updatedInFrameConc'] += [record.id]           
+            flags['updatedInFrameConc'] += [record.id]
+
         # if no CDR3 or FR4 ==> Out-of-frame
         if (inframe and (isnan(qsRec['fr4.start']) or 
-            isnan(qsRec['fr4.end'])  or isnan(qsRec['cdr3.start']) or 
-           qsRec['cdr3.start'] >= qsRec['cdr3.end'])):
+            isnan(qsRec['fr4.end']) or isnan(qsRec['cdr3.start']) or
+            qsRec['cdr3.start'] >= qsRec['cdr3.end'])):
             inframe = False
-            flags['updatedInFrameNo3or4'] += [record.id]                        
+            flags['updatedInFrameNo3or4'] += [record.id]
+
         # doesn't start/end properly .. not multiple of 3
         if (inframe and ((qsRec['fr4.end'] - qsRec['fr1.start'] + 1) % 3 != 0 or 
             (actualQstart != -1 and 
              ((qsRec['fr4.end'] - actualQstart) % 3 != 0)))):
             inframe = False
             flags['updatedInFrame3x'] += [record.id]
-#             print(str(record.seq))
+        # print(str(record.seq))
+
         # indels (gaps) in FRs or CDRs cause frame-shift ==> out-of-frame
         if (inframe and ( 
             qsRec['fr1.gaps'] % 3 != 0 or 
@@ -265,9 +270,11 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags):
             )):
             inframe = False            
             flags['updatedInFrameIndel'] += [record.id]
+
         # FR1 start is not aligned with query start 
 #             if (not inframe or qsRec['vqstart'] != qsRec['fr1.start']):
 #                 inframe = False
+
         if not inframe:
             qsRec['v-jframe'] =  'Out-of-frame'
             flags['updatedInFrame'] += [record.id]

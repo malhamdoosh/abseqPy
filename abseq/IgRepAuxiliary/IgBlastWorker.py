@@ -12,7 +12,7 @@ from multiprocessing import Process
 from pandas.core.frame import DataFrame
 
 from abseq.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
-
+from abseq.logger import printto, LEVEL
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
                     'identity', 'alignlen', 'bitscore',
@@ -28,14 +28,16 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
                     'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
                     ]
 
+
 def getAnnotationFields(chain):
     if (chain == 'hv'):
         return ANNOTATION_FIELDS
     elif (chain in ['kv', 'lv']):
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
-        print('ERROR: unsupported chain type.')     
-        sys.exit() 
+        # should never happen (argparse takes care of this for us)
+        raise Exception("Unsupported chain type")
+
 
 def createCloneRecord(chain):
     cdrRecord = {}    
@@ -51,15 +53,17 @@ def convertCloneRecordToOrderedList(cdrRecord, chain):
     
     return orderedList
 
+
 def to_int(x):
     try:
         return int(x.strip())
     except:
         return None
 
-def extractCDRInfo(blastOutput, chain):
+
+def extractCDRInfo(blastOutput, chain, stream=None):
     # Extract the top hits  
-    print('\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
+    printto(stream, '\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
     # process igblast output and extract top hit 
     cloneAnnot = []
     filteredIDs = []
@@ -275,24 +279,24 @@ def extractCDRInfo(blastOutput, chain):
     else:
         cloneAnnot = DataFrame()
     if (warning):
-        print("Warning: something went wrong while parsing %s" % (blastOutput))                                                            
+        printto(stream, "Warning: something went wrong while parsing %s" % (blastOutput), LEVEL.WARN)
     return (cloneAnnot, filteredIDs)
 
 
 def analyzeSmallFile(fastaFile, chain, igBlastDB,
-                     seqType='dna', threads=8, outdir=""): # , bitScore = 0
+                     seqType='dna', threads=8, outdir="", stream=None): # , bitScore = 0
     # Run igblast
     if seqType.lower() == 'dna':
-        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB, outputDir=outdir)
+        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB, outputDir=outdir, stream=stream)
     else:
         # argparse already checks that it's ether dna or protein, so nothing fishy can pass into else statement here
-        blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB, outputDir=outdir)
-    return extractCDRInfo(blastOutput, chain)
+        blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB, outputDir=outdir, stream=stream)
+    return extractCDRInfo(blastOutput, chain, stream=stream)
     
 
 class IgBlastWorker(Process):
     def __init__(self, chain, igBlastDB, 
-                 seqType, threads):
+                 seqType, threads, stream=None):
         super(IgBlastWorker, self).__init__() 
         self.chain = chain     
         self.igBlastDB = igBlastDB        
@@ -301,6 +305,7 @@ class IgBlastWorker(Process):
         self.tasksQueue = None
         self.resultsQueue = None
         self.exitQueue = None
+        self.stream = stream
 #         self.args = None
     
 #     def __init__(self, name, tasksQueue, resultsQueue):
@@ -314,22 +319,20 @@ class IgBlastWorker(Process):
 #             print("process has started a run... " + self.name)
             # poison pill check            
             if (nextTask is None):
-                print("process has stopped ... " + self.name)
+                printto(self.stream, "process has stopped ... " + self.name)
                 self.exitQueue.put("exit")
 #                 self.terminate()
                 break
             try:
                 result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,                                                                                                      
-                                                     self.seqType, self.threads)                        
+                                          self.seqType, self.threads, stream=self.stream)
 #                 print("process has completed analysis... " + self.name) 
                 self.resultsQueue.put(result)            
             except Exception as e:
-                print("An error occurred while processing " + nextTask.split('/')[-1])
-                print(e)
+                printto(self.stream, "An error occurred while processing " + nextTask.split('/')[-1], LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
 #                 raise
 #                 sys.exit()
                 continue                       
 #             print("process has completed a run... " + self.name) 
         return
-         

@@ -7,12 +7,13 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
 from abseq.IgRepertoire.igRepUtils import findBestMatchedPattern, calMaxIUPACAlignScores
+from abseq.logger import printto, LEVEL
 
 
 class PrimerWorker(Process):
     def __init__(self, procCounter, fr4cut, trim5end,
                  trim3end, actualQstart, end5, end3,
-                 end5offset, tasks, exitQueue, resultsQueue):
+                 end5offset, tasks, exitQueue, resultsQueue, stream=None):
         super(PrimerWorker, self).__init__()
         self.procCounter = procCounter
         self.fr4cut = fr4cut
@@ -26,21 +27,22 @@ class PrimerWorker(Process):
         self.exitQueue = exitQueue
         self.resultsQueue = resultsQueue
         self.firstJobTaken = False
-        self.maxPrimer5Length, self.primer5sequences = _parsePrimerFile(self.end5)
-        self.maxPrimer3Length, self.primer3sequences = _parsePrimerFile(self.end3)
+        self.maxPrimer5Length, self.primer5sequences = _parsePrimerFile(self.end5, stream=stream)
+        self.maxPrimer3Length, self.primer3sequences = _parsePrimerFile(self.end3, stream=stream)
+        self.stream = stream
 
     def run(self):
         while True:
             nextTask = self.taskQueue.get()
             if nextTask is None:
-                print(self.name + " process has stopped.")
+                printto(self.stream, self.name + " process has stopped.")
                 self.exitQueue.put("exit")
                 break
 
             try:
                 recs = []
                 if not self.firstJobTaken:
-                    print(self.name + " process commenced a new task ... ")
+                    printto(self.stream, self.name + " process commenced a new task ... ")
                     self.firstJobTaken = True
                 for record, qsRec in zip(nextTask[0], nextTask[1]):
                     qsRec['queryid'] = record.id
@@ -52,8 +54,7 @@ class PrimerWorker(Process):
                 self.procCounter.increment(len(recs))
                 sys.stdout.flush()
             except Exception as e:
-                print("An error as occurred while processing " + self.name)
-                print(e)
+                printto(self.stream, "An error as occurred while processing " + self.name, LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
                 continue
         return
@@ -92,7 +93,7 @@ def _matchClosestPrimer(qsRec, record, actualQstart, trim5end, trim3end, end5off
     return qsRec, unexpected5, unexpected3
 
 
-def _parsePrimerFile(primerFile):
+def _parsePrimerFile(primerFile, stream=None):
     if primerFile:
         primerids = []
         primerLengths = []
@@ -105,8 +106,9 @@ def _parsePrimerFile(primerFile):
         maxScores = calMaxIUPACAlignScores(primerSequences)
 
         if len(set(primerLengths)) != 1:
-            print("WARNING: Provided primer file {} has primers with different length. Analysis assumes uniform length"
-                  .format(primerFile))
+            printto(stream, "WARNING: Provided primer file {} has primers with different length. "
+                            "Analysis assumes uniform primer length"
+                  .format(primerFile), LEVEL.WARN)
         return max(primerLengths), zip(primerids, primerSequences, maxScores)
 
     return None, None

@@ -22,6 +22,7 @@ from Bio.Alphabet import Alphabet
 
 from abseq.config import WEBLOGO
 import abseq.IgRepertoire
+from abseq.logger import printto, LEVEL
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies
@@ -70,9 +71,9 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
 
 
 def generateMotif(sequences, name, alphabet, filename, 
-                  align = False, transSeq = False, protein =False, weights = None, outDir=None):
+                  align = False, transSeq = False, protein =False, weights=None, outDir=None, stream=None):
     if exists(filename):
-        print("\t" + name + " motif logo was found" )
+        printto(stream, "\t" + name + " motif logo was found", LEVEL.WARN)
         return        
     # check whether sequences should be translated                 
     if transSeq:
@@ -84,7 +85,7 @@ def generateMotif(sequences, name, alphabet, filename,
         seqs = sequences
     # sample sequences if they are too many  
     if (len(seqs) > 1*10**5 or 
-        ( weights is not None and sum(weights) > 1*10**5)):
+        (weights is not None and sum(weights) > 1*10**5)):
         random.seed(1986)
 #         print(sum(weights))
         seqs = weightedSample(seqs, weights, int(1*10**5)) 
@@ -93,13 +94,13 @@ def generateMotif(sequences, name, alphabet, filename,
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
         # ignoreNones because sometimes seqs contains None when frameworks/cdrs failed to align
-        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, ignoreNones=True)
+        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, ignoreNones=True, stream=stream)
 #                 print(alignedSeq[:10])
     else:                
         # if alignment is not required, add "-" to short sequences
         L = map(len, seqs)
         if (min(L) != max(L)):
-            #print('\t\t- is being added to short sequences ...[%d, %d[' % (min(L), max(L)))
+            # print('\t\t- is being added to short sequences ...[%d, %d[' % (min(L), max(L)))
             if '-' not in alphabet.letters: alphabet.letters += '-'
             alignedSeq = []
             m = max(L)
@@ -109,8 +110,8 @@ def generateMotif(sequences, name, alphabet, filename,
         else:
             alignedSeq = filter(lambda x: x != "None", seqs)
     # create the sequence motif and encode it into PFM
-    print("\tMotif logo is being created for %s ..." % (name))
-    m = motifs.create(alignedSeq, alphabet)  #             print(m.counts)
+    printto(stream, "\tMotif logo is being created for %s ..." % (name))
+    m = motifs.create(alignedSeq, alphabet)  # print(m.counts)
     # create sequence logo
     generateMotifLogo(m, filename, outDir, not transSeq and not protein)
     return m
