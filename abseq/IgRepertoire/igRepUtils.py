@@ -22,7 +22,6 @@ from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 
 from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
-from abseq.IgRepReporting.igRepPlots import plotDist
 from abseq.logger import printto, LEVEL
 
 
@@ -510,24 +509,6 @@ def compressCountsGeneLevel(countsDict):
     return geneLevel
 
 
-def writeCountsCategoriesToFile(countsVariant, sampleName, filePrefix, title=''):
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'variant.csv')
-    # gene level
-    countsVariant = compressCountsGeneLevel(countsVariant)
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'gene.csv')
-    plotDist(countsVariant, sampleName,
-             filePrefix + 'gene.png',
-             title)
-    # family level
-    countsVariant = compressCountsFamilyLevel(countsVariant)
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'family.csv')
-    plotDist(countsVariant, sampleName,
-             filePrefix + 'family.png',
-             title)
-
 
 def compressCountsFamilyLevel(countsDict):
     familyLevel = Counter()
@@ -793,11 +774,5 @@ def writeParams(args, outDir):
         out.write("Executed AbSeq with the following parameters:\n")
         for key, val in vars(args).items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
-    #     for arg in PROGRAM_VALID_ARGS:
-    #         a = arg.replace('-', '')
-    #         if args.get(a, None) is not None:
-    #             out.write(arg + " " + str(args[a]) + "\n")
-    #     out.write("\nExecuted command line:\n")
-    #     out.write(args['cmd'] + "\n")
     return filename.split("/")[-1]
 

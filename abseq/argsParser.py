@@ -345,10 +345,17 @@ def parseCommandLineArguments():
 def extractRanges(strRanges, expNoRanges=2):
     """
     Returns the range given an input
-    :param strRanges: string range, allowed format: 0-10,23-25 or 0-10 or 0
-    :param expNoRanges: maximum number of allowed ranges, eg: expNoRange=1 implies only 1 range, expNoRange=2
-    implies 0-10,20-25 is allowed, and so on
-    :return: a nested list of ranges
+
+    :param strRanges:
+                string range, allowed format: 0-10,23-25 or 0-10 or 0
+
+    :param expNoRanges:
+                expected maximum number of allowed ranges, eg: expNoRange=1 implies only 1 range, expNoRange=2
+                implies 0-10,20-25 is allowed, and so on. If provided strRanges has lesser number of ranges than
+                this argument, it will extend the list. I.e. strRanges="0-9", expNoRanges=2 will return [[0,9],[0,9]]
+
+    :return:
+                a nested list of ranges
     """
     numRanges = []
     ranges = strRanges.split(',')
@@ -365,24 +372,10 @@ def extractRanges(strRanges, expNoRanges=2):
         else:
             numRanges.append([float(scores[0]), Inf])
 
-    # BUGSQ: if (len(numRanges) == 1 < expNoRanges):
     if len(numRanges) < expNoRanges:
         numRanges = numRanges * expNoRanges
+
     return numRanges
-
-
-PROGRAM_VALID_ARGS = ['-task', '-chain', '-name',
-                      '-f1', '-f2', '-fmt', '-o', '-merge', '-merger',
-                      '-seqtype', '-threads', '-db',
-                      '-bitscore', '-alignlen', '-sstart', '-actualqstart',
-                      '-trim5', '-trim3', '-nofr4cut',
-                      '-sites',
-                      '-primer',
-                      '-5end', '-3end',
-                      '-5endoffset',
-                      '-upstream',
-                      '-report_interim'
-                      ]
 
 
 def printUsage(parser, additional_msg=None):

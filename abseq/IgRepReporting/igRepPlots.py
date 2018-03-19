@@ -18,7 +18,6 @@ import matplotlib.colors as mcolors
 import math
 import numpy
 import random
-import abseq.IgRepertoire.igRepUtils
 
 from matplotlib import cm
 from collections import Counter
@@ -26,22 +25,23 @@ from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
 
+import abseq.IgRepertoire.igRepUtils
 from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.logger import printto, LEVEL
 
 
-def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf):
-    if (exists(outputFile)):
-        print("\tFile found ... " + outputFile.split('/')[-1])
+def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf, stream=None):
+    if exists(outputFile):
+        printto(stream, "\tFile found ... " + outputFile.split('/')[-1], LEVEL.WARN)
         return
-    print("\tThe sequence length distribution of each gene family is being calculated ...")
+    printto(stream, "\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
     with abseq.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
-            if (len(rec) <= maxLen):
-                if (rec.id.split('|') > 1):
+            if len(rec) <= maxLen:
+                if rec.id.split('|') > 1:
                     ighvID = rec.id.split('|')[1]
                 else:
                     ighvID = rec.id
@@ -64,7 +64,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     outputFile = '/'.join(outputFile.split('/')[:-1] + ["box_" + outputFile.split('/')[-1]])
     fig.savefig(outputFile, dpi=300)
     for k in classes:
-        print(k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k]))
+        printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
     plt.close()
 
 
