@@ -37,7 +37,8 @@ class IgMultiRepertoire:
                 if type(sample) == tuple:
                     # paired end sample
                     f1name, f2name = sample
-                    retval = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
+                    inferredDir, inferredName = inferSampleName(f1name, merger=True,
+                                                                fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = f2name
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
@@ -49,7 +50,8 @@ class IgMultiRepertoire:
                 else:
                     # single ended
                     f1name = sample
-                    retval = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
+                    inferredDir, inferredName = inferSampleName(f1name, merger=False,
+                                                                fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
@@ -57,15 +59,15 @@ class IgMultiRepertoire:
 
                 # if abseq's inferred sample name is in the map ==> sample was specified in -rs
                 # we also need to remap the name
-                if retval[1] in canonicalNameChangeMap:
-                    modifiedArgs.outdir += retval[0]
-                    modifiedArgs.name = canonicalNameChangeMap[retval[1]]
-                    modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
+                if inferredName in canonicalNameChangeMap:
+                    modifiedArgs.outdir += inferredDir
+                    modifiedArgs.name = canonicalNameChangeMap[inferredName]
+                    modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
                     modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
                     self.buffer.append(IgRepertoire(modifiedArgs))
         else:
             self.plotManager.addMetadata((args.outdir, args.name))
-            args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
+            args.outdir = os.path.abspath(args.outdir) + os.path.sep
             args.log = args.outdir + args.name + ".log"
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(args))

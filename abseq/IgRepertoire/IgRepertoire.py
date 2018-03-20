@@ -50,15 +50,126 @@ from abseq.IgRepReporting.restrictionReport import generateOverlapFigures
 
 class IgRepertoire:
     def __init__(self, args):
+        """
+        Creates an AbSeq IgRepertoire object. Contains information prior to downstream analysis.
+
+        :param args:
+                    namespace object containing these attributes
+                        task: string
+                                all, annotate, abundance, diversity, fastqc, productivity,
+                                primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass
+
+                        report_interim: bool
+                                create intermediate report (not implemented yet)
+
+                        outdir: string
+                                path to results directory. implicitly create if doesn't exist
+
+                        threads: int
+                                number of threads to run this sample with
+
+                        primer: int
+                                (not implemented yet)
+
+                        db: string
+                                path to IgBLAST database (directory should contain output of makeblastdb).
+                                Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
+                                will require db to be the string "$IGBLASTDB"
+
+                        bitscore: list / tuple
+                                iterable and indexable of length 2 denoting the min and max value to use for
+                                filtering sequences that do not fall within the provided range.
+                                The bitscore filter applies to the V germline alignment only.
+
+                        clonelimit: int
+                                number of CDR3 clones to output into
+                                diversity/<sample_name>_clonotypes_<clonelimit>_[over|under].csv.gz
+                                This csv file contains CDR3 AA sequences with their counts. Also accepts
+                                np.inf to retain all clones
+
+                        alignlen: list / tuple
+                                iterable and indexable of length 2 denoting the min and max value to use for
+                                filtering sequences taht do not fal within the provided range.
+                                The alignlen filter applies to the V germline only
+
+                        sstart: list / tuple
+                                iterable and indexable of length 2 denoting the min and max value to use for
+                                filtering sequences that do not fall within the provided range.
+                                The sstart filter applies to the V germline only. In this case, subject start
+                                denotes the starting index of V germline when aligned to the query sequence
+
+                        qstart: list / tuple
+                                iterable and indexable of length 2 denoting the min and max value to use for
+                                filtering sequences that do not fall within the provided range.
+                                The qstart filter applies to the V germline only. In this case, query start
+                                denotes the starting index of the query sequence when aligned to the V germline gene
+
+                        seqtype: string
+                                accepted values are dna or protein
+
+                        fmt:    string
+                                accepted values are fasta, fa, fastq, fq
+
+                        chain: string
+                                accepted values are lv, hv, kv for lambda variable, heavy variable and kappa variable
+                                respectively
+
+                        name: string
+                                name to refer this sample as
+
+                        fr4cut: bool
+                                fr4cut automatically cut sequence after end of J germline gene
+                                (extend 3' end of J gene to get actual FR4 end position if mismatches occur). If this is
+                                set to False, trimming of the 3' end will depend on trim3's option
+
+                        upstream: list / tuple
+                                iterable or indexable of length 2 that denotes the start and end position of upstream
+                                sub-sequences.
+
+                        sites: string
+                                path to restriction sites file. Required only if task was rsa or rsasimple
+
+                        actualqstart: int
+                                number of nucleotides to cut at the beginning of the sequence before V germline starts
+                                aligning. Leave this as -1 to let AbSeq automatically infer base on alignment.
+                                This argument has no effect when aligning 5' primer during primer specificity analysis
+
+                        trim5: int
+                                number of nucleotides to trim on the 5' end of V domain
+                                This argument has no effect when aligning 5' primer during primer specificity analysis
+
+                        trim3: int
+                                number of nucleotides to trim on the 3' end of V domain
+                                This argument has no effect when aligning 3' primer during primer specificity analysis
+
+                        primer5end: string
+                                path to 5' primer FASTA file. Only required if task was primer
+
+                        primer3end: string
+                                path to 3' primer FASTA file. Only required if task was primer
+
+                        primer5endoffset: int
+                                number of nucleotides to offset before staring to align the 5' primer sequences. Only
+                                used during primer specificity analysis
+
+                        f1: string
+                                path to read 1 file
+
+                        f2: string
+                                path to read 2 file. This is optional
+
+                        merger: string
+                                name of merger to use. This is ignored if f2 is not provided
+        """
         self.args = args
-        self.task = args.task
+        self.task = args.task.lower().strip()
         self.reportInterim = args.report_interim
-        self.outputDir = args.outdir
+        self.outputDir = os.path.abspath(args.outdir) + os.path.sep
         if not os.path.exists(self.outputDir):
             os.makedirs(self.outputDir)
         self.threads = args.threads
         self.primer = args.primer
-        self.db = args.database
+        self.db = os.path.abspath(os.path.expandvars(args.database))
         self.bitScore = args.bitscore
         self.clonelimit = args.clonelimit
         self.alignLen = args.alignlen
@@ -258,12 +369,19 @@ class IgRepertoire:
 
     def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
         """
-        Analyzes productivity
+        analyze sample productivity
+
         :param generateReport:
+                    not implemented yet
+
         :param all:
-        :param inplace: NOTE: if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
-        productive sequences after this method finishes. Set to false to retain all sequences
-        :return:
+                    if this analysis was conducted using --task all
+
+        :param inplace:
+                    if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
+                    productive sequences after this method finishes. Set to false to retain all sequences
+
+        :return: None
         """
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir, "productivity/")
@@ -339,9 +457,6 @@ class IgRepertoire:
             int(before)
             ), LEVEL.INFO)
 
-    '''
-    
-    '''
 
     def analyzeDiversity(self, all=False):
         logger = logging.getLogger(self.name)
@@ -672,7 +787,7 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
         outdir = os.path.join(self.args.outdir, 'annot/')
 
-        printto(logger, "Sequence {}length distribution is being calculated ... ".format('class' if klass else ''))
+        printto(logger, "Sequence {}length distribution is being calculated ... ".format('class ' if klass else ''))
 
         if not os.path.exists(outdir):
             os.makedirs(outdir)
