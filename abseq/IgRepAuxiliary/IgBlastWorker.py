@@ -17,7 +17,7 @@ from abseq.logger import printto, LEVEL
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
                     'identity', 'alignlen', 'bitscore',
                     'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps', 
-                    'jgene', 'jqstart', 'jqend', 'jstart', 'jmismatches', 'jgaps',  
+                    'jgene', 'jqstart', 'jqend', 'jstart', 'jend', 'jmismatches', 'jgaps',
                     'strand', 'stopcodon', 'v-jframe',
                     'fr1.start', 'fr1.end', 'fr1.mismatches', 'fr1.gaps',
                     'cdr1.start', 'cdr1.end', 'cdr1.mismatches', 'cdr1.gaps',
@@ -261,12 +261,14 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['jqstart'] = to_int(hit[8])
                     cloneRecord['jqend'] = to_int(hit[9])
                     cloneRecord['jstart'] = to_int(hit[10])
+                    # jend is a little special, we need it for FR4 end deduction
+                    cloneRecord['jend'] = to_int(hit[11])
                     cloneRecord['jmismatches'] = to_int(hit[5])
                     cloneRecord['jgaps'] = to_int(hit[7])           
                 cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain)) 
             except Exception as e:                
-#                 print(line, cloneRecord)
-#                 raise e
+                # print(line, cloneRecord)
+                # raise e
                 warning = True
                 continue            
     if (len(cloneAnnot) > 0):

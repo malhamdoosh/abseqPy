@@ -310,21 +310,15 @@ def _predictFR4end(jGeneLengthMap, qsRec, flags, record):
     """
     # FR4end = num of remaining unmapped J nt + queryJEnd
     #        = (JGeneLength - subjectJEnd) + queryJEnd
-    #        = (JGeneLength - (subjectJStart + (number of mapped J nt) - 1) ) + queryJEnd
-    #        = (JGeneLength - (subjectJStart + (queryJEnd - queryJStart + 1) - 1) ) + queryJEnd
-    #        = (JGeneLength - subjectJStart -(queryJEnd - queryJStart + 1) + 1) + queryJEnd
-    #        = (JGeneLength - subjectJStart - queryJEnd + queryJStart - 1 + 1) + queryJEnd
-    #        = JGeneLength - subjectJStart - queryJEnd + queryJStart + queryJEnd
-    #        = JGeneLength - subjectJStart + queryJStart
-    # why FR4end = num unmapped J nt + queryJend? - igblast rather cut J gene instead of allowing
+    # why FR4end = num unmapped J nt + queryJend? - igblast would rather cut the J gene 3' end instead of allowing
     # mismatches => no "extend 3' end" option. So we add remaining unmapped j nt to jqueryend to get
     # end of FR4 (end of whole J gene)
     if type(qsRec['jgene']) == str and qsRec['jgene'] != '' and qsRec['jgene'].strip() in jGeneLengthMap:
         # if jgene is not nan, we can assume that jstart(subject), jqend, jqstart are all defined
-        predictedFR4End = jGeneLengthMap[qsRec['jgene'].strip()] - qsRec['jstart'] + qsRec['jqstart']
+        predictedFR4End = qsRec['jqend'] + (jGeneLengthMap[qsRec['jgene'].strip()] - qsRec['jend'])
         if predictedFR4End < 0 or predictedFR4End < qsRec['jqend']:
+            # this usually doesn't happen, and should most definitely not happen
             predictedFR4End = qsRec['jqend']
-            # this usually doesn't happen
             flags['FR4PredictedError'] += [record.id]
         if predictedFR4End > len(record.seq):
             # this will happen if your sequences end before J gene ends
