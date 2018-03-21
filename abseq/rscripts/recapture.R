@@ -65,9 +65,9 @@ plotRecapture <- function(files, sampleNames, regions = c("CDR3", "V")) {
   p <- ggplot(df.union, aes(x = x, y = y))
   
   if (nsamples == 1) {
-     p <- p + geom_line(aes(linetype = region, color = sample), color = BLUEHEX) + guides(color = FALSE)
+     p <- p + geom_line(aes(linetype = region, color = sample), color = BLUEHEX, size = 0.75) + guides(color = FALSE)
   } else {
-     p <- p + geom_line(aes(linetype = region, color = sample))
+     p <- p + geom_line(aes(linetype = region, color = sample), size = 0.75)
   }
   
   p <- p + scale_x_continuous(breaks = xticks) + 
