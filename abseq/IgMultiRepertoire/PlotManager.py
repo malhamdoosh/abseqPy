@@ -56,13 +56,15 @@ class PlotManager:
     def rscriptsIsConf(arg):
         return PlotManager.rscriptsHasArgs(arg) and \
                len(str(arg).split(RSCRIPT_PAIRING_SEPARATOR)) == 1 and \
+               len(str(arg).split(RSCRIPT_SAMPLE_SEPARATOR)) == 1 and \
                not PlotManager.rscriptsOff(arg)
 
     @staticmethod
     def rscriptsIsPairedStrings(arg):
-        return PlotManager.rscriptsHasArgs(arg) and \
-               len(str(arg).split(RSCRIPT_PAIRING_SEPARATOR)) > 1 and \
-               not PlotManager.rscriptsOff(arg)
+        sarg = str(arg)
+        return PlotManager.rscriptsHasArgs(arg) \
+               and (len(sarg.split(RSCRIPT_SAMPLE_SEPARATOR)) > 1 or len(sarg.split(RSCRIPT_PAIRING_SEPARATOR)) > 1) \
+               and not PlotManager.rscriptsOff(arg)
 
     @staticmethod
     def pythonPlotOn():
