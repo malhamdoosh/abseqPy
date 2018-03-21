@@ -59,15 +59,13 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
                                                        seqType, noWorkers, outdir, stream=stream)
             sys.stdout.flush()
         else:
-            # split FASTA file into smaller files 
-            ext = '.' + fastaFile.split('/')[-1].split('.')[-1]
-            filesDir = igRep.outputDir + "tmp"
-            prefix = fastaFile.split('/')[-1].split('.')[0]
+            # split FASTA file into smaller files
+            prefix, ext = os.path.splitext(os.path.basename(fastaFile))
+            filesDir = os.path.join(igRep.outputDir,  "tmp")
             prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
-            splitFastaFile(fastaFile, totalFiles, seqsPerFile, 
-                           filesDir, prefix, ext, stream=stream)
+            splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir, prefix, ext, stream=stream)
 
-            # # Prepare the multiprocessing queues     
+            # Prepare the multiprocessing queues
             tasks = Queue()    
             outcomes = Queue()   
             exitQueue = Queue()              

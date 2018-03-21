@@ -194,7 +194,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
 
 def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
-    zipname = (installation_dir + '/' + addr.split('/')[-1].strip()).replace('//', '/')
+    zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
     _ = check_output(['curl', addr, '-o', zipname])
     unzipped_name = 'FastQC'
     zip_ref = zipfile.ZipFile(zipname, 'r')
@@ -230,7 +230,7 @@ def install_leehom(installation_dir='.'):
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
     addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-{}.tar.gz'.format(
         version)
-    tarname = addr.split('/')[-1].strip()
+    tarname = os.path.basename(addr)
     old_dir = os.path.abspath('.')
 
     target_dir = os.path.abspath(installation_dir)

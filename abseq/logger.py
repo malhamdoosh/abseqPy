@@ -12,9 +12,11 @@ class _Level:
     EXCEPT = 'exception'
 
     def __init__(self):
-        pass
+        self.streamLevel = logging.WARN
+        self.fileLevel = logging.DEBUG
 
 
+# LOG FILE HEADER - displayed on the top of each *.log file depending on analysis task
 _BANNER = {
     'all': "Running the complete QC pipeline",
     'fastq': "Sequencing QC Analysis",
@@ -44,7 +46,7 @@ def printto(stream, message, level=LEVEL.DEBUG):
         getattr(stream, level)(message)
 
 
-def setupLogger(name, task, logfile, stream=sys.stdout, flevel=logging.DEBUG, slevel=logging.WARN):
+def setupLogger(name, task, logfile, stream=sys.stdout, flevel=LEVEL.fileLevel, slevel=LEVEL.streamLevel):
     with open(logfile, 'a') as fp:
         fp.write(formattedTitle(task) + '\n')
 

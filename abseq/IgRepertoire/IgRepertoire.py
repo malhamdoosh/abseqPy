@@ -283,10 +283,10 @@ class IgRepertoire:
         if exists(cloneAnnotFile):
             if self.task == "annotate":
                 printto(logger, "\tClones annotation file found and no further work needed ... " +
-                        cloneAnnotFile.split('/')[-1])
+                        os.path.basename(cloneAnnotFile))
             else:
                 printto(logger, "\tClones annotation file found and being loaded ... " +
-                        cloneAnnotFile.split('/')[-1])
+                        os.path.basename(cloneAnnotFile))
                 self.cloneAnnot = read_hdf(cloneAnnotFile, "cloneAnnot")
         else:
             if not exists(self.readFile):
@@ -314,7 +314,7 @@ class IgRepertoire:
                 writeListToFile(filteredIDs, os.path.join(outDir, self.name + "_unmapped_clones.txt"))
             # export the CDR/FR annotation to a file
             printto(logger, "\tClones annotation file is being written to " +
-                    cloneAnnotFile.split("/")[-1])
+                    os.path.basename(cloneAnnotFile))
             #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
             self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
             paramFile = writeParams(self.args, outDir)
@@ -420,12 +420,12 @@ class IgRepertoire:
             # if generateReport:
             # export the CDR/FR annotation to a file                
             printto(logger, "The refined clone annotation file is being written to " +
-                    refinedCloneAnnotFile.split("/")[-1])
+                    os.path.basename(refinedCloneAnnotFile))
             self.cloneAnnot.to_hdf(refinedCloneAnnotFile, "refinedCloneAnnot", mode='w',
                                    complib='blosc')
             sys.stdout.flush()
             printto(logger, "The clone protein sequences are being written to " +
-                    cloneSeqFile.split("/")[-1])
+                    os.path.basename(cloneSeqFile))
             self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w',
                                   complib='blosc')
             sys.stdout.flush()
@@ -433,7 +433,7 @@ class IgRepertoire:
             printto(logger, "The analysis parameters have been written to " + paramFile)
         else:
             printto(logger, "The refined clone annotation files were found and being loaded ... " +
-                    refinedCloneAnnotFile.split('/')[-1])
+                    os.path.basename(refinedCloneAnnotFile))
             self.cloneAnnot = read_hdf(refinedCloneAnnotFile, "refinedCloneAnnot")
             printto(logger, "\tClone annotation was loaded successfully")
             self.cloneSeqs = read_hdf(cloneSeqFile, "cloneSequences")
@@ -508,12 +508,12 @@ class IgRepertoire:
             print("WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.")
 
         siteHitsFile = os.path.join(outDir, self.name + "_{}_rsasimple.csv"
-                                    .format(self.sitesFile.split('/')[-1].split('.')[0]))
+                                    .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
         overlap2File = siteHitsFile.replace('.csv', '_overlap_order2.csv')
 
         if exists(siteHitsFile):
             printto(logger, "Restriction sites were already scanned at ... " +
-                    siteHitsFile.split('/')[-1], LEVEL.WARN)
+                    os.path.basename(siteHitsFile), LEVEL.WARN)
             rsaResults = read_csv(siteHitsFile, header=0)
             if exists(overlap2File):
                 overlapResults = {}
@@ -530,14 +530,14 @@ class IgRepertoire:
             rsaResults.to_csv(siteHitsFile,
                               header=True,
                               index=False)
-            print("RSA results were written to " + siteHitsFile.split("/")[-1])
+            print("RSA results were written to " + os.path.basename(siteHitsFile))
             if overlapResults.get("order2", None) is not None:
                 overlapResults["order2"].to_csv(overlap2File,
                                                 header=True, index=True)
         # # print out the results        
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],
-                               self.name, siteHitsFile)
+                               self.name, siteHitsFile, stream=logger)
         paramFile = writeParams(self.args, outDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
@@ -551,10 +551,11 @@ class IgRepertoire:
             printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
                     LEVEL.WARN)
 
-        siteHitsFile = os.path.join(outDir, self.name + "_{}.csv".format(self.sitesFile.split('/')[-1].split('.')[0]))
+        siteHitsFile = os.path.join(outDir, self.name + "_{}.csv"
+                                    .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
 
         if exists(siteHitsFile):
-            print("Restriction sites were already searched at ... " + siteHitsFile.split('/')[-1])
+            print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
             return
 
         if not all or self.cloneAnnot is None or self.cloneSeqs is None:
@@ -655,7 +656,7 @@ class IgRepertoire:
                 .format(seqsCutByAny, seqsCutByAny / len(queryIds)))
         f.close()
         # Ven Diagram of overlapping sequences
-        plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'))
+        plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'), stream=logger)
         print("Restriction enzyme results were written to " + siteHitsFile)
 
     def analyzeSecretionSignal(self, all=False):
@@ -1013,7 +1014,7 @@ class IgRepertoire:
             SeqIO.write(records, open(self.readFile1, 'a'), 'fasta')
             del records
         else:
-            print("File found ... " + self.readFile1.split('/')[-1])
+            print("File found ... " + os.path.basename(self.readFile1))
         self.format = 'fasta'
         self.readFile2 = None
         self.seqType = 'protein'

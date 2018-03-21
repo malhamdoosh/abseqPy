@@ -219,7 +219,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
             ].tolist()
             plotVenn({"5'-end": set(allInvalid5Clones), "3'-end": set(invalid3Clones)},
                      os.path.join(outDir, name + '_all_invalid_primers.png'),
-                     "Intersection of indelled 5' and 3' sequences (All)")
+                     "Intersection of indelled 5' and 3' sequences (All)", stream=stream)
             del invalid3Clones, allInvalid5Clones
 
             outFrameInvalid3Clones = outOfFrameClones.index[
@@ -227,7 +227,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
             ].tolist()
             plotVenn({"5'-end": set(outFrameInvalid5Clones), "3'-end": set(outFrameInvalid3Clones)},
                      os.path.join(outDir, name + '_outframe_invalid_primers.png'),
-                     "Intersection of indelled 5' and 3' sequences (Out-of-frame)")
+                     "Intersection of indelled 5' and 3' sequences (Out-of-frame)", stream=stream)
             del outFrameInvalid3Clones, outFrameInvalid5Clones
 
             productiveInvalid3Clones = productiveClones.index[
@@ -235,7 +235,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
             ].tolist()
             plotVenn({"5'-end": set(productiveInvalid5Clones), "3'-end": set(productiveInvalid3Clones)},
                      os.path.join(outDir, name + "_productive_invalid_primers.png"),
-                     "Intersection of indelled 5' and 3' sequences (productive)")
+                     "Intersection of indelled 5' and 3' sequences (productive)", stream=stream)
     # similar with abundance analysis etc ..
     cloneAnnot.replace(nanString, np.nan, inplace=True)
     gc.collect()

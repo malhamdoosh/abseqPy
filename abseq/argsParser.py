@@ -65,11 +65,11 @@ def parseArgs():
 
         # appending analysis name to output directory filenames
         if args.name is not None:
-            args.outdir += ("/" + args.name)
+            args.outdir = os.path.join(args.outdir, args.name)
         else:
-            retval = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
-            args.outdir += retval[0]
-            args.name = retval[1]
+            inferredDir, inferredName = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
+            args.outdir = os.path.join(args.outdir, inferredDir)
+            args.name = inferredName
 
         # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
         if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):

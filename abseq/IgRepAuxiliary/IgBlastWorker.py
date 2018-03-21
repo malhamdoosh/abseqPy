@@ -5,7 +5,7 @@
     Changes log: check git commits. 
 ''' 
 
-import sys
+import os
 import numpy as np
 
 from multiprocessing import Process
@@ -30,9 +30,9 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
 
 
 def getAnnotationFields(chain):
-    if (chain == 'hv'):
+    if chain == 'hv':
         return ANNOTATION_FIELDS
-    elif (chain in ['kv', 'lv']):
+    elif chain in ['kv', 'lv']:
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
         # should never happen (argparse takes care of this for us)
@@ -63,7 +63,7 @@ def to_int(x):
 
 def extractCDRInfo(blastOutput, chain, stream=None):
     # Extract the top hits  
-    printto(stream, '\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
+    printto(stream, '\tExtracting top hit tables ... ' + os.path.basename(blastOutput))
     # process igblast output and extract top hit 
     cloneAnnot = []
     filteredIDs = []
@@ -329,7 +329,7 @@ class IgBlastWorker(Process):
 #                 print("process has completed analysis... " + self.name) 
                 self.resultsQueue.put(result)            
             except Exception as e:
-                printto(self.stream, "An error occurred while processing " + nextTask.split('/')[-1], LEVEL.EXCEPT)
+                printto(self.stream, "An error occurred while processing " + os.path.basename(nextTask), LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
 #                 raise
 #                 sys.exit()
