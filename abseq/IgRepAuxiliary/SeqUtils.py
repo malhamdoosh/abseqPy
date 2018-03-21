@@ -99,7 +99,7 @@ def generateMotif(sequences, name, alphabet, filename,
     else:                
         # if alignment is not required, add "-" to short sequences
         L = map(len, seqs)
-        if (min(L) != max(L)):
+        if min(L) != max(L):
             # print('\t\t- is being added to short sequences ...[%d, %d[' % (min(L), max(L)))
             if '-' not in alphabet.letters: alphabet.letters += '-'
             alignedSeq = []
@@ -129,17 +129,18 @@ def createAlphabet(align = False, transSeq=False,
         alphabet.letters += '-'  
     return alphabet
 
+
 def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
                         extendAlphabet=False, clusterMotifs=False, protein=False):
     from TAMO.MotifTools import Motif
     ighvMotifs = []
-    if (clusterMotifs and 'gene' in outputPrefix):
+    if clusterMotifs and 'gene' in outputPrefix:
         findMotifClusters(ighvMotifs, outputPrefix)                
-    print("\t\tPWMs, consensus and logos are being generated for %d motifs ... " % (len(seqGroups)))      
+    print('\t\tPWMs, consensus and logos are being generated for {:d} motifs ... '.format(len(seqGroups)))
     pwmFile = open(outputPrefix + '_pwm.txt', 'w')
     consensusFile = open(outputPrefix + '_consensus.txt', 'w')
-    logosFolder = outputPrefix + '_logos/'
-    os.system('mkdir ' + logosFolder)
+    logosFolder = outputPrefix + '_logos'
+    os.makedirs(logosFolder)
     # create the sequence alphabet: DNA or Protein
     alphabet = createAlphabet(align, transSeq, extendAlphabet, protein)
     groups = seqGroups.keys()
@@ -154,25 +155,23 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
         pwm = m.counts.normalize(pseudocounts=None)  # {'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}
         consensusMax = str(m.consensus)      
                
-        pwmFile.write('#%s %d sequences\n' % 
-                      (group, len(motifSeqs)))
+        pwmFile.write('#{} {:d} sequences\n'.format(group, len(motifSeqs)))
         pwmFile.write(str(pwm))  
-        consensusFile.write('>%s max_count\n' % (group))
+        consensusFile.write('>{} max_count\n'.format(group))
         consensusFile.write(consensusMax + '\n')      
     #             print(str(m.anticonsensus)) # smallest values in the columns
-        if (not transSeq and not align and not protein):
+        if not transSeq and not align and not protein:
             consensusIupac = str(m.degenerate_consensus)
     #             print(consensusIupac) # IUPAC ambiguous nucleotides            
-            consensusFile.write('>%s degenerate\n' % (group))
+            consensusFile.write('>{} degenerate\n'.format(group))
             consensusFile.write(consensusIupac + '\n')
         
         pwmFile.flush()
         consensusFile.flush()
         gc.collect()
-        if (clusterMotifs and len(motifSeqs) > 10):
-            motif = Motif(map(lambda x: str(x), motifSeqs), 
-                     backgroundD={'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6},
-                     id = group)
+        if clusterMotifs and len(motifSeqs) > 10:
+            motif = Motif(map(lambda x: str(x), motifSeqs),
+                          backgroundD={'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}, id=group)
             motif.addpseudocounts(0.1)
             ighvMotifs.append(motif)
             
@@ -181,7 +180,7 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     gc.collect()
     print("\tPosition weight matrices are written to " + outputPrefix + '_pwm.txt')
     print("\tConsensus sequences are written to " + outputPrefix + '_consensus.txt')
-    if (clusterMotifs):
+    if clusterMotifs:
         findMotifClusters(ighvMotifs, outputPrefix)
         
         
@@ -219,7 +218,7 @@ def findMotifClusters(ighvMotifs, outputPrefix):
                 print(create_tree_phylip(tree))
                 sys.stdout.flush()
             lists = groupedMotifs.values()
-            tree = UPGMA([m for list in lists for m in list], DFUNC)
+            tree = UPGMA([m for lst in lists for m in lst], DFUNC)
 #                 print_tree(tree)
             print_tree_id(tree)
             print(create_tree_phylip(tree))
@@ -231,12 +230,12 @@ def findMotifClusters(ighvMotifs, outputPrefix):
 #             raise
 
 
-def generateMotifLogo(m, filename, outdir, dna=True):
+def generateMotifLogo(m, filename, outdir='', dna=True):
     instances = m.instances
     records = []
     for i in range(len(instances)):
-        records.append(SeqRecord(instances[i], id=`i`))
-    tmpFile = (((outdir+'/') if outdir else "") + 'temp_seq_logos.fasta').replace('//', '/')
+        records.append(SeqRecord(instances[i], id=str(i)))
+    tmpFile = os.path.join(outdir, 'temp_seq_logos.fasta')
     SeqIO.write(records, tmpFile, 'fasta')
 
     command = "%s -f %s  -o %s -A %s -F png -n 200 -D fasta -s medium "

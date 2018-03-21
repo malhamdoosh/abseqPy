@@ -5,9 +5,10 @@
     Changes log: check git commits. 
 '''
 
-import numpy as np
+import os
 import gc
 import sys
+import numpy as np
 
 from math import ceil
 from multiprocessing import Queue
@@ -181,39 +182,43 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
 
     if end5:
         printto(stream, "5-end analysis of all clones ... ")
-        writePrimerStats('5', name, cloneAnnot, outDir + name + '_all_5end_', stream=stream)
+        writePrimerStats('5', name, cloneAnnot, os.path.join(outDir, name + '_all_5end_'), stream=stream)
         allInvalid5Clones = cloneAnnot.index[
             ((cloneAnnot[PRIMER5] != NA) & (cloneAnnot[INDEL5] != 0))
         ].tolist()
 
         printto(stream, '5-end analysis of out-of-frame clones ... ')
-        writePrimerStats('5', name, outOfFrameClones, outDir + name + '_outframe_5end_', 'Out-of-frame', stream=stream)
+        writePrimerStats('5', name, outOfFrameClones, os.path.join(outDir, name + '_outframe_5end_'), 'Out-of-frame',
+                         stream=stream)
         outFrameInvalid5Clones = outOfFrameClones.index[
             ((outOfFrameClones[PRIMER5] != NA) & (outOfFrameClones[INDEL5] != 0))
         ].tolist()
 
         printto(stream, "5-end analysis of productive clones ... ")
-        writePrimerStats('5', name, productiveClones, outDir + name + '_productive_5end_', 'Productive', stream=stream)
+        writePrimerStats('5', name, productiveClones, os.path.join(outDir, name + '_productive_5end_'), 'Productive',
+                         stream=stream)
         productiveInvalid5Clones = productiveClones.index[
             ((productiveClones[PRIMER5] != NA) & (productiveClones[INDEL5] != 0))
         ].tolist()
 
     if end3:
         printto(stream, "3-end analysis of all clones ... ")
-        writePrimerStats('3', name, cloneAnnot, outDir + name + '_all_3end_', stream=stream)
+        writePrimerStats('3', name, cloneAnnot, os.path.join(outDir, name + '_all_3end_'), stream=stream)
 
         printto(stream, "3-end analysis of out-of-frame clones ... ")
-        writePrimerStats('3', name, outOfFrameClones, outDir + name + '_outframe_3end_', 'Out-of-frame', stream=stream)
+        writePrimerStats('3', name, outOfFrameClones, os.path.join(outDir, name + '_outframe_3end_'), 'Out-of-frame',
+                         stream=stream)
 
         printto(stream, '3-end analysis of productive clones ... ')
-        writePrimerStats('3', name, productiveClones, outDir + name + "_productive_3end_", 'Productive', stream=stream)
+        writePrimerStats('3', name, productiveClones, os.path.join(outDir, name + "_productive_3end_"), 'Productive',
+                         stream=stream)
 
         if end5:
             invalid3Clones = cloneAnnot.index[
                 ((cloneAnnot[PRIMER3] != NA) & (cloneAnnot[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(allInvalid5Clones), "3'-end": set(invalid3Clones)},
-                     outDir + name + '_all_invalid_primers.png',
+                     os.path.join(outDir, name + '_all_invalid_primers.png'),
                      "Intersection of indelled 5' and 3' sequences (All)")
             del invalid3Clones, allInvalid5Clones
 
@@ -221,7 +226,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
                 ((outOfFrameClones[PRIMER3] != NA) & (outOfFrameClones[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(outFrameInvalid5Clones), "3'-end": set(outFrameInvalid3Clones)},
-                     outDir + name + '_outframe_invalid_primers.png',
+                     os.path.join(outDir, name + '_outframe_invalid_primers.png'),
                      "Intersection of indelled 5' and 3' sequences (Out-of-frame)")
             del outFrameInvalid3Clones, outFrameInvalid5Clones
 
@@ -229,7 +234,7 @@ def generatePrimerPlots(cloneAnnot, outDir, name, end5, end3, stream=None):
                 ((productiveClones[PRIMER3] != NA) & (productiveClones[INDEL3] != 0))
             ].tolist()
             plotVenn({"5'-end": set(productiveInvalid5Clones), "3'-end": set(productiveInvalid3Clones)},
-                     outDir + name + "_productive_invalid_primers.png",
+                     os.path.join(outDir, name + "_productive_invalid_primers.png"),
                      "Intersection of indelled 5' and 3' sequences (productive)")
     # similar with abundance analysis etc ..
     cloneAnnot.replace(nanString, np.nan, inplace=True)

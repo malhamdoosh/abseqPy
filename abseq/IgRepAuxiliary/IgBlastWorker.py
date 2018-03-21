@@ -318,7 +318,7 @@ class IgBlastWorker(Process):
             nextTask = self.tasksQueue.get()
 #             print("process has started a run... " + self.name)
             # poison pill check            
-            if (nextTask is None):
+            if nextTask is None:
                 printto(self.stream, "process has stopped ... " + self.name)
                 self.exitQueue.put("exit")
 #                 self.terminate()

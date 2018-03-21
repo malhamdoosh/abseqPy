@@ -63,7 +63,7 @@ def inferSampleName(fname, merger, fastqc):
         ext = '_' + f1name.split("_")[-1]
     else:
         ext = f1name[f1name.find("."):]
-    outdir = "/" + f1name.replace(ext, "")
+    outdir = os.path.sep + f1name.replace(ext, "")
     sampleName = f1name.replace(ext, "")
     # sampleName = f1name.split("_")[0] + "_"
     # sampleName += f1name.split("_")[-1].split(".")[0]
@@ -111,18 +111,18 @@ def fastq2fasta(fastqFile, outputDir, stream=None):
     """
     # FASTQ to FASTA
     # awk 'NR % 4 == 1 {print ">" $0 } NR % 4 == 2 {print $0}' my.fastq > my.fasta
-    filename = fastqFile.split('/')[-1]
-    seqOut = outputDir + "seq/"
+    filename = os.path.basename(fastqFile)
+    seqOut = os.path.join(outputDir, "seq")
     isGZipped = filename.endswith(".gz")
-    if (not os.path.isdir(seqOut)):
-        os.system("mkdir " + seqOut)
+    if not os.path.isdir(seqOut):
+        os.makedirs(seqOut)
 
     # rename all fastq files to fasta, including gzipped files
     if isGZipped:
-        filename = seqOut + filename.replace(filename.split('.')[-2] + ".gz", 'fasta')
+        filename = os.path.join(seqOut, filename.replace(filename.split('.')[-2] + ".gz", 'fasta'))
         fastqFile = gunzip(fastqFile)
     else:
-        filename = seqOut + filename.replace(filename.split('.')[-1], 'fasta')
+        filename = os.path.join(seqOut, filename.replace(filename.split('.')[-1], 'fasta'))
 
     if exists(filename):
         printto(stream, "\tThe FASTA file was found!", LEVEL.WARN)
@@ -157,11 +157,11 @@ def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA",
 
     if outputDir:
         head, tail = os.path.split(blastInput)
-        blastOutput = outputDir + tail.replace('.' + tail.split('.')[-1], '.out')
+        blastOutput = os.path.join(outputDir, tail.replace('.' + tail.split('.')[-1], '.out'))
     else:
         blastOutput = blastInput.replace('.' + blastInput.split('.')[-1], '.out')
 
-    if (exists(blastOutput)):
+    if exists(blastOutput):
         printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
         return blastOutput
 
@@ -201,7 +201,7 @@ IMGT classification system is used to delineate the V domain
 
 def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir="", stream=None):
     # Run igblast on a fasta file        
-    blastOutput = outputDir + blastInput.replace('.' + blastInput.split('.')[-1], '.out')
+    blastOutput = os.path.join(outputDir, blastInput.replace('.' + blastInput.split('.')[-1], '.out'))
 
     if (exists(blastOutput)):
         printto(stream, "\tBlast results were found ... " + blastOutput.split("/")[-1])
@@ -400,15 +400,17 @@ def extractCDRsandFRsDNA(dna, qsRec):
 
 
 def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", stream=None):
-    seqOut = outDir + "seq/"
-    if (not os.path.isdir(seqOut)):
-        os.system("mkdir " + seqOut)
+    seqOut = os.path.join(outDir, "seq")
+
+    if not os.path.isdir(seqOut):
+        os.makedirs(seqOut)
+
     readFile = readFile1.split("/")[-1]
-    outputPrefix = seqOut + readFile.replace("_" + readFile.split('_')[-1], '')
-    mergedFastq = ""
-    if (merger == 'pear'):  ### MERGE using PEAR
+    outputPrefix = os.path.join(seqOut, readFile.replace("_" + readFile.split('_')[-1], ''))
+
+    if merger == 'pear':
         mergedFastq = outputPrefix + '.assembled.fastq'
-        if (not exists(mergedFastq)):
+        if not exists(mergedFastq):
             printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = "pear -f %s -r %s -o %s -j %d -v 15 -n 350"
@@ -416,9 +418,9 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
         else:
             printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
-    elif (merger == 'leehom'):
+    elif merger == 'leehom':
         mergedFastq = outputPrefix + '.fq'
-        if (not exists(mergedFastq)):
+        if not exists(mergedFastq):
             printto(stream, "%s and %s are being merged ..." % (readFile1.split('/')[-1]
                                                       , readFile2.split('/')[-1]))
             command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
@@ -428,7 +430,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
             # os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
             printto(stream, "\tMerged reads file " + mergedFastq.split("/")[-1] + ' was found!', LEVEL.WARN)
-    elif (merger == 'flash'):
+    elif merger == 'flash':
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = outputPrefix.split("/")[-1]
         if (not exists(mergedFastq)):
@@ -526,14 +528,14 @@ def compressCountsFamilyLevel(countsDict):
 def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
     L = map(len, signals)
     printto(stream,
-            "\t\t%d sequences are being aligned using CLUSTAL-OMEGA (L in [%d, %d])... " % (len(L), min(L), max(L)))
-    tempSeq = (outDir + "/csl_temp_seq.fasta").replace("//", "/")
+            "\t\t{} sequences are being aligned using CLUSTAL-OMEGA (L in [{}, {}])... ".format(len(L), min(L), max(L)))
+    tempSeq = os.path.join(outDir, "csl_temp_seq.fasta")
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
         if ignoreNones and signals[i] == "None":
             continue
-        seqs.append(SeqRecord(Seq(signals[i]), id='seq' + `i`))
+        seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
     clustalw = ClustalwCommandline(CLUSTALOMEGA, infile=tempSeq,
                                    outfile=tempAlign)
@@ -543,7 +545,8 @@ def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
     alignedSeq = []
     for rec in alignment:
         alignedSeq.append(str(rec.seq))
-    os.system("rm %s %s " % (tempSeq, tempAlign))
+    os.remove(tempSeq)
+    os.remove(tempAlign)
     return alignedSeq
 
 
@@ -735,11 +738,11 @@ def extend5align(localAlignment):
 
 def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
                    prefix="", ext=".fasta", stream=None):
-    if (not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ext) and
-            not exists(filesDir + "/" + prefix + "part" + `int(totalFiles)` + ".out")):
+    if (not exists(filesDir + "/" + prefix + "part" + str(int(totalFiles)) + ext) and
+            not exists(filesDir + "/" + prefix + "part" + str(int(totalFiles)) + ".out")):
         # Split the FASTA file into multiple chunks
         printto(stream, "\tThe clones are distributed into multiple workers .. ")
-        if (not os.path.isdir(filesDir)):
+        if not os.path.isdir(filesDir):
             os.system("mkdir " + filesDir)
         i = 1
         records = []
@@ -757,7 +760,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             # print(i, totalFiles, seqsPerFile)
             ids = queryIds[i * seqsPerFile: (i + 1) * seqsPerFile]
             records = map(lambda x: recordsAll[x], ids)
-            out = filesDir + "/" + prefix + "part" + `i + 1` + ext
+            out = filesDir + "/" + prefix + "part" + str(i + 1) + ext
             SeqIO.write(records, out, 'fasta')
 
 
@@ -768,7 +771,7 @@ def writeParams(args, outDir):
     :param outDir: output directory where analysis.params reside
     :return: None
     """
-    filename = outDir + "analysis.params"
+    filename = os.path.join(outDir, "analysis.params")
     with open(filename, 'w') as out:
         out.write("AbSeq VERSION: " + VERSION + "\n")
         out.write("Executed AbSeq with the following parameters:\n")

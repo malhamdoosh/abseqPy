@@ -7,6 +7,7 @@
 
 import gc
 import sys
+import os
 
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
@@ -172,9 +173,9 @@ def collectRefineResults(resultsQueue, totalTasks, noSeqs, refineFlagNames, stre
         total += len(qsRecsOrdered)
 #         if (len(qsRecsOrdered) < 100):
 #             print(len(qsRecsOrdered))
-        if (total % 50000 == 0):
-            printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
-    printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
+        if total % 50000 == 0:
+            printto(stream, '\t{}/{} records have been collected ... '.format(total, noSeqs))
+    printto(stream, '\t{}/{} records have been collected ... '.format(total, noSeqs))
     return cloneAnnot, transSeqs, flags        
 
 
@@ -190,8 +191,8 @@ def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=Non
 
 
 def writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, outDir, sampleName):
-    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out, \
-         open(outDir + sampleName + "_refinement_flagged.csv", "w") as outCSV:
+    with open(os.path.join(outDir, sampleName + "_refinement_flagged.txt"), 'w') as out, \
+         open(os.path.join(outDir, sampleName + "_refinement_flagged.csv"), "w") as outCSV:
         outCSV.write('refinementFlag,count\n')
         for f in refineFlagNames:
             if len(flags[f]) > 0:
@@ -215,8 +216,8 @@ class ProcCounter(object):
         with self.lock:
             self.val.value += val
             if self.val.value % 50000 == 0 or self.noSeqs == self.val.value:
-                printto(self.stream, '\t%d/%d %s have been processed ... ' % (self.val.value, self.noSeqs,
-                                                                              self.desc))
+                printto(self.stream, '\t{}/{} {} have been processed ... '
+                        .format(self.val.value, self.noSeqs, self.desc))
 
     def value(self):
         with self.lock:
