@@ -171,14 +171,14 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     continue
                 line = blast.readline()
                 for i in range(1, 4):
-                    if line.lower().startswith('fr' + `i`):
+                    if line.lower().startswith('fr' + str(i)):
                         line = line.split()
                         cloneRecord['fr%d.start' % i] = to_int(line[1])
                         cloneRecord['fr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
                         cloneRecord['fr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])
                         cloneRecord['fr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
-                    if line.lower().startswith('cdr' + `i`):
+                    if line.lower().startswith('cdr' + str(i)):
                         line = line.replace('(germline)', '').split()
                         cloneRecord['cdr%d%s.start' % (i, 'g' if i == 3 else '')] = to_int(line[1])
                         cloneRecord['cdr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])

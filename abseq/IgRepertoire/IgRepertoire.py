@@ -268,7 +268,7 @@ class IgRepertoire:
                            maxbins=40, histtype='bar', removeOutliers=True,
                            normed=True, stream=logger)
 
-    def annotateClones(self, outDirFilter=None, all=False):
+    def annotateClones(self, outDirFilter=None):
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir, "annot")
 
@@ -322,38 +322,42 @@ class IgRepertoire:
 
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
-        if outDirFilter or all:
-            if outDirFilter is None:
-                outDirFilter = outDir
-            # Filter clones based on bitscore, alignLen, qStart, and sStart
-            printto(logger, "Clones are being filtered based on the following criteria: ", LEVEL.INFO)
-            printto(logger, "\tBit score: " + repr(self.bitScore), LEVEL.INFO)
-            printto(logger, "\tAlignment length: " + repr(self.alignLen), LEVEL.INFO)
-            printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
-            printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
-            selectedRows = (
-                    (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
-                    (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
-                    (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &  # check alignment length
-                    (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
-                    (self.cloneAnnot['vstart'] >= self.sStart[0]) &  # check subject (V gene) start position
-                    (self.cloneAnnot['vstart'] <= self.sStart[1]) &
-                    (self.cloneAnnot['vqstart'] >= self.qStart[0]) &  # check query (V gene) start position
-                    (self.cloneAnnot['vqstart'] <= self.qStart[1])
-            )
-            filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
-            if len(filteredIDs) > 0:
-                filteredIDs = filteredIDs[['vgene', 'vstart', 'vqstart', 'bitscore', 'alignlen']]
-                filteredIDs.to_csv(os.path.join(outDirFilter, self.name + "_filtered_out_clones.txt"),
-                                   sep="\t", header=True, index=True)
-            retained = int(self.cloneAnnot.shape[0]) - len(filteredIDs)
-            printto(logger, 'Percentage of retained clones is {:.2%} ({:,}/{:,})'.format(
-                    retained / self.cloneAnnot.shape[0],
-                    retained,
-                    int(self.cloneAnnot.shape[0])), LEVEL.INFO)
-            self.cloneAnnot = self.cloneAnnot[selectedRows]
 
-    def analyzeAbundance(self, all=False):
+        if outDirFilter is None:
+            outDirFilter = outDir
+        # Filter clones based on bitscore, alignLen, qStart, and sStart
+        printto(logger, "Clones are being filtered based on the following criteria: ", LEVEL.INFO)
+        printto(logger, "\tBit score: " + repr(self.bitScore), LEVEL.INFO)
+        printto(logger, "\tAlignment length: " + repr(self.alignLen), LEVEL.INFO)
+        printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
+        printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
+        selectedRows = (
+                (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &     # check bit-Score
+                (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
+                (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &     # check alignment length
+                (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
+                (self.cloneAnnot['vstart'] >= self.sStart[0]) &         # check subject (V gene) start position
+                (self.cloneAnnot['vstart'] <= self.sStart[1]) &
+                (self.cloneAnnot['vqstart'] >= self.qStart[0]) &        # check query (V gene) start position
+                (self.cloneAnnot['vqstart'] <= self.qStart[1])
+        )
+        filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
+
+        if len(filteredIDs) > 0:
+            filteredIDs = filteredIDs[['vgene', 'vstart', 'vqstart', 'bitscore', 'alignlen']]
+            filteredIDs.to_csv(os.path.join(outDirFilter, self.name + "_filtered_out_clones.txt"),
+                               sep="\t", header=True, index=True)
+
+        retained = int(self.cloneAnnot.shape[0]) - len(filteredIDs)
+
+        printto(logger, 'Percentage of retained clones is {:.2%} ({:,}/{:,})'.format(
+                retained / self.cloneAnnot.shape[0],
+                retained,
+                int(self.cloneAnnot.shape[0])), LEVEL.INFO)
+
+        self.cloneAnnot = self.cloneAnnot[selectedRows]
+
+    def analyzeAbundance(self):
         # Estimate the IGV family abundance for each library
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir, "abundance")
@@ -363,7 +367,7 @@ class IgRepertoire:
         elif self.warnOldDir:
             printto(logger, "WARNING: remove the 'abundance' directory if you changed the filtering criteria.",
                     LEVEL.WARN)
-        if not all or self.cloneAnnot is None:
+        if self.cloneAnnot is None:
             self.annotateClones(outDir)
 
         writeAbundanceToFiles(self.cloneAnnot, self.name, outDir, self.chain, stream=logger)
@@ -371,15 +375,9 @@ class IgRepertoire:
         paramFile = writeParams(self.args, outDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
-    def analyzeProductivity(self, generateReport=True, all=False, inplace=True):
+    def analyzeProductivity(self, inplace=True):
         """
         analyze sample productivity
-
-        :param generateReport:
-                    not implemented yet
-
-        :param all:
-                    if this analysis was conducted using --task all
 
         :param inplace:
                     if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
@@ -401,7 +399,7 @@ class IgRepertoire:
         cloneSeqFile = os.path.join(outDir, self.name + "_clones_seq.h5")
 
         if not exists(refinedCloneAnnotFile):
-            if not all or self.cloneAnnot is None:
+            if self.cloneAnnot is None:
                 self.annotateClones(outDir)
             #             if (self.trimmed):
             #                 self.trim3End = 0
@@ -438,16 +436,18 @@ class IgRepertoire:
             printto(logger, "\tClone annotation was loaded successfully")
             self.cloneSeqs = read_hdf(cloneSeqFile, "cloneSequences")
             printto(logger, "\tClone sequences were loaded successfully")
-        if generateReport:
-            # display statistics
-            printto(logger, "Productivity report is being generated ... ")
-            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir, stream=logger)
-            # TODO: analyze productive clones only
+
+        # display statistics
+        printto(logger, "Productivity report is being generated ... ")
+        generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outDir, stream=logger)
+
+        # TODO: analyze productive clones only
         #             self.analyzeIgProtein()
         #             sys.stdout.flush()
         # Diversity analysis can be applied on productive clones only     
         before = int(self.cloneAnnot.shape[0])
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
+
         if inplace:
             cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
             self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
@@ -459,12 +459,12 @@ class IgRepertoire:
             int(before)
             ), LEVEL.INFO)
 
-    def analyzeDiversity(self, all=False):
+    def analyzeDiversity(self):
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir,  "diversity")
 
-        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(self.reportInterim, all)
+        if self.cloneAnnot is None or self.cloneSeqs is None:
+            self.analyzeProductivity()
 
         if len(self.cloneAnnot) == 0:
             printto(logger, "WARNING: There are no productive sequences found (post-refinement) in {},"
@@ -541,7 +541,7 @@ class IgRepertoire:
         paramFile = writeParams(self.args, outDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
-    def analyzeRestrictionSites(self, all=False):
+    def analyzeRestrictionSites(self):
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir, "restriction_sites")
 
@@ -558,8 +558,8 @@ class IgRepertoire:
             print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
             return
 
-        if not all or self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(self.reportInterim, all)
+        if self.cloneAnnot is None or self.cloneSeqs is None:
+            self.analyzeProductivity()
 
         rsites = loadRestrictionSites(self.sitesFile)
         print("Restriction sites are being searched ... ")
@@ -659,7 +659,7 @@ class IgRepertoire:
         plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'), stream=logger)
         print("Restriction enzyme results were written to " + siteHitsFile)
 
-    def analyzeSecretionSignal(self, all=False):
+    def analyzeSecretionSignal(self):
         logger = logging.getLogger(self.name)
 
         outputDir = os.path.join(self.outputDir, 'upstream')
@@ -671,8 +671,8 @@ class IgRepertoire:
                     LEVEL.WARN)
 
         # need self.cloneAnnot dataframe for further analysis
-        if self.cloneAnnot is None or not all:
-            self.analyzeAbundance(all=all)
+        if self.cloneAnnot is None:
+            self.analyzeAbundance()
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
@@ -698,7 +698,7 @@ class IgRepertoire:
             # analyze trimmed secretion signals
             self.analyzeSequences(upstreamFile, self.name, [1, expectLength - 1], True)
 
-    def analyze5UTR(self, all=False):
+    def analyze5UTR(self):
         logger = logging.getLogger(self.name)
 
         outputDir = os.path.join(self.outputDir, 'upstream')
@@ -710,8 +710,8 @@ class IgRepertoire:
                     LEVEL.WARN)
 
         # requires self.cloneAnnot dataframe for further analysis
-        if self.cloneAnnot is None or not all:
-            self.analyzeAbundance(all=all)
+        if self.cloneAnnot is None:
+            self.analyzeAbundance()
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
@@ -738,7 +738,7 @@ class IgRepertoire:
                                   type='5utr',
                                   clusterMotifs=True)
 
-    def analyzePrimerSpecificity(self, all=False):
+    def analyzePrimerSpecificity(self):
         logger = logging.getLogger(self.name)
         outDir = os.path.join(self.outputDir, 'primer_specificity')
 
@@ -758,14 +758,14 @@ class IgRepertoire:
         if not exists(primerAnnotFile):
             # Load self.cloneAnnot for further analysis.
             # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
-            if not all or self.cloneAnnot is None:
+            if self.cloneAnnot is None:
                 if exists(os.path.join(self.outputDir, 'productivity',
                                        self.name + '_refined_clones_annot.h5')):
                     printto(logger, "Using refined clone annotation for primer specificity analysis")
-                    self.analyzeProductivity(all=all, inplace=False)
+                    self.analyzeProductivity(inplace=False)
                 else:
                     printto(logger, "Using unrefined clone annotation for primer specificity analysis")
-                    self.analyzeAbundance(all)
+                    self.analyzeAbundance()
             # add additional primer related data to the dataframe generated by either abundance/productivity analysis
             # before we begin primer analysis
             self.cloneAnnot = addPrimerData(self.cloneAnnot, self.readFile, self.format, self.fr4cut,
@@ -777,9 +777,9 @@ class IgRepertoire:
 
         else:
             printto(logger, "The{}primer clone annotation files were found and being loaded ... "
-                  .format(' refined ' if self.fr4cut else ' '), LEVEL.WARN)
+                    .format(' refined ' if self.fr4cut else ' '), LEVEL.WARN)
             self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
-            printto(logger, "\tPrimer clone annotation was loaded successfully")
+            printto(logger, "\tPrimer clone annotation loaded successfully")
 
         # TODO: Fri Feb 23 17:13:09 AEDT 2018
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!

@@ -198,7 +198,7 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
     # set the ticks and labels on the x-axis
     xticks = range(1, 10, 2) + [10] + range(11, 21, 2)
     xlabels = range(1, 10, 2) + ['>=10']
-    xlabels += map(lambda x: '>' + `int(x) - int(x) % 100` if x > 100 else '>=' + `int(x)`,
+    xlabels += map(lambda x: '>' + str(int(x) - int(x) % 100) if x > 100 else '>=' + str(int(x)),
                    np.linspace(10, 10000, (len(xticks) - len(xlabels)) * 2).tolist()[1::2])
 
     # write to csv too - let metadata tell the plotting program to re-scale the X axis to the provided values

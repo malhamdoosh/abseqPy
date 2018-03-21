@@ -12,6 +12,8 @@ import time
 import traceback
 import warnings
 
+from datetime import timedelta
+
 from abseq.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 from abseq.argsParser import parseArgs
 from abseq.config import VERSION, PriorityPath
@@ -33,7 +35,7 @@ __version__ = VERSION
 
 def main():
     startTimeStr = time.strftime("%Y-%m-%d %H:%M:%S")
-    t = time.time()
+    startTime = time.time()
     try:
         with PriorityPath():
             argsVals = parseArgs()
@@ -44,10 +46,10 @@ def main():
 
                 if argsVals.task == 'all':
                     igRepertoire.runFastqc()
-                    igRepertoire.annotateClones(all=True)
-                    igRepertoire.analyzeAbundance(all=True)
-                    igRepertoire.analyzeProductivity(all=True)
-                    igRepertoire.analyzeDiversity(all=True)
+                    igRepertoire.annotateClones()
+                    igRepertoire.analyzeAbundance()
+                    igRepertoire.analyzeProductivity()
+                    igRepertoire.analyzeDiversity()
                 if argsVals.task == 'fastqc':
                     igRepertoire.runFastqc()
                 elif argsVals.task == 'annotate':
@@ -78,13 +80,13 @@ def main():
                     igRepertoire.analyzeSeqLen(klass=True)
 
             print("The analysis started at " + startTimeStr)
-            print("The analysis took %.2f  minutes!!" % ((time.time() - t) / 60))
+            print("The analysis took {}".format(timedelta(seconds=int(round(time.time() - startTime)))))
             print("Abseq Version " + VERSION)
     except Exception as e:
         print("Unexpected error: " + str(e))
-        print '-' * 60
+        print('-' * 60)
         traceback.print_exc(file=sys.stdout)
-        print '-' * 60
+        print('-' * 60)
     finally:
         pass
 

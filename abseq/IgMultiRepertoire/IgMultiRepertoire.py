@@ -102,20 +102,20 @@ class IgMultiRepertoire:
         if noExceptionRaised:
             self.plotManager.plot()
 
-    def analyzeAbundance(self, all=False):
-        self._beginWork(GeneralWorker.ABUN, all=all)
+    def analyzeAbundance(self):
+        self._beginWork(GeneralWorker.ABUN)
 
     def runFastqc(self):
         self._beginWork(GeneralWorker.FASTQC)
 
-    def analyzeDiversity(self, all=False):
-        self._beginWork(GeneralWorker.DIVER, all=all)
+    def analyzeDiversity(self):
+        self._beginWork(GeneralWorker.DIVER)
 
-    def analyzeProductivity(self, generateReport=True, all=False):
-        self._beginWork(GeneralWorker.PROD, generateReport=generateReport, all=all)
+    def analyzeProductivity(self):
+        self._beginWork(GeneralWorker.PROD)
 
-    def annotateClones(self, outDirFilter=None, all=False):
-        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
+    def annotateClones(self, outDirFilter=None):
+        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter)
 
     def analyzeRestrictionSites(self):
         self._beginWork(GeneralWorker.RSA)
@@ -191,11 +191,12 @@ class IgMultiRepertoire:
                 partner = findPartner(f)
                 if partner is None:
                     raise Exception("Failed to find opposite read for file {}".format(f))
-                res.append(reorderRead(os.path.abspath(folder + "/" + f), os.path.abspath(folder + "/" + partner)))
+                res.append(reorderRead(os.path.abspath(os.path.join(folder,  f)),
+                                       os.path.abspath(os.path.join(folder, partner))))
                 paired.add(partner)
             else:
                 # single file
-                res.append(os.path.abspath(folder + '/' + f))
+                res.append(os.path.abspath(os.path.join(folder, f)))
 
         return distinct(res)
 
@@ -204,13 +205,13 @@ class IgMultiRepertoire:
         # fill self.queue with data from self.buffer
         assert self.queue.empty()
         assert len(self.buffer) == self.sampleCount
-        for _ in xrange(len(self.buffer)):
+        for _ in range(len(self.buffer)):
             self.queue.put(self.buffer.pop())
         assert len(self.buffer) == 0
 
         # initialize workers
         workers = [GeneralWorker(self.queue, self.result, jobdesc, *args, **kwargs) for _ in
-                   xrange(min(self.sampleCount, self.resource))]
+                   range(min(self.sampleCount, self.resource))]
 
         # since macOSX doesn't support .qsize(). also, .empty() and .qsize() are
         # unreliable ==> we use poison pills
@@ -222,7 +223,7 @@ class IgMultiRepertoire:
                 w.start()
 
             # wait for all workers to complete
-            for i in xrange(self.sampleCount):
+            for i in range(self.sampleCount):
                 res = self.result.get()
                 if type(res) == tuple:
                     # XXX: encountered an exception! - here, decide to raise it immediately.
