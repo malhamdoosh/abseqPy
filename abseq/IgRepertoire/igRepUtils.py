@@ -274,16 +274,12 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
 
     #     print(seq, query, alignments)
     scores = [a[2] for a in alignments]
-    if (len(scores) == 0):
-        #         print(seq, query, alignments)
-        #         raise
+    if len(scores) == 0:
         return -1, -1, True
     best = scores.index(max(scores))
     if show:
         print(format_alignment(*alignments[best]))
         print(alignments[best])
-
-    # return alignment start and end
 
     # FR4 start is where both sequence start to align with each other
     # including leading mismatches (these mismatches maybe due to mutations)
@@ -294,9 +290,15 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     # although alignment starts at pos 6, we still consider FR4 to start at pos 4
     start = extend5align(alignments[best]) + offset + 1     # 1-based start
 
-    end = int(offset + alignments[best][-1])
+    end = int(offset + alignments[best][-1])                # 1-based end
 
     gapped = False
+
+    # subtract away non-existing '-'s from the seq because seq itself doesn't have these '-'s
+    # eg: -GGGACGTACGTACGT
+    #      |||||||||||||||
+    #     GGGACAGTACGTACGT
+    # should start at 1, not 2. because the leading '-' doesn't exist in the actual sequence!
     if '-' in alignments[best][0]:
         start -= alignments[best][0][:(alignments[best][-2] + 1)].count('-')
         end -= alignments[best][0][:(alignments[best][-1] + 1)].count('-')
