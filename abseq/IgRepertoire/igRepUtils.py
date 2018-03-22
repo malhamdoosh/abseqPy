@@ -4,7 +4,7 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
-
+import argparse
 import gzip
 import shutil
 import sys
@@ -765,15 +765,28 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
 def writeParams(args, outDir):
     """
     Writes the parameters used for analysis into analysis.params
-    :param args: argparse namespace object
-    :param outDir: output directory where analysis.params reside
-    :return: None
+
+    :param args: argparse.Namespace or dict type
+            argparse namespace object, or a dict
+
+    :param outDir: string
+            output directory where analysis.params reside
+
+    :return: string
+            the filename that was produced in outDir
     """
+    if isinstance(args, argparse.Namespace):
+        args = vars(args)
+    elif isinstance(args, dict):
+        pass
+    else:
+        raise Exception("Unsupported parameter type {}, expecting argparse.Namespace or dict".format(type(args)))
+
     filename = os.path.join(outDir, "analysis.params")
     with open(filename, 'w') as out:
         out.write("AbSeq VERSION: " + VERSION + "\n")
         out.write("Executed AbSeq with the following parameters:\n")
-        for key, val in vars(args).items():
+        for key, val in args.items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     return os.path.basename(filename)
 

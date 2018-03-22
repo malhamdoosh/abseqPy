@@ -64,13 +64,13 @@ class IgMultiRepertoire:
                     modifiedArgs.name = canonicalNameChangeMap[inferredName]
                     modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
                     modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                    self.buffer.append(IgRepertoire(modifiedArgs))
+                    self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
         else:
             self.plotManager.addMetadata((args.outdir, args.name))
             args.outdir = os.path.abspath(args.outdir) + os.path.sep
             args.log = args.outdir + args.name + ".log"
             self.sampleCount += 1
-            self.buffer.append(IgRepertoire(args))
+            self.buffer.append(IgRepertoire(**vars(args)))
 
     def __enter__(self):
         return self

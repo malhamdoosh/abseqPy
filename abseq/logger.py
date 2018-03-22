@@ -11,9 +11,9 @@ class _Level:
     ERR = 'error'
     EXCEPT = 'exception'
 
-    def __init__(self):
-        self.streamLevel = logging.WARN
-        self.fileLevel = logging.DEBUG
+    def __init__(self, streamLevel=logging.WARN, fileLevel=logging.DEBUG):
+        self.streamLevel = streamLevel
+        self.fileLevel = fileLevel
 
 
 # LOG FILE HEADER - displayed on the top of each *.log file depending on analysis task

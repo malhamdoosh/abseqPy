@@ -110,9 +110,6 @@ def parseArgs():
     #                                noFR4Cut, Trim5 and Trim3 logic check
     # --------------------------------------------------------------------------------------------------------
 
-    # negate flag
-    args.fr4cut = not args.nofr4cut
-
     if args.trim5 < 0:
         parser.error("--trim5 cannot be a negative value")
 
@@ -332,7 +329,7 @@ def parseCommandLineArguments():
                                                       "the end of the read if no --trim3 is provided or"
                                                       " trimmed to --trim3 argument if provided. "
                                                       " [default = sequence (FR4 end) ends where J germline ends]",
-                          dest='nofr4cut', action='store_true')
+                          dest='fr4cut', action='store_false')
     optional.add_argument('-st', '--sites', help="path to restriction sites file, required if"
                                                  " --task rsa or --task rsasimple is specified", default=None)
     optional.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)

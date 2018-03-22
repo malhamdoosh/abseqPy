@@ -9,6 +9,7 @@ import gc
 import os
 import logging
 import sys
+import inspect
 
 from collections import Counter
 from os.path import exists
@@ -53,156 +54,147 @@ class IgRepertoire:
     """
     creates an AbSeq.IgRepertoire object with QC methods
     """
-    def __init__(self, args):
+    def __init__(self, f1, f2=None, name=None, fmt='fastq', chain='hv', seqtype='dna', merger='leehom', outdir='.',
+                 threads=1, bitscore=(0, Inf), alignlen=(0, Inf), sstart=(1, Inf), qstart=(1, Inf),
+                 clonelimit=100, actualqstart=-1, trim5=0, trim3=0, fr4cut=True, primer=None, primer5endoffset=0,
+                 primer5end=None, primer3end=None,
+                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=None, log=None,
+                 rscripts=None):
         """
-        Creates an AbSeq IgRepertoire object. Contains information prior to downstream analysis.
 
-        :param args:
-                    namespace object containing these attributes
-                        task: string
-                                all, annotate, abundance, diversity, fastqc, productivity,
-                                primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass
+        :param f1: string
+                                path to read 1 file
+        :param f2: string
+                                path to read 2 file. This is optional
+        :param name: string
+                                name to refer this sample as
+        :param fmt: string
+                                accepted values are fasta, fa, fastq, fq. f1 and f2(if present) should have the
+                                same format
+        :param chain: string
+                                accepted values are lv, hv, kv for lambda variable, heavy variable and kappa variable
+                                respectively
+        :param seqtype: string
+                                accepted values are dna or protein
+        :param merger: string
+                                name of merger to use. This is ignored if f2 is not provided
+        :param outdir: string
 
-                        report_interim: bool
-                                create intermediate report (not implemented yet)
-
-                        outdir: string
                                 path to results directory. implicitly create if doesn't exist
-
-                        threads: int
+        :param threads: string
                                 number of threads to run this sample with
-
-                        primer: int
-                                (not implemented yet)
-
-                        db: string
-                                path to IgBLAST database (directory should contain output of makeblastdb).
-                                Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
-                                will require db to be the string "$IGBLASTDB"
-
-                        bitscore: list / tuple
+        :param bitscore: list or tuple
                                 iterable and indexable of length 2 denoting the min and max value to use for
                                 filtering sequences that do not fall within the provided range.
                                 The bitscore filter applies to the V germline alignment only.
-
-                        clonelimit: int
-                                number of CDR3 clones to output into
-                                diversity/<sample_name>_clonotypes_<clonelimit>_[over|under].csv.gz
-                                This csv file contains CDR3 AA sequences with their counts. Also accepts
-                                np.inf to retain all clones
-
-                        alignlen: list / tuple
-                                iterable and indexable of length 2 denoting the min and max value to use for
-                                filtering sequences taht do not fal within the provided range.
+        :param alignlen: list or tuple
+                                iterable and index-able of length 2 denoting the min and max value to use for
+                                filtering sequences that do not fal within the provided range.
                                 The alignlen filter applies to the V germline only
-
-                        sstart: list / tuple
-                                iterable and indexable of length 2 denoting the min and max value to use for
+        :param sstart: list or tuple
+                                iterable and index-able of length 2 denoting the min and max value to use for
                                 filtering sequences that do not fall within the provided range.
                                 The sstart filter applies to the V germline only. In this case, subject start
                                 denotes the starting index of V germline when aligned to the query sequence
-
-                        qstart: list / tuple
+        :param qstart: list or tuple
                                 iterable and indexable of length 2 denoting the min and max value to use for
                                 filtering sequences that do not fall within the provided range.
                                 The qstart filter applies to the V germline only. In this case, query start
                                 denotes the starting index of the query sequence when aligned to the V germline gene
-
-                        seqtype: string
-                                accepted values are dna or protein
-
-                        fmt:    string
-                                accepted values are fasta, fa, fastq, fq
-
-                        chain: string
-                                accepted values are lv, hv, kv for lambda variable, heavy variable and kappa variable
-                                respectively
-
-                        name: string
-                                name to refer this sample as
-
-                        fr4cut: bool
+        :param clonelimit: int
+                                number of CDR3 clones to output into
+                                diversity/<sample_name>_clonotypes_<clonelimit>_[over|under].csv.gz
+                                This csv file contains CDR3 AA sequences with their counts. Also accepts
+                                np.Inf to retain all clones
+        :param actualqstart: int
+                                number of nucleotides to ignore at the beginning of the sequence before
+                                V germline starts aligning. Leave this as -1 to let AbSeq automatically infer
+                                from IgBLAST's alignment. This argument has no effect when aligning 5'
+                                primer during primer specificity analysis
+        :param trim5: int
+                                number of nucleotides to trim on the 5' end of V domain
+                                This argument has no effect when aligning 5' primer during primer specificity analysis
+        :param trim3: int or list of strings
+                                number of nucleotides to trim on the 3' end of V domain
+                                This argument has no effect when aligning 3' primer during primer specificity analysis.
+                                If a list of strings was provided instead,
+                                then the end of the sequences will be trimmed at the starting position (incl) of
+                                one of the (best matched) sequence in trim3
+        :param fr4cut: bool
                                 fr4cut automatically cut sequence after end of J germline gene
                                 (extend 3' end of J gene to get actual FR4 end position if mismatches occur). If this is
                                 set to False, trimming of the 3' end will depend on trim3's option
-
-                        upstream: list / tuple
-                                iterable or indexable of length 2 that denotes the start and end position of upstream
-                                sub-sequences.
-
-                        sites: string
-                                path to restriction sites file. Required only if task was rsa or rsasimple
-
-                        actualqstart: int
-                                number of nucleotides to cut at the beginning of the sequence before V germline starts
-                                aligning. Leave this as -1 to let AbSeq automatically infer base on alignment.
-                                This argument has no effect when aligning 5' primer during primer specificity analysis
-
-                        trim5: int
-                                number of nucleotides to trim on the 5' end of V domain
-                                This argument has no effect when aligning 5' primer during primer specificity analysis
-
-                        trim3: int
-                                number of nucleotides to trim on the 3' end of V domain
-                                This argument has no effect when aligning 3' primer during primer specificity analysis
-
-                        primer5end: string
-                                path to 5' primer FASTA file. Only required if task was primer
-
-                        primer3end: string
-                                path to 3' primer FASTA file. Only required if task was primer
-
-                        primer5endoffset: int
+        :param primer: int
+                                (not implemented yet)
+        :param primer5endoffset: int
                                 number of nucleotides to offset before staring to align the 5' primer sequences. Only
                                 used during primer specificity analysis
-
-                        f1: string
-                                path to read 1 file
-
-                        f2: string
-                                path to read 2 file. This is optional
-
-                        merger: string
-                                name of merger to use. This is ignored if f2 is not provided
+        :param primer5end: string
+                                path to 5' primer FASTA file. Only required if task was primer
+        :param primer3end: string
+                                path to 3' primer FASTA file. Only required if task was primer
+        :param upstream: list or tuple
+                                iterable or index-able of length 2 that denotes the start and end position of upstream
+                                sub-sequences.
+        :param sites: string
+                                path to restriction sites file. Required only if task was rsa or rsasimple
+        :param database: string
+                                path to IgBLAST database (directory should contain output of makeblastdb).
+                                Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
+                                will require db to be the string "$IGBLASTDB"
+        :param report_interim: bool
+                                create intermediate report (not implemented yet)
+        :param task: string
+                                all, annotate, abundance, diversity, fastqc, productivity,
+                                primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass. This variable
+                                is responsible for the "banner" printed in the log file.
+        :param log: string
+                                path to logger file
+        :param rscripts: string
+                                dummy variable. Used in commandline mode
         """
-        self.args = args
-        self.task = args.task.lower().strip()
-        self.reportInterim = args.report_interim
-        self.outputDir = os.path.abspath(args.outdir) + os.path.sep
+        fargs, _, _, values = inspect.getargvalues(inspect.currentframe())
+        self.args = dict([(i, values[i]) for i in fargs])
+        # todo
+        # sanitizeArgs(self.args)
+
+        self.task = task.lower().strip()
+        self.reportInterim = report_interim
+        self.outputDir = os.path.abspath(outdir) + os.path.sep
         if not os.path.exists(self.outputDir):
             os.makedirs(self.outputDir)
-        self.threads = args.threads
-        self.primer = args.primer
-        self.db = os.path.abspath(os.path.expandvars(args.database))
-        self.bitScore = args.bitscore
-        self.clonelimit = args.clonelimit
-        self.alignLen = args.alignlen
-        self.sStart = args.sstart
-        self.qStart = args.qstart
-        self.seqType = args.seqtype
-        self.format = args.fmt
-        self.chain = args.chain
-        self.name = args.name
-        self.fr4cut = args.fr4cut
+        self.threads = threads
+        self.primer = primer
+        self.db = os.path.abspath(os.path.expandvars(database))
+        self.bitScore = bitscore
+        self.clonelimit = clonelimit
+        self.alignLen = alignlen
+        self.sStart = sstart
+        self.qStart = qstart
+        self.seqType = seqtype
+        self.format = fmt
+        self.chain = chain
+        self.name = name
+        self.fr4cut = fr4cut
 
-        if args.task in ['secretion', '5utr']:
-            self.upstream = args.upstream
+        if task in ['secretion', '5utr']:
+            self.upstream = upstream
 
-        if args.task in ['rsa', 'rsasimple']:
-            self.sitesFile = args.sites
+        if task in ['rsa', 'rsasimple']:
+            self.sitesFile = sites
 
-        self.actualQstart = args.actualqstart
+        self.actualQstart = actualqstart
 
-        self.trim5End = args.trim5
-        self.trim3End = args.trim3
+        self.trim5End = trim5
+        self.trim3End = trim3
 
-        self.end5 = args.primer5end
-        self.end3 = args.primer3end
-        self.end5offset = args.primer5endoffset
+        self.end5 = primer5end
+        self.end3 = primer3end
+        self.end5offset = primer5endoffset
 
-        self.readFile1 = args.f1
-        self.readFile2 = args.f2
-        self.merger = args.merger
+        self.readFile1 = f1
+        self.readFile2 = f2
+        self.merger = merger
         self.merge = 'no' if self.merger is None else 'yes'
 
         self.seqsPerFile = int(10.0 ** 5 / 2)
@@ -216,7 +208,7 @@ class IgRepertoire:
                                   ["abundance", "productivity", "diversity", "restriction_sites",
                                    "primer_specificity", 'upstream']))
 
-        setupLogger(self.name, self.task, args.log)
+        setupLogger(self.name, self.task, log)
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
@@ -787,7 +779,7 @@ class IgRepertoire:
 
     def analyzeSeqLen(self, klass=False):
         logger = logging.getLogger(self.name)
-        outdir = os.path.join(self.args.outdir, 'annot')
+        outdir = os.path.join(self.outputDir, 'annot')
 
         printto(logger, "Sequence {}length distribution is being calculated ... ".format('class ' if klass else ''))
 
@@ -795,11 +787,11 @@ class IgRepertoire:
             os.makedirs(outdir)
 
         if klass:
-            outputFile = os.path.join(outdir, self.args.name + '_length_dist_classes.png')
-            plotSeqLenDistClasses(self.args.f1, self.args.name, outputFile, self.args.fmt, stream=logger)
+            outputFile = os.path.join(outdir, self.name + '_length_dist_classes.png')
+            plotSeqLenDistClasses(self.readFile, self.name, outputFile, self.format, stream=logger)
         else:
-            outputFile = os.path.join(outdir, self.args.name + '_seq_length_dist.png')
-            plotSeqLenDist(self.args.f1, self.args.name, outputFile, self.args.fmt, maxbins=-1, stream=logger)
+            outputFile = os.path.join(outdir, self.name + '_seq_length_dist.png')
+            plotSeqLenDist(self.readFile, self.name, outputFile, self.format, maxbins=-1, stream=logger)
 
     def loadValidSequences(self, upstreamFile, sampleName, expectLength, startCodon=True, type='secsig'):
         print("\tSequences between %d and %d are being extracted ... "
