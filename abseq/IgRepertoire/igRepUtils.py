@@ -502,7 +502,6 @@ def compressCountsGeneLevel(countsDict):
     return geneLevel
 
 
-
 def compressCountsFamilyLevel(countsDict):
     familyLevel = Counter()
     for k in countsDict.keys():
@@ -516,7 +515,7 @@ def compressCountsFamilyLevel(countsDict):
 '''
 
 
-def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
+def alignListOfSeqs(signals, outDir, stream=None):
     L = map(len, signals)
     printto(stream,
             "\t\t{} sequences are being aligned using CLUSTAL-OMEGA (L in [{}, {}])... ".format(len(L), min(L), max(L)))
@@ -524,8 +523,6 @@ def alignListOfSeqs(signals, outDir, ignoreNones=False, stream=None):
     tempAlign = tempSeq.replace('.fasta', '.aln')
     seqs = []
     for i in range(len(signals)):
-        if ignoreNones and signals[i] == "None":
-            continue
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
     clustalw = ClustalwCommandline(CLUSTALOMEGA, infile=tempSeq,

@@ -199,7 +199,7 @@ def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType="protein", stream=N
         printto(stream, "\t" + region.upper())
 
         clonoType = clonoTypes[region]
-        seqs = clonoType.keys()
+        seqs = filter(lambda x: x != "None", clonoType.keys())
         weights = map(lambda x: clonoType[x], seqs)
 
         # Generate cumulative sequence logos using Toby's approach
