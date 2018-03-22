@@ -474,17 +474,6 @@ def writeListToFile(items, filename):
     out.close()
 
 
-def loadIGVSeqsFromFasta(filename):
-    ighvSeqs = {}
-    with safeOpen(filename) as fp:
-        for rec in SeqIO.parse(fp, 'fasta'):
-            ighv = rec.id.split('|')[1].strip()
-            if (ighvSeqs.get(ighv, None) is None):
-                ighvSeqs[ighv] = []
-            ighvSeqs[ighv].append(str(rec.seq))
-    return ighvSeqs
-
-
 def compressSeqGeneLevel(seqDict):
     geneLevel = {}
     for ighv in seqDict.keys():

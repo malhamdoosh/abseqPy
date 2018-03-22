@@ -20,11 +20,12 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
-from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, writeCountsCategoriesToFile
+from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
+    writeCountsCategoriesToFile, findUpstreamMotifs
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, loadIGVSeqsFromFasta
+    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -154,7 +155,7 @@ class IgRepertoire:
                                 dummy variable. Used in commandline mode
         """
         fargs, _, _, values = inspect.getargvalues(inspect.currentframe())
-        self.args = dict([(i, values[i]) for i in fargs])
+        self.args = dict([(arg, values[arg]) for arg in fargs if arg != 'self'])
         # todo
         # sanitizeArgs(self.args)
 
@@ -393,11 +394,12 @@ class IgRepertoire:
         if not exists(refinedCloneAnnotFile):
             if self.cloneAnnot is None:
                 self.annotateClones(outDir)
-            #             if (self.trimmed):
+            #             if self.trimmed:
             #                 self.trim3End = 0
             #                 self.trim5End = 0
             #             elif self.trim3End > 0 or self.trim5End > 0:
-            #                 print("WARNING: if trimming was applied in the 'annotate' step, you may not need trimming")
+            #                 print("WARNING: if trimming was applied in the 'annotate' step"
+            #                       ", you may not need trimming")
             # print(sys.getsizeof(self.cloneAnnot) / (1024.**3)) # in GB
             (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outDir, self.name,
                                                                        self.cloneAnnot, self.readFile,
@@ -685,10 +687,21 @@ class IgRepertoire:
 
         if expectLength != Inf:
             # classify secretion signals based on length, ATG location, gene and gene family
-            # analyze intact secretion signals
-            self.analyzeSequences(upstreamFile, self.name, [expectLength, expectLength], True)
-            # analyze trimmed secretion signals
-            self.analyzeSequences(upstreamFile, self.name, [1, expectLength - 1], True)
+
+            # ----------------------------------------------------------------
+            #                   analyze intact secretion signals
+            # ----------------------------------------------------------------
+            #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
+            for level in ['variant', 'gene', 'family']:
+                findUpstreamMotifs(self.outputDir, upstreamFile, self.name, [expectLength, expectLength], level=level,
+                                   startCodon=True, stream=logger)
+
+            # ----------------------------------------------------------------
+            #                 analyze trimmed secretion signals
+            # ----------------------------------------------------------------
+            for level in ['variant', 'gene', 'family']:
+                findUpstreamMotifs(self.outputDir, upstreamFile, self.name, [1, expectLength - 1], level=level,
+                                   startCodon=True, stream=logger)
 
     def analyze5UTR(self):
         logger = logging.getLogger(self.name)
@@ -722,13 +735,13 @@ class IgRepertoire:
 
         # if user provided values to upstream (and it's not Inf)
         if expectLength != Inf:
-            # analyze intact secretion signals
-            self.analyzeSequences(upstreamFile,
-                                  self.name,
-                                  [expectLength, expectLength],
-                                  startCodon=False,
-                                  type='5utr',
-                                  clusterMotifs=True)
+            # ----------------------------------------------------------------
+            #                 analyze intact secretion signals
+            # ----------------------------------------------------------------
+            #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
+            for level in ['variant', 'gene', 'family']:
+                findUpstreamMotifs(self.outputDir, upstreamFile, self.name, [expectLength, expectLength], level=level,
+                                   startCodon=True, type='5utr', clusterMotifs=True, stream=logger)
 
     def analyzePrimerSpecificity(self):
         logger = logging.getLogger(self.name)
@@ -792,192 +805,6 @@ class IgRepertoire:
         else:
             outputFile = os.path.join(outdir, self.name + '_seq_length_dist.png')
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format, maxbins=-1, stream=logger)
-
-    def loadValidSequences(self, upstreamFile, sampleName, expectLength, startCodon=True, type='secsig'):
-        print("\tSequences between %d and %d are being extracted ... "
-              % (expectLength[0], expectLength[1]))
-        ighvSignals = {}
-        ighvSignalsCounts = Counter()
-        ighvSignalsNoATG = []
-        noStartCodonCounts = Counter()
-        faultyTrans = []
-        faultyTransCounts = Counter()
-        #         if (MEM_GB > 20):
-        #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
-        #                   (use safeOpen from IgRepertoire.utils) if not sure
-        #             records = SeqIO.to_dict(SeqIO.parse(upstreamFile, 'fasta'))
-        #         else:
-        # SeqIO.index can only parse string filename (that isn't opened) and unzipped
-        records = SeqIO.index(gunzip(upstreamFile), 'fasta')
-        for id in records:
-            rec = records[id]
-            ighv = rec.id.split('|')[1]
-            seq = rec.seq
-            if (expectLength[0] <= len(rec) <= expectLength[1]):
-                if (not startCodon or "ATG" in seq):
-                    if (faultyTransCounts.get(ighv, None) is None):
-                        faultyTransCounts[ighv] = 0
-                    if (type == 'secsig'):
-                        seq = seq.translate(to_stop=False)[1:]
-                    if ('X' in seq or '*' in seq):
-                        # print(rec.id, str(rec.seq), str(seq))
-                        faultyTrans.append(rec)
-                        faultyTransCounts[ighv] += 1
-                    elif ('N' not in rec.seq):
-                        # rec.seq = seq
-                        if (ighvSignals.get(ighv, None) is None):
-                            ighvSignals[ighv] = []
-                            ighvSignalsCounts[ighv] = 0
-                        ighvSignals[ighv].append(str(rec.seq))  # rec
-                        ighvSignalsCounts[ighv] += 1
-                    else:
-                        print('Ignored: ' + str(rec.seq) + ' ' + str(seq))
-                        if (type == 'secsig'):
-                            faultyTrans.append(rec)
-                            faultyTransCounts[ighv] += 1
-                elif startCodon:
-                    ighvSignalsNoATG.append(rec)  # seq
-                    if (noStartCodonCounts.get(ighv, None) is None):
-                        noStartCodonCounts[ighv] = 0
-                    noStartCodonCounts[ighv] += 1
-        records.close()
-        if (sum(ighvSignalsCounts.values()) > 0):
-            print("\tThere are %d VALID secretion signals within expected length %s and startCodon=%s " %
-                  (sum(ighvSignalsCounts.values()), str(expectLength), startCodon))
-            if (type == 'secsig'):
-                title = 'Valid Secretion Signals'
-            else:
-                title = 'Valid 5`-UTRs'
-            writeCountsCategoriesToFile(ighvSignalsCounts, sampleName,
-                                        self.outputDir + sampleName + '_%s%d%d_valid_' % (
-                                        type, expectLength[0], expectLength[1]),
-                                        title)
-        # # Faulty secretion signals: stop codons or low quality sequencing
-        if (len(faultyTrans) > 0):
-            # variant level
-            faultySeqFile = self.outputDir + sampleName + '_%s%d%d_faulty_trans.fasta' % (
-            type, expectLength[0], expectLength[1])
-            SeqIO.write(faultyTrans, faultySeqFile, 'fasta')
-            writeCountsCategoriesToFile(faultyTransCounts, sampleName,
-                                        self.outputDir + sampleName + '_%s%d%d_faulty_' % (
-                                        type, expectLength[0], expectLength[1]),
-                                        'Faulty Translations')
-            print("\tTotal faulty secretion signals is %d (excluded)" % (len(faultyTrans)))
-            examples = random.choice(range(len(faultyTrans)), 5)
-            for i in examples:
-                print(faultyTrans[i].seq, faultyTrans[i].seq.translate())
-            faultyTrans = None
-        else:
-            faultySeqFile = None
-            # secretion signals with no start codons
-        if (len(ighvSignalsNoATG) > 0):
-            noStartCodonFile = self.outputDir + sampleName + '_%s%d%d_no_atg.fasta' % (
-            type, expectLength[0], expectLength[1])
-            SeqIO.write(ighvSignalsNoATG, noStartCodonFile, 'fasta')
-            writeCountsCategoriesToFile(noStartCodonCounts, sampleName,
-                                        self.outputDir + sampleName + '_%s%d%d_no_atg_' % (
-                                        type, expectLength[0], expectLength[1]),
-                                        'Secretion Signals without Start Codon')
-            print("\tThere is no ATG codon in %d sequences (excluded). " % (len(ighvSignalsNoATG)))
-            examples = random.choice(range(len(ighvSignalsNoATG)), 5)
-            for i in examples:
-                print(ighvSignalsNoATG[i].seq)
-            ighvSignalsNoATG = None
-        else:
-            noStartCodonFile = None
-        gc.collect()
-        return (ighvSignals, faultySeqFile, noStartCodonFile)
-
-    # todo: fix self.outputDir + samplename
-    def analyzeSequences(self, upstreamFile, sampleName, expectLength, startCodon=True,
-                         type='secsig', clusterMotifs=False):
-        from abseq.IgRepAuxiliary.SeqUtils import generateMotifs
-        lastFile = self.outputDir + sampleName + '_%s%d%d_dna_family' % (type, expectLength[0], expectLength[1])
-        lastFile += '_consensus.txt'
-        if (exists(lastFile)):
-            print("Sequences were already analyzed " + lastFile)
-            ighvSignals = {}
-            faultySeqFile = self.outputDir + sampleName + '_%s%d%d_faulty_trans.fasta' % (
-                type, expectLength[0], expectLength[1])
-            noStartCodonFile = self.outputDir + sampleName + '_%s%d%d_no_atg.fasta' % (
-                type, expectLength[0], expectLength[1])
-        else:
-            print("Sequences are being analyzed ... ")
-            (ighvSignals, faultySeqFile, noStartCodonFile) = self.loadValidSequences(upstreamFile,
-                sampleName, expectLength, startCodon, type)
-
-        # extract DNA motifs for each germline variant
-        generateMotifs(ighvSignals, expectLength[0] < expectLength[1],
-                       self.outputDir + sampleName +
-                       '_%s%d%d_dna_variant' % (type, expectLength[0], expectLength[1]),
-                       clusterMotifs=clusterMotifs)
-        # extract protein motifs for each each germline variant
-        if expectLength[0] == expectLength[1] and type == 'secsig':
-            faultySeq = loadIGVSeqsFromFasta(faultySeqFile)
-            generateMotifs(faultySeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_faulty_variant' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            noStartCodonSeq = loadIGVSeqsFromFasta(noStartCodonFile)
-            generateMotifs(noStartCodonSeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_untranslated_variant' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            generateMotifs(ighvSignals, False,
-                           self.outputDir + sampleName + '_%s%d%d_protein_variant' % (
-                           type, expectLength[0], expectLength[1]),
-                           transSeq=True,
-                           clusterMotifs=clusterMotifs)
-
-            # extract motifs for germline genes
-        ighvSignals = compressSeqGeneLevel(ighvSignals)
-        generateMotifs(ighvSignals, expectLength[0] < expectLength[1],
-                       self.outputDir + sampleName + '_%s%d%d_dna_gene' % (type, expectLength[0], expectLength[1]),
-                       clusterMotifs=clusterMotifs)
-        if expectLength[0] == expectLength[1] and type == 'secsig':
-            faultySeq = compressSeqGeneLevel(faultySeq)
-            generateMotifs(faultySeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_faulty_gene' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            noStartCodonSeq = compressSeqGeneLevel(noStartCodonSeq)
-            generateMotifs(noStartCodonSeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_untranslated_gene' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            generateMotifs(ighvSignals, False,
-                           self.outputDir + sampleName + '_%s%d%d_protein_gene' % (
-                           type, expectLength[0], expectLength[1]),
-                           transSeq=True,
-                           clusterMotifs=clusterMotifs)
-
-            # extract motifs for germline families
-        ighvSignals = compressSeqFamilyLevel(ighvSignals)
-        generateMotifs(ighvSignals, expectLength[0] < expectLength[1],
-                       self.outputDir + sampleName + '_%s%d%d_dna_family' % (type, expectLength[0], expectLength[1]),
-                       clusterMotifs=clusterMotifs)
-        if expectLength[0] == expectLength[1] and type == 'secsig':
-            faultySeq = compressSeqFamilyLevel(faultySeq)
-            generateMotifs(faultySeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_faulty_family' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            noStartCodonSeq = compressSeqFamilyLevel(noStartCodonSeq)
-            generateMotifs(noStartCodonSeq, True,
-                           self.outputDir + sampleName +
-                           '_%s%d%d_untranslated_family' % (type, expectLength[0], expectLength[1]),
-                           transSeq=False, extendAlphabet=True,
-                           clusterMotifs=clusterMotifs)
-            generateMotifs(ighvSignals, False,
-                           self.outputDir + sampleName + '_%s%d%d_protein_family' % (
-                           type, expectLength[0], expectLength[1]),
-                           transSeq=True,
-                           clusterMotifs=clusterMotifs)
 
     def analyzeIgProtein(self):
         # sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'

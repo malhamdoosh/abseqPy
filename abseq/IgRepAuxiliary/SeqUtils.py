@@ -13,7 +13,7 @@ import bisect
 import os
 
 from os.path import exists
-from collections import Sequence
+from collections import Sequence, defaultdict
 from Bio.Seq import Seq
 from Bio.Alphabet.IUPAC import IUPACProtein
 from Bio import SeqIO, motifs
@@ -71,7 +71,7 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
 
 
 def generateMotif(sequences, name, alphabet, filename, 
-                  align = False, transSeq = False, protein =False, weights=None, outDir=None, stream=None):
+                  align=False, transSeq=False, protein=False, weights=None, outDir=None, stream=None):
     if exists(filename):
         printto(stream, "\t" + name + " motif logo was found", LEVEL.WARN)
         return        
@@ -131,12 +131,12 @@ def createAlphabet(align = False, transSeq=False,
 
 
 def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
-                        extendAlphabet=False, clusterMotifs=False, protein=False):
+                        extendAlphabet=False, clusterMotifs=False, protein=False, stream=None):
     from TAMO.MotifTools import Motif
     ighvMotifs = []
     if clusterMotifs and 'gene' in outputPrefix:
-        findMotifClusters(ighvMotifs, outputPrefix)                
-    print('\t\tPWMs, consensus and logos are being generated for {:d} motifs ... '.format(len(seqGroups)))
+        findMotifClusters(ighvMotifs, outputPrefix, stream=stream)
+    printto(stream, '\t\tPWMs, consensus and logos are being generated for {} motifs ... '.format(len(seqGroups)))
     pwmFile = open(outputPrefix + '_pwm.txt', 'w')
     consensusFile = open(outputPrefix + '_consensus.txt', 'w')
     logosFolder = outputPrefix + '_logos'
@@ -149,8 +149,7 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     for group in groups:    
         filename = logosFolder + group.replace('/', '') + '.png'    
         seqs = seqGroups[group]
-        m = generateMotif(seqs, group, alphabet, filename, align, transSeq, 
-                          protein, outDir=logosFolder)
+        m = generateMotif(seqs, group, alphabet, filename, align, transSeq, protein, outDir=logosFolder)
         motifSeqs = m.instances
         pwm = m.counts.normalize(pseudocounts=None)  # {'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}
         consensusMax = str(m.consensus)      
@@ -178,13 +177,13 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     pwmFile.close()
     consensusFile.close()      
     gc.collect()
-    print("\tPosition weight matrices are written to " + outputPrefix + '_pwm.txt')
-    print("\tConsensus sequences are written to " + outputPrefix + '_consensus.txt')
+    printto(stream, "\tPosition weight matrices are written to " + outputPrefix + '_pwm.txt')
+    printto(stream, "\tConsensus sequences are written to " + outputPrefix + '_consensus.txt')
     if clusterMotifs:
-        findMotifClusters(ighvMotifs, outputPrefix)
+        findMotifClusters(ighvMotifs, outputPrefix, stream=stream)
         
         
-def findMotifClusters(ighvMotifs, outputPrefix):
+def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
     from TAMO.Clustering.UPGMA import UPGMA
     from TAMO.Clustering.UPGMA import DFUNC
     from TAMO.Clustering.UPGMA import print_tree
@@ -194,21 +193,20 @@ def findMotifClusters(ighvMotifs, outputPrefix):
     # cluster using a variant of the UPGMA algorithm implemented in the TAMO package
     
     motifsFile = os.path.abspath(outputPrefix + '_motifs.tamo')
-    if (not exists(motifsFile)):
-        if (len(ighvMotifs) > 0):
+    if not exists(motifsFile):
+        if len(ighvMotifs) > 0:
             pickle.dump(ighvMotifs, open(motifsFile, 'wb'))            
     else:
         ighvMotifs = pickle.load(open(motifsFile, 'rb'))
 #         print(ighvMotifs)
-    if (len(ighvMotifs) > 0): 
-        groupedMotifs = {}
+    if len(ighvMotifs) > 0:
+        groupedMotifs = defaultdict(list)
         for m in ighvMotifs:
             ighv = m.id.split('-')[0].split('/')[0]
-            if (groupedMotifs.get(ighv, None) is None):
-                groupedMotifs[ighv] = []
             groupedMotifs[ighv].append(m)
         try:
-            motifClustersFile = outputPrefix + '_pwm_clusters.txt'            
+            motifClustersFile = outputPrefix + '_pwm_clusters.txt'
+
             _old_stdout = sys.stdout
             sys.stdout = open(motifClustersFile, 'w')
             for ighv in groupedMotifs.keys():
@@ -224,9 +222,10 @@ def findMotifClusters(ighvMotifs, outputPrefix):
             print(create_tree_phylip(tree))
             sys.stdout.close()
             sys.stdout = _old_stdout
-            print("\tMotif clusters were written to " + motifClustersFile)
-        except:
-            print("Motifs couldn't be clustered!")
+
+            printto(stream, "\tMotif clusters were written to " + motifClustersFile)
+        except Exception:
+            printto(stream, "Motifs couldn't be clustered!", LEVEL.ERR)
 #             raise
 
 
@@ -241,9 +240,7 @@ def generateMotifLogo(m, filename, outdir='', dna=True):
     command = "%s -f %s  -o %s -A %s -F png -n 200 -D fasta -s medium "
     command += "-c %s --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO"
 
-    os.system(command % (WEBLOGO, tmpFile,
-                         filename, "dna" if dna else "protein",
-                         "classic" if dna else "auto"))
+    os.system(command % (WEBLOGO, tmpFile, filename, "dna" if dna else "protein", "classic" if dna else "auto"))
     os.remove(tmpFile)
         
 
@@ -252,8 +249,8 @@ def maxlen(x):
 
 
 # XXX: Author: JIAHONG FONG: @depreciated. - removing adefazio/sampler dependency
-#TODO: Look for faster and ACCURATE weighted sampling approach
-#def weightedSampleFast(population, weights, k):
+# TODO: Look for faster and ACCURATE weighted sampling approach
+# def weightedSampleFast(population, weights, k):
 #    if (weights is not None):
 #        from fast_sampler import FastSampler
 #        from numpy import array
@@ -268,7 +265,7 @@ def maxlen(x):
 
 
 def weightedSample(population, weights, k):
-    if (weights is not None):
+    if weights is not None:
         return random.sample(WeightedPopulation(population, weights), k)
     else:
         return random.sample(population, k)
@@ -292,6 +289,4 @@ class WeightedPopulation(Sequence):
         if not 0 <= i < len(self):
             raise IndexError(i)
         return self.population[bisect.bisect(self.cumweights, i)]
-    
-    
-    
+

@@ -5,16 +5,25 @@
     Changes log: check git commits. 
 '''
 import os
+import itertools
 import gc
 
-from numpy import Inf
+from numpy import Inf, random
 from Bio import SeqIO
+from collections import defaultdict
 
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotDist
-from abseq.IgRepertoire.igRepUtils import gunzip, writeCountsToFile, compressCountsFamilyLevel, compressCountsGeneLevel
+from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsFamilyLevel, \
+    compressCountsGeneLevel, safeOpen, compressSeqGeneLevel, compressSeqFamilyLevel
 from abseq.logger import LEVEL, printto
 
+_UPSTREAM_SEQ_FILE_SEP = '|'
+_VALID_SEQ_FASTA_TEMPLATE = "{}_{}{}{}_valid_seqs.fasta"
+_FAULTY_SEQ_FASTA_TEMPLATE = "{}_{}{}{}_faulty_trans.fasta"
+_STARTCOD_SEQ_FASTA_TEMPLATE = "{}_{}{}{}_no_atg.fasta"
 
+
+# todo: R plot these
 def plotUpstreamLenDist(upstreamFile, expectLength, name, stream=None):
     """
     plots length distribution of upstream sequences. 4 different sets of plots are generated:
@@ -123,7 +132,7 @@ def extractUpstreamSeqs(cloneAnnot, recordFile, upstream, upstreamFile, stream=N
                     record.seq = record.seq[int(start - 1):int(end)]
                     if expectLength != Inf and len(record.seq) < expectLength:
                         trimmedUpstream += 1
-                    record.id = record.id + '|' + qsRec.vgene
+                    record.id = record.id + _UPSTREAM_SEQ_FILE_SEP + qsRec.vgene
                     record.description = ""
                     recordsBuffer.append(record)
                     procSeqs += 1
@@ -161,29 +170,280 @@ def extractUpstreamSeqs(cloneAnnot, recordFile, upstream, upstreamFile, stream=N
     gc.collect()
 
 
-# todo Mon Mar 19 18:13:58 AEDT 2018
-def loadValidSequences():
-    pass
+def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outputDir,
+                        startCodon=True, type='secsig', plotDist=True, stream=None):
+    """
+    segregates and plots upstream file sequences. They are segregated as sequences with no start codon,
+    faulty sequences (stop codon post translation if type == secsig or X or N nucleotides in the sequence),
+    and valid sequences.
+
+    :param upstreamFile: string
+                        upstream FASTA file
+
+    :param sampleName: string
+                        name of sampel
+
+    :param expectLength: tuple or list
+                        index-able of length 2 denoting start and end
+
+    :param outputDir: string
+                        name of output directory
+
+    :param startCodon: bool
+                        whether or not to care about start codons during segregation
+
+    :param type: string
+                        either 'secsig' or '5utr'
+
+    :param plotDist: bool
+                        whether or not to also save a txt and png file denoting the distribution of segregated sequences
+
+    :param stream: stream
+                        debugging stream
+
+    :return: tuple
+                        (ighvValidSignals : dict, faultySeqs : dict and noStartCodonSeqs: dict)
+    """
+    if type not in ['secsig', '5utr']:
+        raise ValueError("Unknown parameter type={}, expected one of 'secsig', '5utr'".format(type))
+
+    printto(stream, "\tSequences between {} and {} are being extracted ... ".format(expectLength[0], expectLength[1]))
+
+    START_CODON = "ATG"
+
+    # valid sequences
+    ighvSignals = defaultdict(list)
+    ighvSignalsCounts = defaultdict(int)
+
+    # no start codons
+    ighvSignalsNoATG = defaultdict(list)
+    noStartCodonCounts = defaultdict(int)
+
+    # faulty translations
+    faultyTrans = defaultdict(list)
+    faultyTransCounts = defaultdict(int)
+
+    ignoredSeqs = 0
+
+    records = SeqIO.index(gunzip(upstreamFile), 'fasta')
+    for id_ in records:
+        rec = records[id_]
+        ighv = rec.id.split(_UPSTREAM_SEQ_FILE_SEP)[1]
+        seq = rec.seq
+        if expectLength[0] <= len(rec) <= expectLength[1]:
+            if not startCodon or START_CODON in seq:
+
+                if type == 'secsig':
+                    seq = seq.translate(to_stop=False)[1:]
+
+                if 'X' in seq or '*' in seq:
+                    faultyTrans[ighv].append(rec)
+                    faultyTransCounts[ighv] += 1
+                elif 'N' not in rec.seq:
+                    ighvSignals[ighv].append(rec)
+                    ighvSignalsCounts[ighv] += 1
+                else:
+                    printto(stream, "Ignored: " + str(rec.seq) + ' ' + str(seq))
+                    if type == 'secsig':
+                        faultyTrans[ighv].append(rec)
+                        faultyTransCounts[ighv] += 1
+            elif startCodon:
+                # START_CODON not in seq
+                ighvSignalsNoATG[ighv].append(rec)
+                noStartCodonCounts[ighv] += 1
+        else:
+            ignoredSeqs += 1
+
+    if ignoredSeqs:
+        printto(stream, "\tThere are {} sequences that were ignored because the length of the provided upstream"
+                        "sequences were not {} <= length(upstream_seqs) <= {}"
+                .format(ignoredSeqs, *expectLength),
+                LEVEL.WARN)
+
+    if sum(ighvSignalsCounts.values()):
+        flattenRecs = itertools.chain.from_iterable(ighvSignals.values())
+        assert len(flattenRecs) == sum(ighvSignalsCounts.values())
+        title = 'Valid Secretion Signals' if type == 'secsig' else "Valid 5'-UTRs"
+        printto(stream, "\tThere are {} {} within expected "
+                        "length ({} to {}) and startCodon={}"
+                .format(sum(ighvSignalsCounts.values()), title, expectLength[0], expectLength[1], startCodon),
+                LEVEL.INFO)
+        validSeqFile = os.path.join(outputDir, _VALID_SEQ_FASTA_TEMPLATE
+                                    .format(sampleName, type, *expectLength))
+        SeqIO.write(flattenRecs, validSeqFile, 'fasta')
+        if plotDist:
+            writeCountsCategoriesToFile(ighvSignalsCounts,
+                                        sampleName,
+                                        os.path.join(outputDir, "{}_{}{}{}_valid_"
+                                                     .format(sampleName, type, expectLength[0], expectLength[1])),
+                                        title)
+    if sum(faultyTransCounts.values()):
+        flattenRecs = itertools.chain.from_iterable(faultyTrans.values())
+        assert len(flattenRecs) == sum(faultyTransCounts.values())
+        faultySeqFile = os.path.join(outputDir, _FAULTY_SEQ_FASTA_TEMPLATE
+                                     .format(sampleName, type, *expectLength))
+        SeqIO.write(flattenRecs, faultySeqFile, 'fasta')
+        if plotDist:
+            writeCountsCategoriesToFile(faultyTransCounts,
+                                        sampleName,
+                                        os.path.join(outputDir, "{}_{}{}{}_faulty_"
+                                                     .format(sampleName, type, *expectLength)),
+                                        'Faulty Translations')
+        printto(stream, "\tTotal faulty secretion signals is {} (excluded)".format(len(flattenRecs)), LEVEL.INFO)
+        for i in random.choice(range(len(flattenRecs)), min(5, len(flattenRecs)), replace=False):
+            printto(stream, "\t{}\n\tTranslated:{}".format(flattenRecs[i].seq, flattenRecs[i].seq.translate()))
+
+    if sum(noStartCodonCounts.values()):
+        flattenRecs = itertools.chain.from_iterable(ighvSignalsNoATG.values())
+        assert len(flattenRecs) == sum(noStartCodonCounts.values())
+        noStartCodonFile = os.path.join(outputDir, _STARTCOD_SEQ_FASTA_TEMPLATE
+                                        .format(sampleName, type, *expectLength))
+        SeqIO.write(flattenRecs, noStartCodonFile, 'fasta')
+        if plotDist:
+            writeCountsCategoriesToFile(noStartCodonCounts,
+                                        sampleName,
+                                        os.path.join(outputDir, "{}_{}{}{}_no_atg_"
+                                                     .format(sampleName, type, *expectLength)),
+                                        "Upstream sequences without start codon")
+        printto(stream,
+                "\tThere is no ATG codon in {} sequences (excluded)".format(len(flattenRecs)),
+                LEVEL.INFO)
+        for i in random.choice(range(len(flattenRecs)), min(5, len(flattenRecs)), replace=False):
+            printto(stream, "\t{}".format(flattenRecs[i].seq))
+
+    # the output of each ighv key's value should be a list of strings, not SeqRecord object
+    for k in ighvSignals:
+        ighvSignals[k] = map(lambda x: str(x.seq), ighvSignals[k])
+    for k in faultyTrans:
+        faultyTrans[k] = map(lambda x: str(x.seq), faultyTrans[k])
+    for k in ighvSignalsNoATG:
+        ighvSignalsNoATG[k] = map(lambda x: str(x.seq), ighvSignalsNoATG[k])
+
+    return ighvSignals, faultyTrans, ighvSignalsNoATG
 
 
-# todo Mon Mar 19 18:13:58 AEDT 2018
-def analyzeSequences():
-    pass
+def findUpstreamMotifs(outputDir, upstreamFile, sampleName, expectLength, level,
+                       startCodon=True, type='secsig', clusterMotifs=False, stream=None):
+    """
+    finds and visualizes motifs from the sequences provided in upstreamFile
 
+    :param outputDir: string
+                    path to output directory
+
+    :param upstreamFile: string
+                    path to FASTA file containing upstream sequences
+
+    :param sampleName: string
+                    name to refer the sample as
+
+    :param expectLength: tuple or list
+                    index-able of length 2 denoting start and end.
+                    If start == end, this implies that the analysis should
+                    be conducted ONLY on sequences with length == start == end, the rest are ignored.
+
+    :param level: string
+                    one of 'gene', 'family' or 'variant'
+
+    :param startCodon: bool
+                    whether or not to segregate sequences with start codon
+
+    :param type: string
+                    one of upstream analysis types: '5utr' or 'secsig'
+
+    :param clusterMotifs: bool
+                    whether or not to cluster sequences using TAMO
+
+    :param stream: stream
+                    logging stream
+    :return: None
+    """
+    from abseq.IgRepAuxiliary.SeqUtils import generateMotifs
+
+    if level == 'variant':
+        # single arugument identity function
+        compressor = lambda signals: signals
+    elif level == 'gene':
+        compressor = compressSeqGeneLevel
+    elif level == 'family':
+        compressor = compressSeqFamilyLevel
+    else:
+        raise ValueError("Unknown level {} requested, accepted values are family, gene, or variant".format(level))
+
+    if type not in ['secsig', '5utr']:
+        raise ValueError("Unknown parameter type={}, expected one of 'secsig', '5utr'".format(type))
+
+    # output files always have this format: <sampleName>_<type>_<exp[0]>_<exp[1]>_*
+    OUTPUT_FILE_PACKET = (sampleName, type, expectLength[0], expectLength[1])
+
+    # only analyze motifs of secretion signals that have exactly length == expectLength[0] == expectLength[1]
+    EXACT_LENGTH = expectLength[0] == expectLength[1]
+
+    validSeqFile = os.path.join(outputDir, _VALID_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+    faultySeqFile = os.path.join(outputDir, _FAULTY_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+    noStartCodonFile = os.path.join(outputDir, _STARTCOD_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+
+    allFiles = [validSeqFile, faultySeqFile, noStartCodonFile]
+
+    if all(map(lambda x: os.path.exists(x), allFiles)):
+        printto(stream,
+                "Sequences were already analyzed at {}, loading from files instead ... " + ' '.join(allFiles),
+                LEVEL.WARN)
+
+        ighvSignals, faultySeq, noStartCodonSeq = _loadIGVSeqsFromFasta(validSeqFile), \
+                                                  _loadIGVSeqsFromFasta(faultySeqFile), \
+                                                  _loadIGVSeqsFromFasta(noStartCodonFile)
+    else:
+        printto(stream, "Sequences are being analyzed ... ")
+        ighvSignals, faultySeq, noStartCodonSeq = collectUpstreamSeqs(upstreamFile, sampleName, expectLength,
+                                                                      outputDir, startCodon, type, stream=stream)
+
+    ighvSignals = compressor(ighvSignals)
+    generateMotifs(ighvSignals,
+                   align=(expectLength[0] < expectLength[1]),
+                   outputPrefix=os.path.join(outputDir, ("{}_{}{}{}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
+                   clusterMotifs=clusterMotifs,
+                   stream=stream)
+
+    if EXACT_LENGTH and type == 'secsig':
+        faultySeq = compressor(faultySeq)
+        generateMotifs(faultySeq,
+                       align=True,
+                       outputPrefix=os.path.join(outputDir, ("{}_{}{}{}_faulty_" + level).format(*OUTPUT_FILE_PACKET)),
+                       transSeq=False,
+                       extendAlphabet=True,
+                       clusterMotifs=clusterMotifs,
+                       stream=stream)
+        noStartCodonSeq = compressor(noStartCodonSeq)
+        generateMotifs(noStartCodonSeq,
+                       align=True,
+                       outputPrefix=os.path.join(outputDir,
+                                                 ("{}_{}{}{}_untranslated_" + level).format(*OUTPUT_FILE_PACKET)),
+                       transSeq=False,
+                       extendAlphabet=True,
+                       clusterMotifs=clusterMotifs,
+                       stream=stream)
+        generateMotifs(ighvSignals,
+                       align=False,
+                       outputPrefix=os.path.join(outputDir, ("{}_{}{}{}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
+                       transSeq=True,
+                       clusterMotifs=clusterMotifs,
+                       stream=stream)
+
+
+# todo: R plot these!
 def writeCountsCategoriesToFile(countsVariant, sampleName, filePrefix, title=''):
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'variant.csv')
     # gene level
     countsVariant = compressCountsGeneLevel(countsVariant)
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'gene.csv')
-    plotDist(countsVariant, sampleName,
-             filePrefix + 'gene.png',
-             title)
+    plotDist(countsVariant, sampleName, filePrefix + 'gene.png', title)
     # family level
     countsVariant = compressCountsFamilyLevel(countsVariant)
-    writeCountsToFile(countsVariant,
-                      filePrefix + 'family.csv')
-    plotDist(countsVariant, sampleName,
-             filePrefix + 'family.png',
-             title)
+    plotDist(countsVariant, sampleName, filePrefix + 'family.png', title)
+
+
+def _loadIGVSeqsFromFasta(filename):
+    ighvSeqs = defaultdict(list)
+    with safeOpen(filename) as fp:
+        for rec in SeqIO.parse(fp, 'fasta'):
+            ighv = rec.id.split('|')[1].strip()
+            ighvSeqs[ighv].append(str(rec.seq))
+    return ighvSeqs
