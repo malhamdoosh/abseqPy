@@ -3,16 +3,17 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
 from collections import Counter
+
 
 #
 #  spectratype, that is, histogram of clone counts by CDR/FR nucleotide length. 
 #  The spectratype is useful to detect pathological and highly clonal repertoires, 
 #  as the spectratype of non-expanded T- and B-cells has a symmetric gaussian-like distribution.
 def annotateSpectratypes(cloneAnnot):
-    #TODO: add annotation to clonotypes, e.g., germline genes
-    #TODO: add nucleotide level calculations 
+    # TODO: add annotation to clonotypes, e.g., germline genes
+    # TODO: add nucleotide level calculations
     spectraTypes = {}
     # CDR1
     spectraType = ((cloneAnnot['cdr1.end'] - cloneAnnot['cdr1.start'] + 1) / 3).astype(int)
@@ -46,13 +47,14 @@ def annotateSpectratypes(cloneAnnot):
     spectraType = ((cloneAnnot['fr4.end'] - cloneAnnot['fr1.start'] + 1) / 3).astype(int)
     spectraType = Counter(spectraType.tolist())
     spectraTypes['v'] = spectraType
-        
+
     return spectraTypes
+
 
 # clonotype is the histogram of clone counts by CDR/FR amino acid sequence 
 def annotateClonotypes(cloneSeqs):
-    #TODO: add annotation to clonotypes, e.g., germline genes
-    #TODO: add nucleotide level calculations
+    # TODO: add annotation to clonotypes, e.g., germline genes
+    # TODO: add nucleotide level calculations
     clonoTypes = {}
     # CDR1
     seqs = cloneSeqs['cdr1'].tolist()
@@ -76,25 +78,14 @@ def annotateClonotypes(cloneSeqs):
     seqs = cloneSeqs['fr4'].tolist()
     clonoTypes['fr4'] = Counter(seqs)
     # V domain
-    seqs = map(lambda x:''.join(x), zip(cloneSeqs['fr1'].tolist(),
-                                        cloneSeqs['cdr1'].tolist(),
-                                        cloneSeqs['fr2'].tolist(),
-                                        cloneSeqs['cdr2'].tolist(),
-                                        cloneSeqs['fr3'].tolist(),
-                                        cloneSeqs['cdr3'].tolist(),
-                                        cloneSeqs['fr4'].tolist()                                        
-                                        )
+    seqs = map(lambda x: ''.join(x), zip(cloneSeqs['fr1'].tolist(),
+                                         cloneSeqs['cdr1'].tolist(),
+                                         cloneSeqs['fr2'].tolist(),
+                                         cloneSeqs['cdr2'].tolist(),
+                                         cloneSeqs['fr3'].tolist(),
+                                         cloneSeqs['cdr3'].tolist(),
+                                         cloneSeqs['fr4'].tolist()
+                                         )
                )
     clonoTypes['v'] = Counter(seqs)
     return clonoTypes
-
-
-
-
-
-
-
-
-
-
-

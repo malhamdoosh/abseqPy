@@ -27,7 +27,7 @@ class RefineWorker(Process):
         self.procCounter = procCounter
         # we could have done the J gene length map reading earlier, but this encapsulates it better.
         # you'll only be reading N number of times where N = num.threads
-        self.jGeneLengthMap = _generateJMap(igdb, chain)
+        # self.jGeneLengthMap = _generateJMap(igdb, chain)
         self.chain = chain
         self.actualQstart = actualQstart
         self.fr4cut = fr4cut
@@ -45,7 +45,7 @@ class RefineWorker(Process):
         while True:            
             nextTask = self.tasksQueue.get()
             # poison pill check            
-            if (nextTask is None):
+            if nextTask is None:
                 printto(self.stream, self.name + " process has stopped." )
                 self.exitQueue.put("exit")
                 break
@@ -62,7 +62,7 @@ class RefineWorker(Process):
                     seqs = refineCloneAnnotation(qsRec, record, 
                                                  self.actualQstart, self.fr4cut,
                                                  self.trim5End, self.trim3End,
-                                                 self.chain, self.jGeneLengthMap, flags, stream=self.stream)
+                                                 self.chain, flags, stream=self.stream)
                     # out-of-frame clones are excluded
                     if qsRec['v-jframe'] != 'Out-of-frame':
                         refineInFramePrediction(qsRec, record, self.actualQstart, flags, stream=self.stream)
@@ -84,7 +84,7 @@ class RefineWorker(Process):
 
 
 def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
-                          trim5End, trim3End, chain, jGeneLengthMap, flags, stream=None):
+                          trim5End, trim3End, chain, flags, stream=None):
     seqs = [record.id, qsRec['vgene']]
 
     try:
@@ -126,29 +126,36 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 
             qsRec['cdr3.start'] = qsRec['fr3.end'] + 1
 
-            fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS[chain])
+            fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS[chain], dna=False)
 
             if not gapped and fr4start != -1 and fr4end != -1 and fr4end > fr4start:
-                # FR4 start
+
                 qsRec['fr4.start'] = (fr4start - 1) * 3 + qsRec['fr3.end'] + 1
 
-                # CDR3                
                 qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
+
+                # FR4end here is amino acid indexing, change to nt
+                fr4end = qsRec['fr3.end'] + fr4end * 3
+
             else:
                 # try to use the DNA consensus
                 searchRegion = str(record.seq)[int(qsRec['fr3.end']):]
-                fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS_DNA[chain], True)
-#                 print ("DNA", searchRegion, fr4start, fr4end)  
+                fr4start, fr4end, gapped = findBestAlignment(searchRegion, FR4_CONSENSUS_DNA[chain], dna=True)
+
                 if fr4start != -1 and fr4end != -1 and fr4end > fr4start:
-                    # FR4 start
                     qsRec['fr4.start'] = qsRec['fr3.end'] + fr4start
 
-                    # CDR3                
                     qsRec['cdr3.end'] = qsRec['fr4.start'] - 1
                     flags['CDR3dna'] += [record.id]
+
+                    # FR4end is already in nt counts (don't need to * 3)
+                    fr4end = qsRec['fr3.end'] + fr4end
                 else:
                     # TODO: check this case
                     qsRec['cdr3.end'] = qsRec['jqend']
+
+                    # Can't deduce FR4 !
+                    fr4end = nan
                     # qsRec['fr4.end'] = len(record.seq)
                     # qsRec['fr4.start'] =  len(record.seq)
 
@@ -160,21 +167,24 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
                     _, _, _, relativeFR4EndPosition, _ = \
                         findBestMatchedPattern(str(record.seq)[int(qsRec['cdr3.end']):], trim3End, extend5end=True)
                     if relativeFR4EndPosition == -1:
-                        # bad alignment - flag it and fall back to Jend
+                        # bad alignment - flag it and fall back to consensus FR4end
                         flags['FR4endless'] += [record.id]
-                        qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+                        qsRec['fr4.end'] = fr4end
                     else:
                         qsRec['fr4.end'] = qsRec['cdr3.end'] + relativeFR4EndPosition
                         if qsRec['fr4.end'] < qsRec['jqend']:
-                            # if FR4 is somehow misaligned, flag it and fall back to Jend
+                            # if FR4 is somehow misaligned, flag it and fall back to consensus FR4end
                             # this may happen if: for example, the provided sequence happen to also appear
                             # before J germline ends, and it matches that first.
                             flags['FR4cutEarly'] += [record.id]
-                            qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+                            qsRec['fr4.end'] = fr4end
                 else:
+                    # trim3End is int, use sliced string from earlier as FR4end
                     qsRec['fr4.end'] = len(record.seq)
             else:
-                qsRec['fr4.end'] = _predictFR4end(jGeneLengthMap, qsRec, flags, record)
+                if isnan(fr4end):
+                    qsRec['FR4PredictedError'] += [record.id]
+                qsRec['fr4.end'] = fr4end
 
         # Extract the CDR and FR protein sequences
         (protein, tmp) = extractCDRsandFRsProtein(protein, qsRec, offset, stream=stream)
@@ -187,7 +197,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
         # Extract the CDR and FR nucleotide sequences
         # COMMENTED OUT ON:  Fri Feb 16 10:36:41 AEDT 2018 BY JIAHONG - REASON: tmp var not used
         # is also generating "clones not partitioned correctly although the protein seqs are"
-        #tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)
+        # tmp = extractCDRsandFRsDNA(str(record.seq), qsRec)
         # TODO: consider adding the DNA sequences
         if '*' in protein:
             flags['endsWithStopCodon'] += [record.id]                     
@@ -218,13 +228,6 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
     except Exception as e:
         if "partitioning" in str(e):
             flags['partitioning'] += [record.id]            
-#         print("ERROR: exception in the Clone Annotation Refinement method")
-#         print(record.id)
-#         print(str(vh))
-#         print(qsRec)
-#         print(protein)        
-#         traceback.print_exc(file=sys.stdout)
-#         raise e
     return seqs
 
 
@@ -280,14 +283,6 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags, stream=None):
             flags['updatedInFrame'] += [record.id]
 
 
-def _generateJMap(database, chain, species='human'):
-    lengthMap = {}
-    pathToDB = os.path.join(os.path.abspath(os.path.expandvars(database)), 'imgt_{}_ig{}j'.format(species, chain[0]))
-    for rec in SeqIO.parse(pathToDB, 'fasta'):
-        lengthMap[rec.id.strip()] = len(rec.seq.strip())
-    return lengthMap
-
-
 def _parse3EndSeqs(seqs):
     """
     transform list of seqs to expected format by findBestMatchedPattern
@@ -299,6 +294,16 @@ def _parse3EndSeqs(seqs):
     return zip(targetids, seqs, maxScores)
 
 
+# deprecated function
+def _generateJMap(database, chain, species='human'):
+    lengthMap = {}
+    pathToDB = os.path.join(os.path.abspath(os.path.expandvars(database)), 'imgt_{}_ig{}j'.format(species, chain[0]))
+    for rec in SeqIO.parse(pathToDB, 'fasta'):
+        lengthMap[rec.id.strip()] = len(rec.seq.strip())
+    return lengthMap
+
+
+# deprecated function
 def _predictFR4end(jGeneLengthMap, qsRec, flags, record):
     """
     predict FR4end by extending J germline end index

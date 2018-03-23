@@ -5,7 +5,7 @@
     Changes log: check git commits. 
 ''' 
 
-import sys
+import os
 import numpy as np
 
 from multiprocessing import Process
@@ -30,9 +30,9 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
 
 
 def getAnnotationFields(chain):
-    if (chain == 'hv'):
+    if chain == 'hv':
         return ANNOTATION_FIELDS
-    elif (chain in ['kv', 'lv']):
+    elif chain in ['kv', 'lv']:
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
         # should never happen (argparse takes care of this for us)
@@ -63,7 +63,7 @@ def to_int(x):
 
 def extractCDRInfo(blastOutput, chain, stream=None):
     # Extract the top hits  
-    printto(stream, '\tExtracting top hit tables ... ' + blastOutput.split("/")[-1])
+    printto(stream, '\tExtracting top hit tables ... ' + os.path.basename(blastOutput))
     # process igblast output and extract top hit 
     cloneAnnot = []
     filteredIDs = []
@@ -171,14 +171,14 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     continue
                 line = blast.readline()
                 for i in range(1, 4):
-                    if line.lower().startswith('fr' + `i`):
+                    if line.lower().startswith('fr' + str(i)):
                         line = line.split()
                         cloneRecord['fr%d.start' % i] = to_int(line[1])
                         cloneRecord['fr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
                         cloneRecord['fr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])
                         cloneRecord['fr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
-                    if line.lower().startswith('cdr' + `i`):
+                    if line.lower().startswith('cdr' + str(i)):
                         line = line.replace('(germline)', '').split()
                         cloneRecord['cdr%d%s.start' % (i, 'g' if i == 3 else '')] = to_int(line[1])
                         cloneRecord['cdr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
@@ -320,7 +320,7 @@ class IgBlastWorker(Process):
             nextTask = self.tasksQueue.get()
 #             print("process has started a run... " + self.name)
             # poison pill check            
-            if (nextTask is None):
+            if nextTask is None:
                 printto(self.stream, "process has stopped ... " + self.name)
                 self.exitQueue.put("exit")
 #                 self.terminate()
@@ -331,7 +331,7 @@ class IgBlastWorker(Process):
 #                 print("process has completed analysis... " + self.name) 
                 self.resultsQueue.put(result)            
             except Exception as e:
-                printto(self.stream, "An error occurred while processing " + nextTask.split('/')[-1], LEVEL.EXCEPT)
+                printto(self.stream, "An error occurred while processing " + os.path.basename(nextTask), LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
 #                 raise
 #                 sys.exit()
