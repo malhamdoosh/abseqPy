@@ -4,7 +4,7 @@ from multiprocessing import Queue
 from copy import deepcopy
 from math import floor
 
-from abseq.config import DEFAULT_MERGER
+from abseq.config import DEFAULT_MERGER, RESULT_FOLDER
 from abseq.IgMultiRepertoire.GeneralWorker import GeneralWorker, GeneralWorkerException
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
@@ -19,10 +19,10 @@ class IgMultiRepertoire:
         self.sampleCount = 0
         self.resource = args.threads
         self.plotManager = PlotManager(args)
-
         if os.path.isdir(args.f1):
             clusterFiles = self._pairFiles(args.f1, args)
-            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles)
+
+            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles, resultDirName=RESULT_FOLDER)
 
             # get requested samples from -rs (if specified / if any) only
             self.sampleCount = len(canonicalNameChangeMap)
@@ -37,7 +37,7 @@ class IgMultiRepertoire:
                 if type(sample) == tuple:
                     # paired end sample
                     f1name, f2name = sample
-                    retval = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
+                    inferredName = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = f2name
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
@@ -49,7 +49,7 @@ class IgMultiRepertoire:
                 else:
                     # single ended
                     f1name = sample
-                    retval = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
+                    inferredName = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
@@ -57,18 +57,20 @@ class IgMultiRepertoire:
 
                 # if abseq's inferred sample name is in the map ==> sample was specified in -rs
                 # we also need to remap the name
-                if retval[1] in canonicalNameChangeMap:
-                    modifiedArgs.outdir += retval[0]
-                    modifiedArgs.name = canonicalNameChangeMap[retval[1]]
-                    modifiedArgs.outdir = (os.path.abspath(modifiedArgs.outdir) + '/').replace("//", "/")
-                    modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
-                    self.buffer.append(IgRepertoire(modifiedArgs))
+                if inferredName in canonicalNameChangeMap:
+                    modifiedArgs.name = canonicalNameChangeMap[inferredName]
+                    modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
+                    # <outdir>/result/<sample_name>/<sample_name>.log
+                    modifiedArgs.log = os.path.join(modifiedArgs.outdir, RESULT_FOLDER, modifiedArgs.name,
+                                                    '{}.log'.format(modifiedArgs.name))
+                    self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
         else:
-            self.plotManager.addMetadata((args.outdir, args.name))
-            args.outdir = (os.path.abspath(args.outdir) + "/").replace("//", "/")
-            args.log = args.outdir + args.name + ".log"
+            self.plotManager.processSingleInput(args.name, resultDirName=RESULT_FOLDER)
+            args.outdir = os.path.abspath(args.outdir) + os.path.sep
+            # <outdir>/result/<sample_name>/<sample_name>.log
+            args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
             self.sampleCount += 1
-            self.buffer.append(IgRepertoire(args))
+            self.buffer.append(IgRepertoire(**vars(args)))
 
     def __enter__(self):
         return self
@@ -100,20 +102,20 @@ class IgMultiRepertoire:
         if noExceptionRaised:
             self.plotManager.plot()
 
-    def analyzeAbundance(self, all=False):
-        self._beginWork(GeneralWorker.ABUN, all=all)
+    def analyzeAbundance(self):
+        self._beginWork(GeneralWorker.ABUN)
 
     def runFastqc(self):
         self._beginWork(GeneralWorker.FASTQC)
 
-    def analyzeDiversity(self, all=False):
-        self._beginWork(GeneralWorker.DIVER, all=all)
+    def analyzeDiversity(self):
+        self._beginWork(GeneralWorker.DIVER)
 
-    def analyzeProductivity(self, generateReport=True, all=False):
-        self._beginWork(GeneralWorker.PROD, generateReport=generateReport, all=all)
+    def analyzeProductivity(self):
+        self._beginWork(GeneralWorker.PROD)
 
-    def annotateClones(self, outDirFilter=None, all=False):
-        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter, all=all)
+    def annotateClones(self, outDirFilter=None):
+        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter)
 
     def analyzeRestrictionSites(self):
         self._beginWork(GeneralWorker.RSA)
@@ -169,9 +171,9 @@ class IgMultiRepertoire:
             reduced = []
             for f in files:
                 if type(f) == tuple:
-                    _, sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
+                    sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
                 else:
-                    _, sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
+                    sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
                 if sampleName not in seen:
                     seen.add(sampleName)
                     reduced.append(f)
@@ -189,11 +191,12 @@ class IgMultiRepertoire:
                 partner = findPartner(f)
                 if partner is None:
                     raise Exception("Failed to find opposite read for file {}".format(f))
-                res.append(reorderRead(os.path.abspath(folder + "/" + f), os.path.abspath(folder + "/" + partner)))
+                res.append(reorderRead(os.path.abspath(os.path.join(folder,  f)),
+                                       os.path.abspath(os.path.join(folder, partner))))
                 paired.add(partner)
             else:
                 # single file
-                res.append(os.path.abspath(folder + '/' + f))
+                res.append(os.path.abspath(os.path.join(folder, f)))
 
         return distinct(res)
 
@@ -202,13 +205,13 @@ class IgMultiRepertoire:
         # fill self.queue with data from self.buffer
         assert self.queue.empty()
         assert len(self.buffer) == self.sampleCount
-        for _ in xrange(len(self.buffer)):
+        for _ in range(len(self.buffer)):
             self.queue.put(self.buffer.pop())
         assert len(self.buffer) == 0
 
         # initialize workers
         workers = [GeneralWorker(self.queue, self.result, jobdesc, *args, **kwargs) for _ in
-                   xrange(min(self.sampleCount, self.resource))]
+                   range(min(self.sampleCount, self.resource))]
 
         # since macOSX doesn't support .qsize(). also, .empty() and .qsize() are
         # unreliable ==> we use poison pills
@@ -220,7 +223,7 @@ class IgMultiRepertoire:
                 w.start()
 
             # wait for all workers to complete
-            for i in xrange(self.sampleCount):
+            for i in range(self.sampleCount):
                 res = self.result.get()
                 if type(res) == tuple:
                     # XXX: encountered an exception! - here, decide to raise it immediately.

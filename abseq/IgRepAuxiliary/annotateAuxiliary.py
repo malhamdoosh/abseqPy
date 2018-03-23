@@ -4,7 +4,7 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
-
+from __future__ import division
 import os
 import sys
 import gc
@@ -28,13 +28,13 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             return Counter()
 
         # Estimate the IGV diversity in a library from igblast output 
-        printto(stream, 'The IGV clones of ' + fastaFile.split('/')[-1] + ' are being annotated ...')
+        printto(stream, 'The IGV clones of ' + os.path.basename(fastaFile) + ' are being annotated ...')
         with open(fastaFile) as f:
             noSeqs = sum(1 for line in f if line.startswith(">"))
-        totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
+        totalFiles = int(ceil(noSeqs / seqsPerFile))
         if totalFiles < noWorkers:
-            seqsPerFile = int(noSeqs * 1.0 / noWorkers) 
-            totalFiles = int(ceil(noSeqs * 1.0 / seqsPerFile))
+            seqsPerFile = int(noSeqs / noWorkers)
+            totalFiles = int(ceil(noSeqs / seqsPerFile))
         noSplit = noSeqs <= igRep.seqsPerFile
         printto(stream, "\t{0:,} sequences were found to be distributed into {1:,} file(s)"
                 .format(noSeqs, (totalFiles if not noSplit else 1)))
@@ -42,43 +42,41 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             with safeOpen(fastaFile) as fp:
                 recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             records = []
-            for id in recordsAll:
-                rec = recordsAll[id]
+            for id_ in recordsAll:
+                rec = recordsAll[id_]
                 rec.description = ''
                 rec.seq = rec.seq[:igRep.primer]
                 records.append(rec)
-            filesDir = igRep.outputDir + "tmp"
-            SeqIO.write(records, filesDir + "/seqs.fasta", 'fasta')
-            newFastFile = filesDir + "/seqs.fasta"
+            filesDir = os.path.join(outdir, "tmp")
+            SeqIO.write(records, os.path.join(filesDir, "seqs.fasta"), 'fasta')
+            newFastFile = os.path.join(filesDir, "seqs.fasta")
         else:
             newFastFile = fastaFile
         # if we only asked for one worker or if the sequences within the fasta file is smaller than the threshold in
         # in igRep.seqsPerFile, we can just analyze the file without splitting it
-        if (noWorkers == 1 or noSplit):
-            (cloneAnnot, fileteredIDs) = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
-                                                  seqType, noWorkers, outdir, stream=stream)
+        if noWorkers == 1 or noSplit:
+            cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
+                                                       seqType, noWorkers, outdir, stream=stream)
             sys.stdout.flush()
         else:
-            # split FASTA file into smaller files 
-            ext = '.' + fastaFile.split('/')[-1].split('.')[-1]
-            filesDir = igRep.outputDir + "tmp"
-            prefix = fastaFile.split('/')[-1].split('.')[0]
+            # split FASTA file into smaller files
+            prefix, ext = os.path.splitext(os.path.basename(fastaFile))
+            filesDir = os.path.join(outdir,  "tmp")
             prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
-            splitFastaFile(fastaFile, totalFiles, seqsPerFile, 
-                           filesDir, prefix, ext, stream=stream)
+            splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir, prefix, ext, stream=stream)
 
-            # # Prepare the multiprocessing queues     
+            # Prepare the multiprocessing queues
             tasks = Queue()    
             outcomes = Queue()   
             exitQueue = Queue()              
             cloneAnnot = DataFrame()
-            fileteredIDs = []
+            filteredIDs = []
             workers = []
             try:
                 # Initialize workers
                 for i in range(noWorkers):
                     w = IgBlastWorker(igRep.chain, igRep.db,
-                                      seqType, int(ceil(noWorkers * 1.0/ totalFiles)), stream=stream)
+                                      seqType, int(ceil(noWorkers / totalFiles)), stream=stream)
                     w.tasksQueue = tasks
                     w.resultsQueue = outcomes
                     w.exitQueue = exitQueue      
@@ -88,7 +86,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
 
                 # initialize tasks queue with file names     
                 for i in range(totalFiles):
-                    tasks.put(filesDir + "/" + prefix + "part" + str(i + 1) + ext)
+                    tasks.put(os.path.join(filesDir, prefix + "part" + str(i + 1) + ext))
 
                 # Add a poison pill for each worker
                 for i in range(noWorkers + 10):
@@ -107,11 +105,11 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
                 while totalFiles:
                     outcome = outcomes.get()
                     totalFiles -= 1                    
-                    if (outcome is None):
+                    if outcome is None:
                         continue                    
                     (cloneAnnoti, fileteredIDsi) = outcome
                     cloneAnnot = cloneAnnot.append(cloneAnnoti)
-                    fileteredIDs += fileteredIDsi
+                    filteredIDs += fileteredIDsi
                     sys.stdout.flush()
                     gc.collect()
                 printto(stream, "\tResults were collated successfully.")
@@ -126,7 +124,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             # Clean folders to save space
             # TODO: remove .fasta and .out files
             if (noSeqs > igRep.seqsPerFile and 
-                os.path.exists(filesDir + "/" + prefix + "part1" + ext)): 
+                os.path.exists(filesDir + "/" + prefix + "part1" + ext)):
                 os.system("rm " + filesDir + "/*" + ext)
 
-        return cloneAnnot, fileteredIDs
+        return cloneAnnot, filteredIDs

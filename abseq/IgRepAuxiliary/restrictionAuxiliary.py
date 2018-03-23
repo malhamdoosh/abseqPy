@@ -214,7 +214,7 @@ def loadRestrictionSites(sitesFile):
                 site = site.replace('N', '.').replace('(', '[').replace(')', ']')                
                 sites[fields[0]] = site
             except:
-                print line, fields
+                print(line, fields)
                 raise
     print("Restricting sites have been loaded")
     return sites

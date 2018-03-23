@@ -7,6 +7,7 @@
 
 import gc
 import sys
+import os
 
 from Bio import SeqIO
 from pandas.core.frame import DataFrame
@@ -22,32 +23,32 @@ from abseq.logger import LEVEL, printto
 
 
 def loadRefineFlagInfo():
-    refineFlagNames = ['fr1NotAtBegin', 'endsWithStopCodon', 
-             'fr4NotAsExpected', 'updatedStopCodon', 'noFR4', 'CDR3dna',
-             'partitioning',
-             'updatedInFrame' , 'updatedInFrameNA', 'updatedInFrameConc',
-             'updatedInFrameNo3or4', 'updatedInFrame3x' ,
-             'updatedInFrameIndel', 'FR4PredictedError', 'FR4AbruptEnd', 'FR4cutEarly']
-    refineFlagMsgs = {}
-    refineFlagMsgs['fr1NotAtBegin'] = "{:,} clones have FR1 start not equal to query start (Excluded)" 
-    refineFlagMsgs['endsWithStopCodon'] = "{:,} clones contain a stop codon "
-    refineFlagMsgs['updatedStopCodon'] = "The stopcodon flag was updated for {:,} clones "
-    refineFlagMsgs['fr4NotAsExpected'] = "The FR4 of {:,} clones do not start as expected"
-    refineFlagMsgs['noFR4'] = "{:,} clones do not have FR4 "
-    refineFlagMsgs['updatedInFrame'] = "The v-j frame rearrangement status has been corrected for {:,} clones "
-    refineFlagMsgs['updatedInFrameNA'] = "{:,} clones have undefined in-frame status"
-    refineFlagMsgs['updatedInFrameConc'] = "{:,} clones show discordance between the query and v gene starts"
-    refineFlagMsgs['updatedInFrameNo3or4'] = "{:,} clones have no CDR3 or FR4"
-    refineFlagMsgs['updatedInFrame3x'] = "{:,} clones are not multiple of 3 "
-    refineFlagMsgs['updatedInFrameIndel'] = "{:,} clones have indels in one of the FRs or CDRs"
-    refineFlagMsgs['CDR3dna'] = "The CDR3 of {:,} clones was determined using DNA consensus"
-    refineFlagMsgs['partitioning'] = "{:,} clones were partitioned incorrectly."
-    refineFlagMsgs['FR4PredictedError'] = "{:,} clones have incorrectly predicted FR4 end region"
-    refineFlagMsgs['FR4AbruptEnd'] = "{:,} clones' J gene ends abruptly. Sequence ends before end of J gene"
-    refineFlagMsgs['FR4cutEarly'] = "{:,} clones have --trim3 sequence(s) match earlier than expected. Matched" \
-                                    " before J germline ends, expected after."
-    refineFlagMsgs['FR4Endless'] = "{:,} clones do not align with provided trim3 sequences"
-    return (refineFlagNames, refineFlagMsgs)
+    refineFlagMsgs = {
+        'fr1NotAtBegin': "{:,} clones have FR1 start not equal to query start (Excluded)",
+
+        'endsWithStopCodon': "{:,} clones contain a stop codon ",
+        'updatedStopCodon': "The stopcodon flag was updated for {:,} clones ",
+
+        'updatedInFrame': "The v-j frame rearrangement status has been corrected for {:,} clones ",
+        'updatedInFrameNA': "{:,} clones have undefined in-frame status",
+        'updatedInFrameConc': "{:,} clones show discordance between the query and v gene starts",
+        'updatedInFrameNo3or4': "{:,} clones have no CDR3 or FR4",
+        'updatedInFrame3x': "{:,} clones are not multiple of 3 ",
+        'updatedInFrameIndel': "{:,} clones have indels in one of the FRs or CDRs",
+
+        'CDR3dna': "The CDR3 of {:,} clones was determined using DNA consensus",
+
+        'partitioning': "{:,} clones were partitioned incorrectly.",
+
+        'FR4PredictedError': "{:,} clones have no FR4 end because the consensus region cannot be identified.",
+        # 'FR4AbruptEnd': "{:,} clones' J gene ends abruptly. Sequence ends before end of J gene",        # not in use
+        'FR4cutEarly': "{:,} clones have --trim3 sequence(s) match earlier than expected. Matched"
+                       " before J germline ends, expected after.",
+        'FR4Endless': "{:,} clones do not align with provided trim3 sequences",
+        'fr4NotAsExpected': "The FR4 of {:,} clones do not start as expected",
+        'noFR4': "{:,} clones do not have FR4 "
+    }
+    return list(refineFlagMsgs.keys()), refineFlagMsgs
 
 
 def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, format, 
@@ -172,9 +173,9 @@ def collectRefineResults(resultsQueue, totalTasks, noSeqs, refineFlagNames, stre
         total += len(qsRecsOrdered)
 #         if (len(qsRecsOrdered) < 100):
 #             print(len(qsRecsOrdered))
-        if (total % 50000 == 0):
-            printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
-    printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
+        if total % 50000 == 0:
+            printto(stream, '\t{}/{} records have been collected ... '.format(total, noSeqs))
+    printto(stream, '\t{}/{} records have been collected ... '.format(total, noSeqs))
     return cloneAnnot, transSeqs, flags        
 
 
@@ -190,8 +191,8 @@ def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=Non
 
 
 def writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, outDir, sampleName):
-    with open(outDir + sampleName + "_refinement_flagged.txt", 'w') as out, \
-         open(outDir + sampleName + "_refinement_flagged.csv", "w") as outCSV:
+    with open(os.path.join(outDir, sampleName + "_refinement_flagged.txt"), 'w') as out, \
+         open(os.path.join(outDir, sampleName + "_refinement_flagged.csv"), "w") as outCSV:
         outCSV.write('refinementFlag,count\n')
         for f in refineFlagNames:
             if len(flags[f]) > 0:
@@ -215,8 +216,8 @@ class ProcCounter(object):
         with self.lock:
             self.val.value += val
             if self.val.value % 50000 == 0 or self.noSeqs == self.val.value:
-                printto(self.stream, '\t%d/%d %s have been processed ... ' % (self.val.value, self.noSeqs,
-                                                                              self.desc))
+                printto(self.stream, '\t{}/{} {} have been processed ... '
+                        .format(self.val.value, self.noSeqs, self.desc))
 
     def value(self):
         with self.lock:

@@ -20,7 +20,7 @@ VERSION = '1.1.8'
 # ====================================================================================
 # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
 # IT IN setup.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
-EXTERNAL_DEP_DIR = '3rd_party/'
+EXTERNAL_DEP_DIR = '3rd_party'
 # 1. clustal omega
 CLUSTALOMEGA = 'clustalo'
 # 2. FASTQC
@@ -41,19 +41,19 @@ class PriorityPath:
         _env = os.environ.copy()
 
         # if the BIN directory exists, append it to the front of PATH variable
-        override_path = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/bin/').replace('//', '/'))
+        override_path = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'bin')) + os.path.sep
         if os.path.exists(override_path):
             _env['PATH'] = override_path + os.pathsep + _env['PATH']
             self.updated = True
 
         # if the igdata dir exists, override it irrespective of if there's already a IGDATA env
-        override_igdata = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/igdata/').replace('//', '/'))
+        override_igdata = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'igdata')) + os.path.sep
         if os.path.exists(override_igdata):
             _env['IGDATA'] = override_igdata
             self.updated = True
 
         # if the igdb dir exists, override it irrespective of if there's already a IGBLASTDB env
-        override_igdb = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/databases/').replace('//', '/'))
+        override_igdb = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'databases')) + os.path.sep
         if os.path.exists(override_igdb):
             _env["IGBLASTDB"] = override_igdb
             self.updated = True
@@ -81,15 +81,46 @@ DEFAULT_MERGER = 'leehom'
 WEBLOGO = 'weblogo'
 
 
+#  === Chain type: K ===
+# VDVRPRDQGGNQ                   WTFGQGTKVEIK                   GRSAKGPRWKSN
+# CTLLARGPSWRSN                  VHFWPGDQAGDQ                   YTFGQGTKLEIK
+# VHFWPGDQAGDQ                   CTFGQGTKLEIK @                 ALLARGPSWRSN
+# CTVLARGPSWRSN                  VQFWPGDQAGDQ                   YSFGQGTKLEIK
+# CAVLARGPSWRSN                  VQFWPGDQAGDQ                   CSFGQGTKLEIK
+# IHFRPWDQSGYQ                   FTFGPGTKVDIK                   SLSALGPKWISN
+# AHFRRRDQGGDQ                   LTFGGGTKVEIK                   SLSAEGPRWRSN
+# AHVRRRDQGGDQ                   LTFGGGTKVEIK                   SRSAEGPRWRSN
+# DHLRPRDTTGD*                   ITFGQGTRLEIK                   SPSAKGHDWRLN
+#  === Chain type: L ===
+# LCLRNWDQGHRP                   YVFGTGTKVTVL                   MSSELGPRSPS*
+# CGIRRRDQADRP                   VVFGGGTKLTVL @                 WYSAEGPS*PS*
+# CGIRRRDQADRP                   VVFGGGTKLTVL                   WYSAEGPS*PS*
+# LGVRRRDQADRP                   WVFGGGTKLTVL                   GCSAEGPS*PS*
+# FCIWWRNPADHF                   FVFGGGTQLIIL                   LYLVEEPS*SF*
+# LGVW*GDRADRP                   WVFGEGTELTVL                   GCLVRGPS*PS*
+# LGVW*GDGADRP                   WVFGEGTELTVL                   GCLVRGRS*PS*
+# *CVRQWHQGDRP                   NVFGSGTKVTVL                   MCSAVAPR*PSS
+# CCVRRRHPADRP                   AVFGGGTQLTVL                   LCSEEAPS*PSS
+# CCVRRRHPADRP                   AVFGGGTQLTAL                   LCSEEAPS*PPS
 # consensus protein of HV http://discovery.ucl.ac.uk/15808/1/15808.pdf
-FR4_CONSENSUS = {'hv':"WGQGTXVTVSS", 'kv':'FGGGTQ', 'lv':'FGGGTQ'}
-FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC", 
-                     'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'}
+FR4_CONSENSUS = {
+    'hv': "WGQGTXVTVSS",
+    'kv': 'FGXGTKLEIK',
+    'lv': 'FGXGTKLTVL'
+}
+
+FR4_CONSENSUS_DNA = {
+    'hv': "TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC",
+    'kv': 'TTTGGCCAGGGGACCAAGCTGGAGATCAAA',
+    'lv': 'TTCGGCGGAGGGACCAAGCTGACCGTCCTA'
+}
 
 
 GB = (1024.**3)
 
-
+# directory naming
+RESULT_FOLDER = 'results'
+AUX_FOLDER = 'auxiliary'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
 if sys.platform == 'darwin':
@@ -101,8 +132,7 @@ else:
     MEM_GB = tmp/GB
 
 
-
-#SAMTOOLS_PROGRAM= 'samtools'
-#BGZIP = 'bgzip'
-#TABIX = 'tabix'
-#CLUSTALW = 'clustalw2'
+# SAMTOOLS_PROGRAM= 'samtools'
+# BGZIP = 'bgzip'
+# TABIX = 'tabix'
+# CLUSTALW = 'clustalw2'

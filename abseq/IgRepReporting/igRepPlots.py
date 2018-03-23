@@ -18,7 +18,6 @@ import matplotlib.colors as mcolors
 import math
 import numpy
 import random
-import abseq.IgRepertoire.igRepUtils
 
 from matplotlib import cm
 from collections import Counter
@@ -26,22 +25,23 @@ from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
 
+import abseq.IgRepertoire.igRepUtils
 from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.logger import printto, LEVEL
 
 
-def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf):
-    if (exists(outputFile)):
-        print("\tFile found ... " + outputFile.split('/')[-1])
+def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf, stream=None):
+    if exists(outputFile):
+        printto(stream, "\tFile found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
-    print("\tThe sequence length distribution of each gene family is being calculated ...")
+    printto(stream, "\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
     with abseq.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
-            if (len(rec) <= maxLen):
-                if (rec.id.split('|') > 1):
+            if len(rec) <= maxLen:
+                if rec.id.split('|') > 1:
                     ighvID = rec.id.split('|')[1]
                 else:
                     ighvID = rec.id
@@ -61,10 +61,10 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     ax.set_xticks(ind)
     ax.set_xticklabels(classes, rotation=45)
     ax.set_title("Sequence Lengths in " + sampleName)
-    outputFile = '/'.join(outputFile.split('/')[:-1] + ["box_" + outputFile.split('/')[-1]])
+    outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
     fig.savefig(outputFile, dpi=300)
     for k in classes:
-        print(k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k]))
+        printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
     plt.close()
 
 
@@ -73,12 +73,12 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    autoscale=None, maxbins=20, seqName='', normed=False,
                    removeOutliers=False, stream=None):
 
-    if (exists(outputFile)):
-        printto(stream, "\tSequence length distribution plot found ... " + outputFile.split('/')[-1], LEVEL.WARN)
+    if exists(outputFile):
+        printto(stream, "\tSequence length distribution plot found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
-    if (type("") == type(counts)):
+    if type("") == type(counts):
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         count = Counter(sizes)
@@ -151,15 +151,15 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
 
 
 def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, stream=None):
-    if (exists(filename)):
-        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
+    if exists(filename):
+        printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
         ax.grid()
         ax.set_xlabel('Duplication Level')
         ax.set_ylabel('Proportion of Duplicated Sequences')
-        if (not grouped):
+        if not grouped:
             ax.set_title(title + '\nTotal is {:,}'.format(int(sum(frequencies[0]))))
         else:
             ax.set_title(title + '\nTotal is {:,}'.format(sum(map(lambda x: sum(x), frequencies))))
@@ -198,7 +198,7 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
     # set the ticks and labels on the x-axis
     xticks = range(1, 10, 2) + [10] + range(11, 21, 2)
     xlabels = range(1, 10, 2) + ['>=10']
-    xlabels += map(lambda x: '>' + `int(x) - int(x) % 100` if x > 100 else '>=' + `int(x)`,
+    xlabels += map(lambda x: '>' + str(int(x) - int(x) % 100) if x > 100 else '>=' + str(int(x)),
                    np.linspace(10, 10000, (len(xticks) - len(xlabels)) * 2).tolist()[1::2])
 
     # write to csv too - let metadata tell the plotting program to re-scale the X axis to the provided values
@@ -227,7 +227,7 @@ In ecology, rarefaction is a technique to assess species richness from the resul
 
 def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=None):
     if (exists(filename)):
-        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
+        printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -306,8 +306,8 @@ XXX: Note to whoever is using this function - there will be NO R plot for this f
 
 
 def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
-    if (exists(filename)):
-        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
+    if exists(filename):
+        printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -365,7 +365,7 @@ Uses sampling without replacement and gives equal properties to all clones
 
 def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
     if (exists(filename)):
-        printto(stream, '\tFile found ... ' + filename.split('/')[-1], LEVEL.WARN)
+        printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
         fig, ax = plt.subplots(figsize=(8, 5))
@@ -412,24 +412,19 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
         plt.close()
 
 
-'''
-    Plot Venn diagrams using the matplotlib_venn package
-'''
-
-
-def plotVenn(sets, filename, title=''):
-    if (exists(filename)):
-        print("File found ... " + filename.split('/')[-1])
+def plotVenn(sets, filename, title='', stream=None):
+    if exists(filename):
+        printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     fig, ax = plt.subplots()
-    if (len(sets) == 2):
+    if len(sets) == 2:
         from matplotlib_venn import venn2
         venn2(sets.values(), sets.keys())
-    elif (len(sets) == 3):
+    elif len(sets) == 3:
         from matplotlib_venn import venn3
         venn3(sets.values(), sets.keys())
     else:
-        print("Venn diagram cannot be generated for more than 3 restriction enzymes")
+        printto(stream, "Venn diagram cannot be generated for more than 3 restriction enzymes", LEVEL.ERR)
         return
     ax.set_title(title)
     fig.savefig(filename, dpi=300)
@@ -439,7 +434,7 @@ def plotVenn(sets, filename, title=''):
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
              rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False, stream=None):
     if (exists(filename)):
-        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
+        printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
 
     # This function creates bar plot for the distribution counts/proportions
@@ -543,7 +538,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
 
 def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=None):
     if (exists(filename)):
-        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
+        printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     x = data[xyCol[0]].tolist()
     y = data[xyCol[1]].tolist()
@@ -601,7 +596,7 @@ def plotHeatmap(hm, extent, xticks, yticks,
     plt.close()
 
 
-def plotHeatmapFromDF(df, filename, title=None):
+def plotHeatmapFromDF(df, filename, title=None, stream=None):
     # df = (df - df.min()) / (df.max() - df.min())
 
     fig, ax = plt.subplots()
@@ -727,8 +722,8 @@ Amino acids are colored based on their physiochemical properties
 
 
 def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=None):
-    if (exists(filename)):
-        printto(stream, "File found ... " + filename.split('/')[-1], LEVEL.WARN)
+    if exists(filename):
+        printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     totals = np.array([sum(ct.values()) for ct in counts])
     if removeOutliers:

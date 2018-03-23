@@ -7,6 +7,7 @@
 
 import gc
 import pandas as pd
+import os
 
 from collections import Counter, OrderedDict
 from numpy import nan
@@ -22,8 +23,8 @@ def generateProductivityReport(cloneAnnot, cloneSeqs, name, chain, outputDir, st
 
     productive = extractProductiveClones(cloneAnnot, name, outputDir, stream=stream)
     productiveFamilyDist = compressCountsFamilyLevel(Counter(productive['vgene'].tolist()))
-    plotDist(productiveFamilyDist, name, outputDir + name + 
-             '_igv_dist_productive.png',
+    plotDist(productiveFamilyDist, name, os.path.join(outputDir, name +
+             '_igv_dist_productive.png'),
              title='IGV Abundance of Productive Clones',
              proportion=True, stream=stream)
     del productiveFamilyDist
@@ -67,69 +68,69 @@ def writeProdStats(cloneAnnot, sampleName, outdir):
     }
 
     df = pd.DataFrame.from_dict(res)
-    df.to_csv(outdir + sampleName + "_productivity.csv")
+    df.to_csv(os.path.join(outdir, sampleName + "_productivity.csv"))
 
 
 def writeGeneStats(cloneAnnot, name, chain, outputDir, suffix, stream=None):
     # V gene stats
     gaps = Counter(cloneAnnot['vgaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_igv_gaps_dist.png', title='Gaps in V Gene',
+    plotDist(gaps, name, os.path.join(outputDir, name +
+             '_igv_gaps_dist.png'), title='Gaps in V Gene',
              proportion=True, rotateLabels=False, top=20, stream=stream)
     mismatches = Counter(cloneAnnot['vmismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_igv_mismatches_dist.png', title='Mismatches in V Gene',
+    plotDist(mismatches, name, os.path.join(outputDir, name +
+             '_igv_mismatches_dist.png'), title='Mismatches in V Gene',
              proportion=True, rotateLabels=False, top=20, stream=stream)
     # D gene stats
     if chain == 'hv':
         gaps = Counter(cloneAnnot['dgaps'].tolist())
-        plotDist(gaps, name, outputDir + name + 
-                 '_igd_gaps_dist.png', title='Gaps in D Gene',
+        plotDist(gaps, name, os.path.join(outputDir, name +
+                 '_igd_gaps_dist.png'), title='Gaps in D Gene',
                  proportion=False, rotateLabels=False, stream=stream)
         mismatches = Counter(cloneAnnot['dmismatches'].tolist())
 #         print(mismatches)
-        plotDist(mismatches, name, outputDir + name + 
-                 '_igd_mismatches_dist.png', title='Mismatches in D Gene',
+        plotDist(mismatches, name, os.path.join(outputDir, name +
+                 '_igd_mismatches_dist.png'), title='Mismatches in D Gene',
                  proportion=False, rotateLabels=False, stream=stream)
     # J gene stats
     gaps = Counter(cloneAnnot['jgaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_igj_gaps_dist.png', title='Gaps in J Gene',
+    plotDist(gaps, name, os.path.join(outputDir, name +
+             '_igj_gaps_dist.png'), title='Gaps in J Gene',
              proportion=False, rotateLabels=False, stream=stream)
     mismatches = Counter(cloneAnnot['jmismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_igj_mismatches_dist.png', title='Mismatches in J Gene',
+    plotDist(mismatches, name, os.path.join(outputDir, name +
+             '_igj_mismatches_dist.png'), title='Mismatches in J Gene',
              proportion=False, rotateLabels=False, stream=stream)
 
 
 def writeCDRStats(cloneAnnot, name, outputDir, suffix = '', stream=None):
     # CDR1 statistics
     cdrGaps = Counter(cloneAnnot['cdr1.gaps'].tolist())
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr1_gaps_dist.png', title='Gaps in CDR1',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr1_gaps_dist.png'), title='Gaps in CDR1',
              proportion=False, rotateLabels=False, stream=stream)
     cdrMismatches = Counter(cloneAnnot['cdr1.mismatches'].tolist())
-    plotDist(cdrMismatches, name, outputDir + name + 
-             '_cdr1_mismatches_dist.png', title='Mismatches in CDR1',
+    plotDist(cdrMismatches, name, os.path.join(outputDir, name +
+             '_cdr1_mismatches_dist.png'), title='Mismatches in CDR1',
              proportion=False, rotateLabels=False, stream=stream)
     # CDR2 stats    
     cdrGaps = Counter(cloneAnnot['cdr2.gaps'].tolist())
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr2_gaps_dist.png', title='Gaps in CDR2',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr2_gaps_dist.png'), title='Gaps in CDR2',
              proportion=False, rotateLabels=False, stream=stream)
     cdrMismatches = Counter(cloneAnnot['cdr2.mismatches'].tolist())
-    plotDist(cdrMismatches, name, outputDir + name + 
-             '_cdr2_mismatches_dist.png', title='Mismatches in CDR2',
+    plotDist(cdrMismatches, name, os.path.join(outputDir, name +
+             '_cdr2_mismatches_dist.png'), title='Mismatches in CDR2',
              proportion=False, rotateLabels=False, stream=stream)
     # CDR3 stats
     cdrGaps = Counter(cloneAnnot['cdr3g.gaps'])
 #         print(len(cdrGaps))
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr3_gaps_dist.png', title='Gaps in CDR3 (Germline)',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr3_gaps_dist.png'), title='Gaps in CDR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     cdrMismatches = Counter(cloneAnnot['cdr3g.mismatches'].tolist())
-    plotDist(cdrMismatches, name, outputDir + name + 
-             '_cdr3_mismatches_dist.png', title='Mismatches in CDR3 (Germline)',
+    plotDist(cdrMismatches, name, os.path.join(outputDir, name +
+             '_cdr3_mismatches_dist.png'), title='Mismatches in CDR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     gc.collect()
 
@@ -137,30 +138,30 @@ def writeCDRStats(cloneAnnot, name, outputDir, suffix = '', stream=None):
 def writeFRStats(cloneAnnot, name, outputDir, suffix = '', stream=None):
     # FR1 statistics 
     gaps = Counter(cloneAnnot['fr1.gaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_fr1_gaps_dist.png', title='Gaps in FR1',
+    plotDist(gaps, name, os.path.join(outputDir,  name +
+             '_fr1_gaps_dist.png'), title='Gaps in FR1',
              proportion=False, rotateLabels=False, stream=stream)
     mismatches = Counter(cloneAnnot['fr1.mismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_fr1_mismatches_dist.png', title='Mismatches in FR1',
+    plotDist(mismatches, name, os.path.join(outputDir, name +
+             '_fr1_mismatches_dist.png'), title='Mismatches in FR1',
              proportion=False, rotateLabels=False, stream=stream)
     # FR2 statistics 
     gaps = Counter(cloneAnnot['fr2.gaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_fr2_gaps_dist.png', title='Gaps in FR2',
+    plotDist(gaps, name, os.path.join(outputDir, name +
+             '_fr2_gaps_dist.png'), title='Gaps in FR2',
              proportion=False, rotateLabels=False, stream=stream)
     mismatches = Counter(cloneAnnot['fr2.mismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_fr2_mismatches_dist.png', title='Mismatches in FR2',
+    plotDist(mismatches, name, os.path.join(outputDir, name +
+             '_fr2_mismatches_dist.png'), title='Mismatches in FR2',
              proportion=False, rotateLabels=False, stream=stream)
     # FR3 statistics 
     gaps = Counter(cloneAnnot['fr3g.gaps'].tolist())
-    plotDist(gaps, name, outputDir + name + 
-             '_fr3_gaps_dist.png', title='Gaps in FR3 (Germline)',
+    plotDist(gaps, name, os.path.join(outputDir, name +
+             '_fr3_gaps_dist.png'), title='Gaps in FR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     mismatches = Counter(cloneAnnot['fr3g.mismatches'].tolist())
-    plotDist(mismatches, name, outputDir + name + 
-             '_fr3_mismatches_dist.png', title='Mismatches in FR3 (Germline)',
+    plotDist(mismatches, name, os.path.join(outputDir, name +
+             '_fr3_mismatches_dist.png'), title='Mismatches in FR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     
     gc.collect()   
@@ -169,47 +170,47 @@ def writeFRStats(cloneAnnot, name, outputDir, suffix = '', stream=None):
 def extractProductiveClones(cloneAnnot, name, outputDir, stream=None):
     # v-j rearrangement frame distribution 
     vjframeDist = Counter(cloneAnnot['v-jframe'].tolist())        
-    plotDist(vjframeDist, name, outputDir + name + 
-             '_vjframe_dist.png', title='V-D-J Rearrangement',
+    plotDist(vjframeDist, name, os.path.join(outputDir, name +
+             '_vjframe_dist.png'), title='V-D-J Rearrangement',
              proportion=False, rotateLabels=False, stream=stream)
     del vjframeDist
     # plot the family distribution of out-of-frame
     outOfFrame = cloneAnnot[cloneAnnot['v-jframe'] != 'In-frame']
     outOfFrameFamilyDist = compressCountsFamilyLevel(Counter(outOfFrame['vgene'].tolist()))
-    plotDist(outOfFrameFamilyDist, name, outputDir + name + 
-             '_igv_dist_out_of_frame.png',
+    plotDist(outOfFrameFamilyDist, name, os.path.join(outputDir, name +
+             '_igv_dist_out_of_frame.png'),
               title='IGV Abundance of Out-Of-frame Clones',
              proportion=True, stream=stream)
     del outOfFrameFamilyDist
     # Indels in CDR1 and FR1    
     cdrGaps = Counter(outOfFrame['cdr1.gaps'].tolist())
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr1_gaps_dist_out_of_frame.png', title='Gaps in CDR1',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr1_gaps_dist_out_of_frame.png'), title='Gaps in CDR1',
              proportion=False, rotateLabels=False, stream=stream)
     frGaps = Counter(outOfFrame['fr1.gaps'].tolist())
-    plotDist(frGaps, name, outputDir + name + 
-             '_fr1_gaps_dist_out_of_frame.png', title='Gaps in FR1',
+    plotDist(frGaps, name, os.path.join(outputDir, name +
+             '_fr1_gaps_dist_out_of_frame.png'), title='Gaps in FR1',
              proportion=False, rotateLabels=False, stream=stream)
     del  cdrGaps, frGaps
     # Indels in CDR2 and FR2
     cdrGaps = Counter(outOfFrame['cdr2.gaps'].tolist())
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr2_gaps_dist_out_of_frame.png', title='Gaps in CDR2',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr2_gaps_dist_out_of_frame.png'), title='Gaps in CDR2',
              proportion=False, rotateLabels=False, stream=stream)
     frGaps = Counter(outOfFrame['fr2.gaps'].tolist())
-    plotDist(frGaps, name, outputDir + name + 
-             '_fr2_gaps_dist_out_of_frame.png', title='Gaps in FR2',
+    plotDist(frGaps, name, os.path.join(outputDir, name +
+             '_fr2_gaps_dist_out_of_frame.png'), title='Gaps in FR2',
              proportion=False, rotateLabels=False, stream=stream)
     del cdrGaps, frGaps
     # Indels in CDR3 and FR3
     cdrGaps = Counter(outOfFrame['cdr3g.gaps'])
 #         print(len(cdrGaps))
-    plotDist(cdrGaps, name, outputDir + name + 
-             '_cdr3_gaps_dist_out_of_frame.png', title='Gaps in CDR3 (Germline)',
+    plotDist(cdrGaps, name, os.path.join(outputDir, name +
+             '_cdr3_gaps_dist_out_of_frame.png'), title='Gaps in CDR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     frGaps = Counter(outOfFrame['fr3g.gaps'].tolist())
-    plotDist(frGaps, name, outputDir + name + 
-             '_fr3_gaps_dist_out_of_frame.png', title='Gaps in FR3 (Germline)',
+    plotDist(frGaps, name, os.path.join(outputDir, name +
+             '_fr3_gaps_dist_out_of_frame.png'), title='Gaps in FR3 (Germline)',
              proportion=False, rotateLabels=False, stream=stream)
     del cdrGaps, frGaps
 #     # Indels in FR4
@@ -222,15 +223,15 @@ def extractProductiveClones(cloneAnnot, name, outputDir, stream=None):
     inFrame = cloneAnnot[cloneAnnot['v-jframe'] == 'In-frame']
     # Stop Codon 
     stopcodonInFrameDist = Counter(inFrame['stopcodon'].tolist())
-    plotDist(stopcodonInFrameDist, name, outputDir + name + 
-             '_stopcodon_dist_in_frame.png', title='Stop Codons in In-frame Clones',
+    plotDist(stopcodonInFrameDist, name, os.path.join(outputDir,  name +
+             '_stopcodon_dist_in_frame.png'), title='Stop Codons in In-frame Clones',
              proportion=False, rotateLabels=False, stream=stream)
     
     # stop codon family distribution
     stopcodFamily = Counter(inFrame[inFrame['stopcodon'] == 'Yes']['vgene'].tolist())
     stopcodFamily = compressCountsFamilyLevel(stopcodFamily)
-    plotDist(stopcodFamily, name, outputDir + name + 
-             '_igv_dist_inframe_unproductive.png',
+    plotDist(stopcodFamily, name, os.path.join(outputDir, name +
+             '_igv_dist_inframe_unproductive.png'),
              title='IGV Abundance of In-frame Unproductive Clones',
              proportion=True, stream=stream)
     del stopcodonInFrameDist, stopcodFamily
@@ -264,7 +265,7 @@ def writeStopCodonStats(cloneAnnot, cloneSeqs, name, outputDir, inframe, stream=
     for region in regions:
         counter[region] = sum(cloneSeqs[region.lower()].str.contains("*", regex=False))
     orderedCounter = OrderedDict((reg, counter[reg]) for reg in regions)
-    plotDist(orderedCounter, name, outputDir + name
-             + '_stopcodon_region_{}.png'.format('inframe' if inframe else 'outframe'),
+    plotDist(orderedCounter, name, os.path.join(outputDir, name
+             + '_stopcodon_region_{}.png').format('inframe' if inframe else 'outframe'),
              title="Stop codon in FRs and CDRs of {} sequences".format(frameStatus),
              proportion=True, sortValues=False, maintainx=True, stream=stream)
