@@ -167,9 +167,6 @@ class PlotManager:
 
         return canonicalNameChangeMap
 
-    def addMetadata(self, data):
-        self.metadata.append(data)
-
     def _getRscriptSamples(self):
         # whether or not there was python plotting, see if user explicitly chose samples
         requestedSamples = set()
