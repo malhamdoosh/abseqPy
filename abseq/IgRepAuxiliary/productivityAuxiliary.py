@@ -41,7 +41,7 @@ def loadRefineFlagInfo():
         'partitioning': "{:,} clones were partitioned incorrectly.",
 
         'FR4PredictedError': "{:,} clones have no FR4 end because the consensus region cannot be identified.",
-        'FR4AbruptEnd': "{:,} clones' J gene ends abruptly. Sequence ends before end of J gene",
+        # 'FR4AbruptEnd': "{:,} clones' J gene ends abruptly. Sequence ends before end of J gene",        # not in use
         'FR4cutEarly': "{:,} clones have --trim3 sequence(s) match earlier than expected. Matched"
                        " before J germline ends, expected after.",
         'FR4Endless': "{:,} clones do not align with provided trim3 sequences",

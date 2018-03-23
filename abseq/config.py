@@ -81,10 +81,39 @@ DEFAULT_MERGER = 'leehom'
 WEBLOGO = 'weblogo'
 
 
+#  === Chain type: K ===
+# VDVRPRDQGGNQ                   WTFGQGTKVEIK                   GRSAKGPRWKSN
+# CTLLARGPSWRSN                  VHFWPGDQAGDQ                   YTFGQGTKLEIK
+# VHFWPGDQAGDQ                   CTFGQGTKLEIK @                 ALLARGPSWRSN
+# CTVLARGPSWRSN                  VQFWPGDQAGDQ                   YSFGQGTKLEIK
+# CAVLARGPSWRSN                  VQFWPGDQAGDQ                   CSFGQGTKLEIK
+# IHFRPWDQSGYQ                   FTFGPGTKVDIK                   SLSALGPKWISN
+# AHFRRRDQGGDQ                   LTFGGGTKVEIK                   SLSAEGPRWRSN
+# AHVRRRDQGGDQ                   LTFGGGTKVEIK                   SRSAEGPRWRSN
+# DHLRPRDTTGD*                   ITFGQGTRLEIK                   SPSAKGHDWRLN
+#  === Chain type: L ===
+# LCLRNWDQGHRP                   YVFGTGTKVTVL                   MSSELGPRSPS*
+# CGIRRRDQADRP                   VVFGGGTKLTVL @                 WYSAEGPS*PS*
+# CGIRRRDQADRP                   VVFGGGTKLTVL                   WYSAEGPS*PS*
+# LGVRRRDQADRP                   WVFGGGTKLTVL                   GCSAEGPS*PS*
+# FCIWWRNPADHF                   FVFGGGTQLIIL                   LYLVEEPS*SF*
+# LGVW*GDRADRP                   WVFGEGTELTVL                   GCLVRGPS*PS*
+# LGVW*GDGADRP                   WVFGEGTELTVL                   GCLVRGRS*PS*
+# *CVRQWHQGDRP                   NVFGSGTKVTVL                   MCSAVAPR*PSS
+# CCVRRRHPADRP                   AVFGGGTQLTVL                   LCSEEAPS*PSS
+# CCVRRRHPADRP                   AVFGGGTQLTAL                   LCSEEAPS*PPS
 # consensus protein of HV http://discovery.ucl.ac.uk/15808/1/15808.pdf
-FR4_CONSENSUS = {'hv':"WGQGTXVTVSS", 'kv':'FGGGTQ', 'lv':'FGGGTQ'}
-FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC", 
-                     'kv':'TTCGGCGGCGGCACCCAG', 'lv':'TTCGGCGGCGGCACCCAG'}
+FR4_CONSENSUS = {
+    'hv': "WGQGTXVTVSS",
+    'kv': 'FGXGTKLEIK',
+    'lv': 'FGXGTKLTVL'
+}
+
+FR4_CONSENSUS_DNA = {
+    'hv': "TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC",
+    'kv': 'TTTGGCCAGGGGACCAAGCTGGAGATCAAA',
+    'lv': 'TTCGGCGGAGGGACCAAGCTGACCGTCCTA'
+}
 
 
 GB = (1024.**3)
@@ -103,8 +132,7 @@ else:
     MEM_GB = tmp/GB
 
 
-
-#SAMTOOLS_PROGRAM= 'samtools'
-#BGZIP = 'bgzip'
-#TABIX = 'tabix'
-#CLUSTALW = 'clustalw2'
+# SAMTOOLS_PROGRAM= 'samtools'
+# BGZIP = 'bgzip'
+# TABIX = 'tabix'
+# CLUSTALW = 'clustalw2'
