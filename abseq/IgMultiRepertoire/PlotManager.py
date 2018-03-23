@@ -2,6 +2,7 @@ import subprocess
 import sys
 import itertools
 import numpy as np
+import os
 
 from collections import defaultdict
 
@@ -105,22 +106,34 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
-    def processInput(self, allFiles):
+    def processInput(self, allFiles, resultDirName=""):
+        """
+        reads rscript argument and parses it into metadata as Rscript.tmp file for R plot to know where
+        the sample files are located. It also maps inferred "canonical" name into user provided name in -rs
+
+        :param allFiles: iterable of tuples(pair-end) or string(single ended)
+                    all clustered files from a directory
+
+        :param resultDirName: string
+                    intermediate directory name (if any)
+
+        :return: dict
+                    mapping between old inferred name and user provided -rs name
+        """
         from abseq.IgRepertoire.igRepUtils import inferSampleName
         canonicalNameChangeMap = {}
         for sample in allFiles:
             if type(sample) == tuple:
                 # paired end sample
                 f1name, _ = sample
-                dirName, canonicalName = inferSampleName(f1name, merger=True,
-                                                         fastqc=(self.args.task.lower() == 'fastqc'))
-                outDirName = self.args.outdir + dirName
-                self.metadata.append((outDirName, canonicalName))
+                merger = True
             else:
-                dirName, canonicalName = inferSampleName(sample, merger=False,
-                                                         fastqc=(self.args.task.lower() == 'fastqc'))
-                outDirName = self.args.outdir + dirName
-                self.metadata.append((outDirName, canonicalName))
+                f1name = sample
+                merger = False
+
+            canonicalName = inferSampleName(f1name, merger=merger, fastqc=(self.args.task.lower() == 'fastqc'))
+            outDirName = os.path.join(self.args.outdir, resultDirName, canonicalName)
+            self.metadata.append((outDirName, canonicalName))
             canonicalNameChangeMap[canonicalName] = canonicalName
 
         # 1st. Filter out all samples that are not required. (by consulting -rs <args>)

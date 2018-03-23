@@ -24,7 +24,7 @@ _STARTCOD_SEQ_FASTA_TEMPLATE = "{}_{}{}{}_no_atg.fasta"
 
 
 # todo: R plot these
-def plotUpstreamLenDist(upstreamFile, expectLength, name, stream=None):
+def plotUpstreamLenDist(upstreamFile, expectLength, name, outDir, stream=None):
     """
     plots length distribution of upstream sequences. 4 different sets of plots are generated:
         1. class-level distribution
@@ -42,6 +42,9 @@ def plotUpstreamLenDist(upstreamFile, expectLength, name, stream=None):
     :param name:
                 sample name (string)
 
+    :param outDir: string
+                output directory
+
     :param stream:
                 logging stream
 
@@ -53,19 +56,19 @@ def plotUpstreamLenDist(upstreamFile, expectLength, name, stream=None):
 
     fileExt = 'fasta'
 
-    outputFile = upstreamFile.replace('.fasta', '_dist.png')
+    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist.png'))
     plotSeqLenDist(upstreamFile, name, outputFile, fileExt, stream=stream)
 
-    outputFile = upstreamFile.replace('.fasta', '_dist_class.png')
+    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_class.png'))
     plotSeqLenDistClasses(upstreamFile, name, outputFile, fileExt, stream=stream)
 
     # if user provided values to upstream (and it's not Inf)
     if expectLength != Inf:
         # plot seqs that do not meet the expectedLength (shorter than expected length)
-        outputFile = upstreamFile.replace('.fasta', '_dist_short.png')
+        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short.png'))
         plotSeqLenDist(upstreamFile, name, outputFile, fileExt, expectLength - 1, stream=stream)
 
-        outputFile = upstreamFile.replace('.fasta', '_dist_short_class.png')
+        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short_class.png'))
         plotSeqLenDistClasses(upstreamFile, name, outputFile, fileExt, expectLength - 1, stream=stream)
 
 
@@ -322,19 +325,19 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outputDir,
     return ighvSignals, faultyTrans, ighvSignalsNoATG
 
 
-def findUpstreamMotifs(outputDir, upstreamFile, sampleName, expectLength, level,
+def findUpstreamMotifs(upstreamFile, sampleName, outputDir, expectLength, level,
                        startCodon=True, type='secsig', clusterMotifs=False, stream=None):
     """
     finds and visualizes motifs from the sequences provided in upstreamFile
-
-    :param outputDir: string
-                    path to output directory
 
     :param upstreamFile: string
                     path to FASTA file containing upstream sequences
 
     :param sampleName: string
                     name to refer the sample as
+
+    :param outputDir: string
+                    path to output directory
 
     :param expectLength: tuple or list
                     index-able of length 2 denoting start and end.

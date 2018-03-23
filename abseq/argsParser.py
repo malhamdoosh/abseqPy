@@ -63,13 +63,9 @@ def parseArgs():
         if args.merger is None and args.f2 is not None:
             args.merger = DEFAULT_MERGER
 
-        # appending analysis name to output directory filenames
-        if args.name is not None:
-            args.outdir = os.path.join(args.outdir, args.name)
-        else:
-            inferredDir, inferredName = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
-            args.outdir = os.path.join(args.outdir, inferredDir)
-            args.name = inferredName
+        # automatically infer sample name from F1
+        if args.name is None:
+            args.name = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
 
         # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
         if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):

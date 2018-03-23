@@ -51,11 +51,15 @@ def detectFileFormat(fname, noRaise=False):
 def inferSampleName(fname, merger, fastqc):
     """
     infers the sample name from a given file.
-    EG: SRR1002_R1.fastq.gz => SRR1002
-        Sample1_R1.fastq.gz => Sample1
-        Sample1.fastq.gz    => Sample1
-    :param fname: filename to infer
-    :return: 2-tuple of (args.outdir, args.name)
+    EG: SRR1002_L001.fastq.gz   => SRR1002_L001
+        Sample1_L001.fastq.gz   => Sample1_L001
+        Sample1.fastq.gz        => Sample1
+
+    :param fname: string
+            filename to infer from (usually args.f1)
+
+    :return: string
+            inferred sample name from fname
     """
     f1name = os.path.basename(fname)
     # read is paired end ==> remove everything after _R1.fast*...
@@ -63,11 +67,10 @@ def inferSampleName(fname, merger, fastqc):
         ext = '_' + f1name.split("_")[-1]
     else:
         ext = f1name[f1name.find("."):]
-    outdir = os.path.sep + f1name.replace(ext, "")
     sampleName = f1name.replace(ext, "")
     # sampleName = f1name.split("_")[0] + "_"
     # sampleName += f1name.split("_")[-1].split(".")[0]
-    return outdir, sampleName
+    return sampleName
 
 
 # U flag = Universal ending flag (windows/dos/mac/linux  ... etc) (http://biopython.org/wiki/SeqIO)

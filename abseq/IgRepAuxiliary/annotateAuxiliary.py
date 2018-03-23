@@ -42,14 +42,14 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             with safeOpen(fastaFile) as fp:
                 recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             records = []
-            for id in recordsAll:
-                rec = recordsAll[id]
+            for id_ in recordsAll:
+                rec = recordsAll[id_]
                 rec.description = ''
                 rec.seq = rec.seq[:igRep.primer]
                 records.append(rec)
-            filesDir = igRep.outputDir + "tmp"
-            SeqIO.write(records, filesDir + "/seqs.fasta", 'fasta')
-            newFastFile = filesDir + "/seqs.fasta"
+            filesDir = os.path.join(outdir, "tmp")
+            SeqIO.write(records, os.path.join(filesDir, "seqs.fasta"), 'fasta')
+            newFastFile = os.path.join(filesDir, "seqs.fasta")
         else:
             newFastFile = fastaFile
         # if we only asked for one worker or if the sequences within the fasta file is smaller than the threshold in
@@ -61,7 +61,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
         else:
             # split FASTA file into smaller files
             prefix, ext = os.path.splitext(os.path.basename(fastaFile))
-            filesDir = os.path.join(igRep.outputDir,  "tmp")
+            filesDir = os.path.join(outdir,  "tmp")
             prefix = prefix[prefix.find("_R")+1:prefix.find("_R")+3] + "_" if (prefix.find("_R") != -1) else ""
             splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir, prefix, ext, stream=stream)
 
@@ -86,7 +86,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
 
                 # initialize tasks queue with file names     
                 for i in range(totalFiles):
-                    tasks.put(filesDir + "/" + prefix + "part" + str(i + 1) + ext)
+                    tasks.put(os.path.join(filesDir, prefix + "part" + str(i + 1) + ext))
 
                 # Add a poison pill for each worker
                 for i in range(noWorkers + 10):
@@ -105,7 +105,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
                 while totalFiles:
                     outcome = outcomes.get()
                     totalFiles -= 1                    
-                    if (outcome is None):
+                    if outcome is None:
                         continue                    
                     (cloneAnnoti, fileteredIDsi) = outcome
                     cloneAnnot = cloneAnnot.append(cloneAnnoti)
@@ -124,7 +124,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
             # Clean folders to save space
             # TODO: remove .fasta and .out files
             if (noSeqs > igRep.seqsPerFile and 
-                os.path.exists(filesDir + "/" + prefix + "part1" + ext)): 
+                os.path.exists(filesDir + "/" + prefix + "part1" + ext)):
                 os.system("rm " + filesDir + "/*" + ext)
 
         return cloneAnnot, filteredIDs

@@ -89,7 +89,9 @@ FR4_CONSENSUS_DNA = {'hv':"TGGGGCCAGGGCACCNNNGTGACCGTGAGCAGC",
 
 GB = (1024.**3)
 
-
+# directory naming
+RESULT_FOLDER = 'results'
+AUX_FOLDER = 'auxiliary'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
 if sys.platform == 'darwin':

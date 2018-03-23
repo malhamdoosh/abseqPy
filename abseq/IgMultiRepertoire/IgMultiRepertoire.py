@@ -4,7 +4,7 @@ from multiprocessing import Queue
 from copy import deepcopy
 from math import floor
 
-from abseq.config import DEFAULT_MERGER
+from abseq.config import DEFAULT_MERGER, RESULT_FOLDER
 from abseq.IgMultiRepertoire.GeneralWorker import GeneralWorker, GeneralWorkerException
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
@@ -19,10 +19,10 @@ class IgMultiRepertoire:
         self.sampleCount = 0
         self.resource = args.threads
         self.plotManager = PlotManager(args)
-
         if os.path.isdir(args.f1):
             clusterFiles = self._pairFiles(args.f1, args)
-            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles)
+
+            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles, resultDirName=RESULT_FOLDER)
 
             # get requested samples from -rs (if specified / if any) only
             self.sampleCount = len(canonicalNameChangeMap)
@@ -37,8 +37,7 @@ class IgMultiRepertoire:
                 if type(sample) == tuple:
                     # paired end sample
                     f1name, f2name = sample
-                    inferredDir, inferredName = inferSampleName(f1name, merger=True,
-                                                                fastqc=(args.task.lower() == 'fastqc'))
+                    inferredName = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = f2name
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
@@ -50,8 +49,7 @@ class IgMultiRepertoire:
                 else:
                     # single ended
                     f1name = sample
-                    inferredDir, inferredName = inferSampleName(f1name, merger=False,
-                                                                fastqc=(args.task.lower() == 'fastqc'))
+                    inferredName = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
@@ -60,15 +58,17 @@ class IgMultiRepertoire:
                 # if abseq's inferred sample name is in the map ==> sample was specified in -rs
                 # we also need to remap the name
                 if inferredName in canonicalNameChangeMap:
-                    modifiedArgs.outdir += inferredDir
                     modifiedArgs.name = canonicalNameChangeMap[inferredName]
                     modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
-                    modifiedArgs.log = modifiedArgs.outdir + modifiedArgs.name + '.log'
+                    # <outdir>/result/<sample_name>/<sample_name>.log
+                    modifiedArgs.log = os.path.join(modifiedArgs.outdir, RESULT_FOLDER, modifiedArgs.name,
+                                                    '{}.log'.format(modifiedArgs.name))
                     self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
         else:
-            self.plotManager.addMetadata((args.outdir, args.name))
+            self.plotManager.processInput([args.f1], resultDirName=RESULT_FOLDER)
             args.outdir = os.path.abspath(args.outdir) + os.path.sep
-            args.log = args.outdir + args.name + ".log"
+            # <outdir>/result/<sample_name>/<sample_name>.log
+            args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
             self.sampleCount += 1
             self.buffer.append(IgRepertoire(**vars(args)))
 
@@ -171,9 +171,9 @@ class IgMultiRepertoire:
             reduced = []
             for f in files:
                 if type(f) == tuple:
-                    _, sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
+                    sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
                 else:
-                    _, sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
+                    sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
                 if sampleName not in seen:
                     seen.add(sampleName)
                     reduced.append(f)
