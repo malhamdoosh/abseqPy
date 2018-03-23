@@ -106,6 +106,19 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
+    def processSingleInput(self, name, resultDirName=""):
+        """
+        parses name into metadata as Rscript file for R plot to know where the same file is located.
+        :param name: string
+                    single sample name
+
+        :param resultDirName: string
+                    intermediate directory name (if any)
+        :return: None
+        """
+        outDirName = os.path.join(self.args.outdir, resultDirName, name)
+        self.metadata.append((outDirName, name))
+
     def processInput(self, allFiles, resultDirName=""):
         """
         reads rscript argument and parses it into metadata as Rscript.tmp file for R plot to know where

@@ -65,7 +65,7 @@ class IgMultiRepertoire:
                                                     '{}.log'.format(modifiedArgs.name))
                     self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
         else:
-            self.plotManager.processInput([args.f1], resultDirName=RESULT_FOLDER)
+            self.plotManager.processSingleInput(args.name, resultDirName=RESULT_FOLDER)
             args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
