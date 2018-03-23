@@ -20,7 +20,7 @@ VERSION = '1.1.8'
 # ====================================================================================
 # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
 # IT IN setup.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
-EXTERNAL_DEP_DIR = '3rd_party/'
+EXTERNAL_DEP_DIR = '3rd_party'
 # 1. clustal omega
 CLUSTALOMEGA = 'clustalo'
 # 2. FASTQC
@@ -41,19 +41,19 @@ class PriorityPath:
         _env = os.environ.copy()
 
         # if the BIN directory exists, append it to the front of PATH variable
-        override_path = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/bin/').replace('//', '/'))
+        override_path = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'bin')) + os.path.sep
         if os.path.exists(override_path):
             _env['PATH'] = override_path + os.pathsep + _env['PATH']
             self.updated = True
 
         # if the igdata dir exists, override it irrespective of if there's already a IGDATA env
-        override_igdata = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/igdata/').replace('//', '/'))
+        override_igdata = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'igdata')) + os.path.sep
         if os.path.exists(override_igdata):
             _env['IGDATA'] = override_igdata
             self.updated = True
 
         # if the igdb dir exists, override it irrespective of if there's already a IGBLASTDB env
-        override_igdb = os.path.abspath((ABSEQROOT + '/' + EXTERNAL_DEP_DIR + '/databases/').replace('//', '/'))
+        override_igdb = os.path.abspath(os.path.join(ABSEQROOT, EXTERNAL_DEP_DIR, 'databases')) + os.path.sep
         if os.path.exists(override_igdb):
             _env["IGBLASTDB"] = override_igdb
             self.updated = True
