@@ -176,7 +176,8 @@ class PlotManager:
                                             canonicalNameChangeMap[res]))
                 canonicalNameChangeMap[res] = newName
 
-            self.metadata = map(lambda x: (x[0], canonicalNameChangeMap[x[1]]), self.metadata)
+            self.metadata = map(lambda x: (os.path.join(self.args.outdir, resultDirName, canonicalNameChangeMap[x[1]]),
+                                           canonicalNameChangeMap[x[1]]), self.metadata)
 
         return canonicalNameChangeMap
 
