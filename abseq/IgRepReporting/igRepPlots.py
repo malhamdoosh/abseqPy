@@ -52,20 +52,21 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
                 ighvSizes[id].append(len(rec))
                 ighvDist[id] += 1
 
-    plotDist(ighvDist, sampleName, outputFile)
-    # box plot of sequence length in each class
-    fig, ax = plt.subplots()
-    classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
-    ax.boxplot(map(lambda x: ighvSizes[x], classes))
-    ind = np.arange(1, len(classes) + 1)
-    ax.set_xticks(ind)
-    ax.set_xticklabels(classes, rotation=45)
-    ax.set_title("Sequence Lengths in " + sampleName)
-    outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
-    fig.savefig(outputFile, dpi=300)
-    for k in classes:
-        printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
-    plt.close()
+    if sum(ighvDist.values()):
+        plotDist(ighvDist, sampleName, outputFile)
+        # box plot of sequence length in each class
+        fig, ax = plt.subplots()
+        classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
+        ax.boxplot(map(lambda x: ighvSizes[x], classes))
+        ind = np.arange(1, len(classes) + 1)
+        ax.set_xticks(ind)
+        ax.set_xticklabels(classes, rotation=45)
+        ax.set_title("Sequence Lengths in " + sampleName)
+        outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
+        fig.savefig(outputFile, dpi=300)
+        for k in classes:
+            printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
+        plt.close()
 
 
 def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
@@ -81,6 +82,8 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     if type("") == type(counts):
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
+        if len(sizes) == 0:
+            return
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()

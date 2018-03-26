@@ -4,19 +4,22 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
-
+from __future__ import print_function
+import matplotlib
+matplotlib.use('agg')
 import gc
 import sys
 import pickle
 import random
 import bisect
+import matplotlib.pyplot as plt
 import os
 
 from os.path import exists
 from collections import Sequence, defaultdict
 from Bio.Seq import Seq
 from Bio.Alphabet.IUPAC import IUPACProtein
-from Bio import SeqIO, motifs
+from Bio import SeqIO, motifs, Phylo
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
 
@@ -91,7 +94,7 @@ def generateMotif(sequences, name, alphabet, filename,
     """
     if exists(filename):
         printto(stream, "\t" + name + " motif logo was found", LEVEL.WARN)
-        return        
+        return
     # check whether sequences should be translated                 
     if transSeq:
         seqs = []               
@@ -134,8 +137,7 @@ def generateMotif(sequences, name, alphabet, filename,
     return m
     
     
-def createAlphabet(align = False, transSeq=False, 
-                   extendAlphabet = False, protein = False):
+def createAlphabet(align=False, transSeq=False, extendAlphabet=False, protein=False):
     if not transSeq and not protein:
         alphabet = Alphabet()
         alphabet.letters = "ACGT" if not extendAlphabet else "ACGTN"            
@@ -157,21 +159,27 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     pwmFile = open(outputPrefix + '_pwm.txt', 'w')
     consensusFile = open(outputPrefix + '_consensus.txt', 'w')
     logosFolder = outputPrefix + '_logos'
-    os.makedirs(logosFolder)
+
+    if not os.path.exists(logosFolder):
+        os.makedirs(logosFolder)
+
     # create the sequence alphabet: DNA or Protein
     alphabet = createAlphabet(align, transSeq, extendAlphabet, protein)
     groups = seqGroups.keys()
     groups.sort()        
     
     for group in groups:    
-        filename = logosFolder + group.replace('/', '') + '.png'    
+        filename = os.path.join(logosFolder, group.replace('/', '') + '.png')
         seqs = seqGroups[group]
         m = generateMotif(seqs, group, alphabet, filename, align, transSeq, protein, outDir=logosFolder)
+        if m is None:
+            # motif file found, no further work required
+            return
         motifSeqs = m.instances
         pwm = m.counts.normalize(pseudocounts=None)  # {'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}
         consensusMax = str(m.consensus)      
                
-        pwmFile.write('#{} {:d} sequences\n'.format(group, len(motifSeqs)))
+        pwmFile.write('#{} {} sequences\n'.format(group, len(motifSeqs)))
         pwmFile.write(str(pwm))  
         consensusFile.write('>{} max_count\n'.format(group))
         consensusFile.write(consensusMax + '\n')      
@@ -187,15 +195,15 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
         gc.collect()
         if clusterMotifs and len(motifSeqs) > 10:
             motif = Motif(map(lambda x: str(x), motifSeqs),
-                          backgroundD={'A':0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}, id=group)
+                          backgroundD={'A': 0.6, 'C': 0.4, 'G': 0.4, 'T': 0.6}, id=group)
             motif.addpseudocounts(0.1)
             ighvMotifs.append(motif)
             
     pwmFile.close()
     consensusFile.close()      
     gc.collect()
-    printto(stream, "\tPosition weight matrices are written to " + outputPrefix + '_pwm.txt')
-    printto(stream, "\tConsensus sequences are written to " + outputPrefix + '_consensus.txt')
+    printto(stream, "\tPosition weight matrices are written to " + os.path.basename(outputPrefix + '_pwm.txt'))
+    printto(stream, "\tConsensus sequences are written to " + os.path.basename(outputPrefix + '_consensus.txt'))
     if clusterMotifs:
         findMotifClusters(ighvMotifs, outputPrefix, stream=stream)
         
@@ -203,10 +211,7 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
 def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
     from TAMO.Clustering.UPGMA import UPGMA
     from TAMO.Clustering.UPGMA import DFUNC
-    from TAMO.Clustering.UPGMA import print_tree
-    from TAMO.Clustering.UPGMA import create_tree_phylip
     from TAMO.Clustering.UPGMA import print_tree_id
-    from TAMO import MotifTools
     # cluster using a variant of the UPGMA algorithm implemented in the TAMO package
     
     motifsFile = os.path.abspath(outputPrefix + '_motifs.tamo')
@@ -215,35 +220,83 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
             pickle.dump(ighvMotifs, open(motifsFile, 'wb'))            
     else:
         ighvMotifs = pickle.load(open(motifsFile, 'rb'))
-#         print(ighvMotifs)
+
+    prefixName, sampleName = os.path.split(outputPrefix)
+    dendogramDirectory = os.path.join(prefixName, 'dendograms')
+    if not exists(dendogramDirectory):
+        os.makedirs(dendogramDirectory)
+
     if len(ighvMotifs) > 0:
         groupedMotifs = defaultdict(list)
         for m in ighvMotifs:
             ighv = m.id.split('-')[0].split('/')[0]
             groupedMotifs[ighv].append(m)
         try:
-            motifClustersFile = outputPrefix + '_pwm_clusters.txt'
+            motifClustersFile = os.path.join(dendogramDirectory, sampleName + '_pwm_clusters.txt')
 
             _old_stdout = sys.stdout
             sys.stdout = open(motifClustersFile, 'w')
+
             for ighv in groupedMotifs.keys():
+                newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_{}_newick.dnd'.format(ighv))
                 tree = UPGMA(groupedMotifs[ighv], DFUNC)
-#                 print_tree(tree)
                 print_tree_id(tree)
-                print(create_tree_phylip(tree))
-                sys.stdout.flush()
+
+                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=ighv, logger=stream)
+
             lists = groupedMotifs.values()
             tree = UPGMA([m for lst in lists for m in lst], DFUNC)
-#                 print_tree(tree)
             print_tree_id(tree)
-            print(create_tree_phylip(tree))
+
+            newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_newick.dnd')
+            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, logger=stream)
+
             sys.stdout.close()
             sys.stdout = _old_stdout
 
-            printto(stream, "\tMotif clusters were written to " + motifClustersFile)
-        except Exception:
+            printto(stream, "\tMotif clusters were written to " + os.path.basename(motifClustersFile))
+        except Exception as e:
+            print(e)
             printto(stream, "Motifs couldn't be clustered!", LEVEL.ERR)
-#             raise
+
+
+def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
+    """
+    :param newickClusterFile:
+    :param tree:  UPGMA object
+    :param stream:
+    :param title:
+    :param logger:
+    :return:
+    """
+    from TAMO.Clustering.UPGMA import create_tree_phylip
+    desc = '' if not title else " for {} ".format(title)
+
+    # get phylip newick syntax
+    phylipTree = create_tree_phylip(tree)
+    with open(newickClusterFile, 'w') as newickfp:
+        newickfp.write(phylipTree)
+
+    printto(logger, "Newick dendogram{}written to ".format(desc) + os.path.basename(newickClusterFile))
+
+    # show ascii art
+    phylipTree = Phylo.read(newickClusterFile, format='newick')
+
+    try:
+        print("\n\nASCII phylip tree{}:\n".format(desc), file=stream)
+        Phylo.draw_ascii(phylipTree, file=stream)
+    except ZeroDivisionError:
+        # if the weights are 0
+        print("\t Not drawn because of 0 weights", file=stream)
+        pass
+
+    # plot dendogram in matplotlib
+    phylipTree.ladderize()
+    fig, axes = plt.subplots(figsize=(8, 5))
+    Phylo.draw(phylipTree, do_show=False, axes=axes, branch_labels=lambda c: c.branch_length)
+    axes.set_title(title)
+    fig.savefig(newickClusterFile.replace('.dnd', '.png'), dpi=300)
+    plt.close()
 
 
 def generateMotifLogo(m, filename, outdir='', dna=True):

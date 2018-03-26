@@ -696,10 +696,10 @@ class IgRepertoire:
         outResDir = os.path.join(self.resultDir, 'upstream')
         outAuxDir = os.path.join(self.auxDir, 'upstream')
 
-        if os.path.exists(outResDir):
+        if not os.path.exists(outResDir):
             os.makedirs(outResDir)
 
-        if os.path.exists(outAuxDir):
+        if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
             printto(logger, "WARNING: Remove 'upstream' directory if you've changed the filtering criteria.",
@@ -721,7 +721,7 @@ class IgRepertoire:
 
         upstreamFile = os.path.abspath(upstreamFile)
 
-        expectLength = self.upstream[1] - self.upstream[0] + 1
+        expectLength = int(self.upstream[1] - self.upstream[0] + 1)
 
         # plot the distribution of sequence length
         plotUpstreamLenDist(upstreamFile, expectLength, self.name, outResDir, stream=logger)
@@ -733,16 +733,21 @@ class IgRepertoire:
             #                   analyze intact secretion signals
             # ----------------------------------------------------------------
             #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
+            printto(logger, "\tAnalyzing intact secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outResDir, [expectLength, expectLength], level=level,
-                                   startCodon=True, stream=logger)
+                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir,
+                                   [expectLength, expectLength], level=level, startCodon=True, stream=logger)
 
             # ----------------------------------------------------------------
             #                 analyze trimmed secretion signals
             # ----------------------------------------------------------------
+            printto(logger, "\tAnalyzing trimmed secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outResDir, [1, expectLength - 1], level=level,
+                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [1, expectLength - 1], level=level,
                                    startCodon=True, stream=logger)
+
+        paramFile = writeParams(self.args, outResDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyze5UTR(self):
         logger = logging.getLogger(self.name)
@@ -774,7 +779,7 @@ class IgRepertoire:
             printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
-        expectLength = self.upstream[1] - self.upstream[0] + 1
+        expectLength = int(self.upstream[1] - self.upstream[0] + 1)
 
         plotUpstreamLenDist(upstreamFile, expectLength, self.name, outResDir, stream=logger)
 
@@ -785,8 +790,11 @@ class IgRepertoire:
             # ----------------------------------------------------------------
             #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outResDir, [expectLength, expectLength], level=level,
-                                   startCodon=True, type='5utr', clusterMotifs=True, stream=logger)
+                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [expectLength, expectLength],
+                                   level=level, startCodon=True, type='5utr', clusterMotifs=True, stream=logger)
+
+        paramFile = writeParams(self.args, outResDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzePrimerSpecificity(self):
         logger = logging.getLogger(self.name)
@@ -834,6 +842,9 @@ class IgRepertoire:
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
         generatePrimerPlots(self.cloneAnnot, outResDir, self.name, self.end5, self.end3, stream=logger)
 
+        paramFile = writeParams(self.args, outResDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
+
     def analyzeSeqLen(self, klass=False):
         logger = logging.getLogger(self.name)
 
@@ -850,6 +861,9 @@ class IgRepertoire:
         else:
             outputFile = os.path.join(outResdir, self.name + '_seq_length_dist.png')
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format, maxbins=-1, stream=logger)
+
+        paramFile = writeParams(self.args, outResDir)
+        printto(logger, "The analysis parameters have been written to " + paramFile)
 
     # todo: do not use this method. USE AT YOUR OWN RISK
     def analyzeIgProtein(self):
