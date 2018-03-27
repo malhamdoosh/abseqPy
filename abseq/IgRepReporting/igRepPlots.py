@@ -32,7 +32,7 @@ from abseq.logger import printto, LEVEL
 
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf, stream=None):
-    if exists(outputFile):
+    if eitherExists(outputFile):
         printto(stream, "\tFile found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
     printto(stream, "\tThe sequence length distribution of each gene family is being calculated ...")
@@ -74,7 +74,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    autoscale=None, maxbins=20, seqName='', normed=False,
                    removeOutliers=False, stream=None):
 
-    if exists(outputFile):
+    if eitherExists(outputFile):
         printto(stream, "\tSequence length distribution plot found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
@@ -154,7 +154,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
 
 
 def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -229,7 +229,7 @@ In ecology, rarefaction is a technique to assess species richness from the resul
 
 
 def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -309,7 +309,7 @@ XXX: Note to whoever is using this function - there will be NO R plot for this f
 
 
 def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -367,7 +367,7 @@ Uses sampling without replacement and gives equal properties to all clones
 
 
 def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -416,7 +416,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
 
 
 def plotVenn(sets, filename, title='', stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     fig, ax = plt.subplots()
@@ -436,7 +436,7 @@ def plotVenn(sets, filename, title='', stream=None):
 
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
              rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False, stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
 
@@ -540,7 +540,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
 
 
 def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     x = data[xyCol[0]].tolist()
@@ -725,7 +725,7 @@ Amino acids are colored based on their physiochemical properties
 
 
 def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     totals = np.array([sum(ct.values()) for ct in counts])
@@ -765,7 +765,7 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
 
 
 def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, "\t" + region + " Cumulative Logo was found ", LEVEL.WARN)
     else:
         m = maxlen(seqs)
@@ -777,7 +777,7 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
             cnt = []
             for i in range(len(seqs)):
                 seq = seqs[i].upper()
-                if (x < len(seq)):
+                if x < len(seq):
                     cnt += [seq[x]] * weights[i]
                     #                 print(len(cnt))
             aaCounts.append(Counter(cnt))
@@ -814,3 +814,13 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     for arg in vals:
         f.write(template.format(*arg))
     f.close()
+
+
+def eitherExists(filename, originalExt='.png', exts=('.csv', '.csv.gz')):
+    if exists(filename):
+        return True
+
+    for ex in exts:
+        if exists(filename.replace(originalExt, ex)):
+            return True
+    return False
