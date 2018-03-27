@@ -257,6 +257,7 @@ class PlotManager:
     def _findBestMatch(self, sampleName, useProvidedName=False):
         if useProvidedName:
             tmp = list(self.nameFileMap[sampleName])
+            tmp[0] = os.path.join(os.path.split(tmp[0])[0], sampleName)
             tmp[1] = sampleName
             return tuple(tmp)
         return self.nameFileMap[sampleName]
