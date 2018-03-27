@@ -819,7 +819,11 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
 def eitherExists(filename, originalExt='.png', exts=('.csv', '.csv.gz')):
     if exists(filename):
         return True
+    # python should be plotting but .png isn't there
+    if PlotManager.pythonPlotOn():
+        return False
 
+    # python isn't plotting, R is. Check if either of the extensions are present
     for ex in exts:
         if exists(filename.replace(originalExt, ex)):
             return True
