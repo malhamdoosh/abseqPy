@@ -19,7 +19,7 @@
 # Introduction
 
 ## AbSeq
-**AbSeq** is a quality control pipeline for the construction of antibody libraries, currently running on version 1.1.9
+**AbSeq** is a quality control pipeline for the construction of antibody libraries, currently running on version 1.1.10
 
 ## About
 * **AbSeq** is developed by Monther Alhamdoosh and JiaHong Fong
