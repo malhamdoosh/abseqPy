@@ -5,22 +5,14 @@
     Changes log: check git commits. 
 '''
 
-import matplotlib as mpl
-
-
-mpl.use('Agg')  # Agg
 import os
-import matplotlib.mlab as mlab
 import gzip
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.colors as mcolors
 import math
 import numpy
 import random
 
-from matplotlib import cm
-from collections import Counter
+from collections import Counter, defaultdict
 from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
@@ -29,6 +21,13 @@ import abseq.IgRepertoire.igRepUtils
 from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.logger import printto, LEVEL
+
+import matplotlib as mpl
+mpl.use('Agg')  # Agg
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import matplotlib.colors as mcolors
+from matplotlib import cm
 
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf, stream=None):
@@ -118,10 +117,6 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
             if sigma != 0:
-                ## the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
-                ## eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
-                #assert (len(sizes) == 1)
-                #sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
                 y = mlab.normpdf(bins, mu, sigma)
                 ax.plot(bins, y, 'r--')
     else:
@@ -678,7 +673,7 @@ def cmap_discretize(cmap, N):
     cdict = {}
     for ki, key in enumerate(('red', 'green', 'blue')):
         cdict[key] = [(indices[i], colors_rgba[i - 1, ki], colors_rgba[i, ki])
-                      for i in xrange(N + 1)]
+                      for i in range(N + 1)]
     # Return colormap object.
     return mcolors.LinearSegmentedColormap(cmap.name + "_%d" % N, cdict, 1024)
 
@@ -728,6 +723,7 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
     if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
+
     totals = np.array([sum(ct.values()) for ct in counts])
     if removeOutliers:
         sel = totals > 0.01 * max(totals)
@@ -768,20 +764,18 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
     if eitherExists(filename):
         printto(stream, "\t" + region + " Cumulative Logo was found ", LEVEL.WARN)
     else:
-        m = maxlen(seqs)
-        if m > 30:
-            m = 30
-        # Calculate AA counts per position 
+        m = min(30, maxlen(seqs))
+        # Calculate AA counts per position
         aaCounts = []
         for x in range(m):
-            cnt = []
+            cnt = defaultdict(int)
             for i in range(len(seqs)):
                 seq = seqs[i].upper()
                 if x < len(seq):
-                    cnt += [seq[x]] * weights[i]
-                    #                 print(len(cnt))
+                    cnt[seq[x]] += weights[i]
             aaCounts.append(Counter(cnt))
-            # Generate a cumulative bar plot
+
+        # Generate a cumulative bar plot
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
                 filename, removeOutliers=(region != "cdr3"), stream=stream)
@@ -789,6 +783,16 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
                 "{} ({:,})".format(region.upper(), sum(weights)),
                 filename.replace(".png", "_scaled.png"),
                 scaled=True, stream=stream)
+
+        # write raw barLogo csv file
+        rawCountsFlattened = []
+        for pos, c in enumerate(aaCounts):
+            for aminoAcid, tally in c.items():
+                rawCountsFlattened.append((pos + 1, tally, aminoAcid))
+        rawCountsFileName, _ = os.path.splitext(filename)
+        writeCSV(rawCountsFileName + "_raw.csv",
+                 'position,count,AA',
+                 "{},{},{}\n", rawCountsFlattened)
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):

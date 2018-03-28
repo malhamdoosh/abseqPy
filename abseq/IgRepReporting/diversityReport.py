@@ -9,10 +9,10 @@ import sys
 import os
 import gzip
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 from abseq.IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
-from abseq.IgRepertoire.igRepUtils import writeClonoTypesToFile
+from abseq.IgRepertoire.igRepUtils import writeClonoTypesToFile, createIfNot
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \
     plotSeqRecapture, plotSeqRecaptureNew
@@ -21,10 +21,10 @@ from abseq.logger import LEVEL, printto
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, stream=None):
     generateSpectraTypePlots(spectraTypes,  name, outDir, stream=stream)
+    flattened = flattenClonoTypeCountsDict(clonoTypes)
 
-    writeClonoTypesToFiles(clonoTypes, name, outDir, topClonotypes, stream=stream)
-
-    estimateDiversity(clonoTypes, name, outDir, stream=stream)
+    writeClonoTypesToFiles(flattened, name, outDir, topClonotypes, stream=stream)
+    estimateDiversity(clonoTypes, flattened, name, outDir, stream=stream)
 #     generateCDRandFRLogos()
 
 
@@ -68,11 +68,11 @@ def generateSpectraTypePlots(spectraTypes, name, outDir, stream=None):
                            removeOutliers=True, stream=stream)
 
 
-def estimateDiversity(clonoTypes, name, outDir, stream=None):
-    generateSeqLogosMotifs(clonoTypes, name, outDir, "protein", stream=stream)
-    generateRarefactionPlots(clonoTypes, name, outDir, stream=stream)
+def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, stream=None):
+    generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, "protein", stream=stream)
+    generateRarefactionPlots(flatClonoTypes, name, outDir, stream=stream)
     printto(stream, "The diversity of the library is being estimated ... ")
-    calcDiversity(clonoTypes, name, outDir)
+    calcDiversity(flatClonoTypes, name, outDir)
 
 
 # todo: diversity indices
@@ -177,41 +177,88 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                         'Percent Recapture of CDRs and V Domains', stream=stream)
 
 
-def generateSeqLogosMotifs(clonoTypes, name, outDir, seqType="protein", stream=None):
+def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, seqType="protein", stream=None):
+    """
+    Create motif plots and composition logos for all FR and CDR regions
+
+    :param clonoTypes: dict
+                    dict with key for each V germline, each having keys of FR / CDR region,
+                    which in turn, each having a value of Counter() where the AA sequences are tallied
+                    For example:
+                    {
+                        'IGHV3-3': { 'FR1': Counter({"FGWSG": 32, ...}),  'CDR1': Counter(...) },
+                        'IGHV2-1': { ... }
+                    }
+
+    :param flatClonoTypes: dict
+                    dict with keys of FR / CDR region, each having a value of Counter() where the
+                    AA sequences are tallied
+                    For example:
+                    {
+                        'FR1': Counter({"FGWSG": 32, ...}),
+                        'CDR1': Counter(...)
+                    }
+
+    :param name: string
+                    name of sample
+
+    :param outDir: string
+                    output directory
+
+    :param seqType: string
+                    dna or protein
+
+    :param stream: stream object
+                    output stream
+    :return: None
+    """
 
     logosFolder = os.path.join(outDir, 'composition_logos')
-    if not os.path.isdir(logosFolder):
-        os.makedirs(logosFolder)
-
+    createIfNot(logosFolder)
     motifsFolder = os.path.join(outDir, 'motifs')
-
-    if not os.path.isdir(motifsFolder):
-        os.makedirs(motifsFolder)
-
-    regions = clonoTypes.keys()
-    regions.sort()
+    createIfNot(motifsFolder)
 
     printto(stream, seqType + " sequence logos are being generated .... ")
 
+    # create Germline gene level composition logos
+    for vgerm in clonoTypes:
+        regions = clonoTypes[vgerm].keys()
+        regions.sort()
+        for region in regions:
+            if region == 'v':
+                continue
+            printto(stream, "\t" + region.upper() + " for " + vgerm.upper())
+            clonoType = clonoTypes[vgerm][region]
+            seqs = clonoType.keys()
+            weights = clonoType.values()
+
+            regionDirectory = os.path.join(logosFolder, region.upper())
+            createIfNot(regionDirectory)
+            filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.png"
+                                    .format(vgerm.replace(os.path.sep, '_')))
+            # Generate cumulative sequence logos using Toby's approach
+            generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
+
+    # create cumulative composition logos and motif logos
+    regions = flatClonoTypes.keys()
+    regions.sort()
     for region in regions:
         if region == 'v':
             continue
-        printto(stream, "\t" + region.upper())
 
-        clonoType = clonoTypes[region]
-        seqs = filter(lambda x: x != "None", clonoType.keys())
-        weights = map(lambda x: clonoType[x], seqs)
+        clonoType = flatClonoTypes[region]
+        seqs = clonoType.keys()
+        weights = clonoType.values()
 
-        # Generate cumulative sequence logos using Toby's approach
-        # TODO: generate composition logos by IGV family
-        filename = os.path.join(logosFolder, name + ("_{}_cumulative_logo.png".format(region)))
+        regionDirectory = os.path.join(logosFolder, region.upper())
+        createIfNot(regionDirectory)
+        filename = os.path.join(regionDirectory, name + "_cumulative_logo.png")
         generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
 
         # Generate sequence motif logos using weblogo
-
         # generate logos without alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_logo.png".format(region)))
-        alphabet = createAlphabet(align=False, protein=True, extendAlphabet = True)
+        alphabet = createAlphabet(align=False, protein=True, extendAlphabet=True)
         m = generateMotif(seqs, region, alphabet, filename,  align=False,
                           protein=True, weights=weights, outDir=outDir, stream=stream)
 
@@ -268,6 +315,34 @@ def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir, stream
         fp.write(writeBuffer)
 
 
+def flattenClonoTypeCountsDict(clonoTypes):
+    """
+    reduces something of this structure:
+            'IGHV1-3': {
+                'FR1': { 'FWGCGC': 12, 'EVILK': 1, ... }
+                'CDR1': { 'FWGCGC': 12, 'EVILK': 1, ... }
+            },
+            'IGHV2-3': {
+                'FR1' : { 'FWGCGC': 12, 'EVILK': 1, ... }
+                'CDR1': { 'FWGCGC': 12, 'EVILK': 1, ... }
+            }, ...
+    to this:
+            {
+                'FR1': { 'FWGCGC': 24, 'EVILK': 2, ... }
+                'CDR1': { 'FWGCGC': 24, 'EVILK': 2, ... }
+            }
+
+    :param clonoTypes: dict
+                input nested dictionary
+
+    :return: dict
+            flattened dictionary
+    """
+    flattened = defaultdict(Counter)
+    for geneName in clonoTypes:
+        for region, counts in clonoTypes[geneName].items():
+            flattened[region] += Counter(counts)
+    return flattened
 
 
 # quantify CDR sequence diversity
