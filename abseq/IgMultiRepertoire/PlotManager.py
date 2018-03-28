@@ -257,6 +257,7 @@ class PlotManager:
     def _findBestMatch(self, sampleName, useProvidedName=False):
         if useProvidedName:
             tmp = list(self.nameFileMap[sampleName])
+            tmp[0] = os.path.join(os.path.split(tmp[0])[0], sampleName)
             tmp[1] = sampleName
             return tuple(tmp)
         return self.nameFileMap[sampleName]
@@ -332,8 +333,8 @@ def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchS
     string2 = string2.strip()
     matrix = [[0] * (len(string1) + 1)] * (len(string2) + 1)
     maxval = 0
-    for i in xrange(1, len(string2) + 1):
-        for j in xrange(1, len(string1) + 1):
+    for i in range(1, len(string2) + 1):
+        for j in range(1, len(string1) + 1):
             matrix[i][j] = max(matrix[i][j - 1] + deletionPenalty, matrix[i - 1][j] + insertionPenalty,
                                matrix[i - 1][j - 1] + (
                                    matchScore if string1[j - 1] == string2[i - 1] else mismatchScore), 0)

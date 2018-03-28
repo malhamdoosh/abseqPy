@@ -5,22 +5,15 @@
     Changes log: check git commits. 
 '''
 
-import matplotlib as mpl
-
-
-mpl.use('Agg')  # Agg
 import os
-import matplotlib.mlab as mlab
 import gzip
-import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib.colors as mcolors
 import math
 import numpy
 import random
+import itertools
 
-from matplotlib import cm
-from collections import Counter
+from collections import Counter, defaultdict
 from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
@@ -30,9 +23,16 @@ from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.logger import printto, LEVEL
 
+import matplotlib as mpl
+mpl.use('Agg')  # Agg
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import matplotlib.colors as mcolors
+from matplotlib import cm
+
 
 def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', maxLen=Inf, stream=None):
-    if exists(outputFile):
+    if eitherExists(outputFile):
         printto(stream, "\tFile found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
     printto(stream, "\tThe sequence length distribution of each gene family is being calculated ...")
@@ -52,20 +52,21 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
                 ighvSizes[id].append(len(rec))
                 ighvDist[id] += 1
 
-    plotDist(ighvDist, sampleName, outputFile)
-    # box plot of sequence length in each class
-    fig, ax = plt.subplots()
-    classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
-    ax.boxplot(map(lambda x: ighvSizes[x], classes))
-    ind = np.arange(1, len(classes) + 1)
-    ax.set_xticks(ind)
-    ax.set_xticklabels(classes, rotation=45)
-    ax.set_title("Sequence Lengths in " + sampleName)
-    outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
-    fig.savefig(outputFile, dpi=300)
-    for k in classes:
-        printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
-    plt.close()
+    if sum(ighvDist.values()):
+        plotDist(ighvDist, sampleName, outputFile)
+        # box plot of sequence length in each class
+        fig, ax = plt.subplots()
+        classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
+        ax.boxplot(map(lambda x: ighvSizes[x], classes))
+        ind = np.arange(1, len(classes) + 1)
+        ax.set_xticks(ind)
+        ax.set_xticklabels(classes, rotation=45)
+        ax.set_title("Sequence Lengths in " + sampleName)
+        outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
+        fig.savefig(outputFile, dpi=300)
+        for k in classes:
+            printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
+        plt.close()
 
 
 def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
@@ -73,7 +74,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    autoscale=None, maxbins=20, seqName='', normed=False,
                    removeOutliers=False, stream=None):
 
-    if exists(outputFile):
+    if eitherExists(outputFile):
         printto(stream, "\tSequence length distribution plot found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
@@ -81,6 +82,8 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     if type("") == type(counts):
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
+        if len(sizes) == 0:
+            return
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()
@@ -115,10 +118,6 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
             if sigma != 0:
-                ## the only way that sigma is 0 is when there's no deviation (i.e. all the values belong to one bin)
-                ## eg: Counter([x,x,x,x,x]) = {x:5} where sizes = [1] and weights = [5] => mu = 5 and sigma = 0
-                #assert (len(sizes) == 1)
-                #sigma = 1e-6  # give sigma a small value to prevent division by 0 error in normpdf calculation
                 y = mlab.normpdf(bins, mu, sigma)
                 ax.plot(bins, y, 'r--')
     else:
@@ -151,7 +150,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
 
 
 def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -226,7 +225,7 @@ In ecology, rarefaction is a technique to assess species richness from the resul
 
 
 def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -306,7 +305,7 @@ XXX: Note to whoever is using this function - there will be NO R plot for this f
 
 
 def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -364,7 +363,7 @@ Uses sampling without replacement and gives equal properties to all clones
 
 
 def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
     if PlotManager.pythonPlotOn():
@@ -413,7 +412,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
 
 
 def plotVenn(sets, filename, title='', stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     fig, ax = plt.subplots()
@@ -433,7 +432,7 @@ def plotVenn(sets, filename, title='', stream=None):
 
 def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
              rotateLabels=True, vertical=True, sortValues=True, top=15, maintainx=False, stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
 
@@ -537,7 +536,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
 
 
 def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=None):
-    if (exists(filename)):
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
     x = data[xyCol[0]].tolist()
@@ -675,7 +674,7 @@ def cmap_discretize(cmap, N):
     cdict = {}
     for ki, key in enumerate(('red', 'green', 'blue')):
         cdict[key] = [(indices[i], colors_rgba[i - 1, ki], colors_rgba[i, ki])
-                      for i in xrange(N + 1)]
+                      for i in range(N + 1)]
     # Return colormap object.
     return mcolors.LinearSegmentedColormap(cmap.name + "_%d" % N, cdict, 1024)
 
@@ -722,9 +721,25 @@ Amino acids are colored based on their physiochemical properties
 
 
 def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=None):
-    if exists(filename):
+    """
+
+    :param counts:
+    :param title:
+    :param filename:
+    :param removeOutliers:
+    :param scaled: boolean
+                proportion over max number of amino acid. If False, then proportion is set to be over the sum
+                of current position's number of amino acids. For example, position 23 might have N-2 total amino acid
+                counts ( i.e. sum(counts[22].values()) == N-2) because there are 2 sequences that don't have length
+                >= 23. If scaled was set to False, the proportion calculated for position 23 is x / N-2 rather than
+                x / N
+    :param stream:
+    :return:
+    """
+    if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
+
     totals = np.array([sum(ct.values()) for ct in counts])
     if removeOutliers:
         sel = totals > 0.01 * max(totals)
@@ -762,23 +777,21 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
 
 
 def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
-    if exists(filename):
+    if eitherExists(filename):
         printto(stream, "\t" + region + " Cumulative Logo was found ", LEVEL.WARN)
     else:
-        m = maxlen(seqs)
-        if m > 30:
-            m = 30
-        # Calculate AA counts per position 
+        m = min(30, maxlen(seqs))
+        # Calculate AA counts per position
         aaCounts = []
         for x in range(m):
-            cnt = []
+            cnt = defaultdict(int)
             for i in range(len(seqs)):
                 seq = seqs[i].upper()
-                if (x < len(seq)):
-                    cnt += [seq[x]] * weights[i]
-                    #                 print(len(cnt))
+                if x < len(seq):
+                    cnt[seq[x]] += weights[i]
             aaCounts.append(Counter(cnt))
-            # Generate a cumulative bar plot
+
+        # Generate a cumulative bar plot
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
                 filename, removeOutliers=(region != "cdr3"), stream=stream)
@@ -786,6 +799,20 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
                 "{} ({:,})".format(region.upper(), sum(weights)),
                 filename.replace(".png", "_scaled.png"),
                 scaled=True, stream=stream)
+
+        # write raw barLogo csv file - in a human friendly way
+        rawCountsFileName, _ = os.path.splitext(filename)
+        rawCountsFileName += '_raw.csv'
+        allAAs = ''.join(set(itertools.chain.from_iterable(count.keys() for count in aaCounts))).upper()
+        with open(rawCountsFileName, 'w') as fp:
+            # write header
+            positions = range(1, len(aaCounts) + 1)
+            fp.write('AminoAcid/Position,' + ','.join(map(str, positions)) + '\n')
+            for aa in sorted(allAAs):
+                aaBuffer = ""
+                for counter in aaCounts:
+                    aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / sum(counter.values()))
+                fp.write("{}{}\n".format(aa, aaBuffer))
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):
@@ -811,3 +838,17 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     for arg in vals:
         f.write(template.format(*arg))
     f.close()
+
+
+def eitherExists(filename, originalExt='.png', exts=('.csv', '.csv.gz')):
+    if exists(filename):
+        return True
+    # python should be plotting but .png isn't there
+    if PlotManager.pythonPlotOn():
+        return False
+
+    # python isn't plotting, R is. Check if either of the extensions are present
+    for ex in exts:
+        if exists(filename.replace(originalExt, ex)):
+            return True
+    return False
