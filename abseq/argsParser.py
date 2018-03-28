@@ -243,6 +243,9 @@ def parseCommandLineArguments():
     optional.add_argument('-s', '--seqtype', default='dna', help="sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
                           choices=["dna", "protein"])
+    optional.add_argument('-ds', '--domain-classification', dest='domainClassification', default='imgt',
+                          help="domain classification to use. Either one of Kabat or IMGT numbering [default=imgt]",
+                          choices=['imgt', 'kabat'])
     optional.add_argument('-m', '--merger', help="choice between different mergers. Omit this if no -f2 option"
                                                  " is specified [default={}]".format(DEFAULT_MERGER),
                           default=None,
@@ -352,14 +355,14 @@ def extractRanges(strRanges, expNoRanges=2):
     """
     numRanges = []
     ranges = strRanges.split(',')
-    if (len(ranges) > expNoRanges):
+    if len(ranges) > expNoRanges:
         raise Exception("Number of bitScore, alignLen, sstart, and qstart ranges should match the number of files")
 
     for i in range(len(ranges)):
         scores = ranges[i].split('-')
-        if (len(scores) == 2):
+        if len(scores) == 2:
             numRanges.append([float(scores[0]), float(scores[1])])
-            if (numRanges[-1][0] >= numRanges[-1][1]):
+            if numRanges[-1][0] >= numRanges[-1][1]:
                 raise Exception("Invalid ranges " + strRanges)
 
         else:

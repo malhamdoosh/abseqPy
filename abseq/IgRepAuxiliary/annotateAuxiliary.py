@@ -20,7 +20,7 @@ from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 from abseq.logger import printto, LEVEL
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassification='imgt', stream=None):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
 
@@ -56,7 +56,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", stream=None):
         # in igRep.seqsPerFile, we can just analyze the file without splitting it
         if noWorkers == 1 or noSplit:
             cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
-                                                       seqType, noWorkers, outdir, stream=stream)
+                                                       seqType, noWorkers, outdir,
+                                                       domainClassification=domainClassification, stream=stream)
             sys.stdout.flush()
         else:
             # split FASTA file into smaller files

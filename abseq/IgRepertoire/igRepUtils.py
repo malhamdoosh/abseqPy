@@ -12,6 +12,7 @@ import os
 
 from os.path import exists
 from Bio import SeqIO, AlignIO
+from subprocess import check_output, CalledProcessError
 from pandas.core.frame import DataFrame
 from numpy import isnan, nan
 from Bio.SeqRecord import SeqRecord
@@ -140,7 +141,6 @@ def fastq2fasta(fastqFile, outputDir, stream=None):
     return filename
 
 
-# TODO: allow user to choose either imgt or kabat
 '''
 The V domain can be delineated using either IMGT system (Lefranc et al 2003) or 
 Kabat system (Kabat et al, 1991, Sequences of Proteins of Immunological Interest, 
@@ -151,12 +151,11 @@ for the best matched germline hit.
 
 IMGT classification system is used to delineate the V domain 
 '''
-
-
-def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA", outputDir="", stream=None):
-    # Run igblast on a fasta file
-    # TODO: update $IGDATA for auxiliary_data to correct path
-    # TODO: change organism to be fed through parameters
+def runIgblastn(blastInput, chain, threads=8,
+                db='$IGBLASTDB', igdata="$IGDATA", domainClassification='imgt',
+                outputDir="", species='human', stream=None):
+    if chain not in ['hv', 'kv', 'lv']:
+        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
 
     if outputDir:
         head, tail = os.path.split(blastInput)
@@ -170,67 +169,42 @@ def runIgblastn(blastInput, chain, threads=8, db='$IGBLASTDB', igdata="$IGDATA",
 
     printto(stream, '\tRunning igblast ... ' + os.path.basename(blastInput))
 
-    if chain == 'hv':
-        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_ighv -germline_db_J " \
-                  + db + "/imgt_human_ighj -germline_db_D " + db \
-                  + "/imgt_human_ighd -domain_system imgt " \
-                  + "-query %s -organism human -auxiliary_data " + igdata \
-                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-
-    elif chain == 'kv':
-        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_igkv -germline_db_J " \
-                  + db + "/imgt_human_igkj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt " + \
-                  "-query %s -organism human -auxiliary_data " + igdata \
-                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-
-    elif chain == 'lv':
-        command = IGBLASTN + " -germline_db_V " + db + "/imgt_human_iglv -germline_db_J " \
-                  + db + "/imgt_human_iglj -germline_db_D " + db + "/imgt_human_ighd -domain_system imgt" + \
-                  "-query %s -organism human -auxiliary_data " + igdata \
-                  + "/optional_file/human_gl.aux -show_translation -extend_align5end -outfmt 7 -num_threads %d -out %s"
-
-    else:
-        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
-        sys.exit()
-
-    os.system(command % (blastInput, threads, blastOutput))
+    command = buildIgBLASTCommand(igdata, db, chain, species, domainClassification,
+                                  blastInput, blastOutput, threads, protein=False, stream=stream)
+    try:
+        check_output([command.split()[0]] + command.split()[1:])
+    except CalledProcessError as e:
+        printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
+                LEVEL.CRIT)
+        raise e
     return blastOutput
+
 
 
 '''
 IMGT classification system is used to delineate the V domain 
 '''
+def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA', domainClassification='imgt',
+                outputDir="", species='human', stream=None):
+    if chain not in ['hv', 'kv', 'lv']:
+        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
 
-
-def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', outputDir="", stream=None):
-    # Run igblast on a fasta file        
     blastOutput = os.path.join(outputDir, blastInput.replace('.' + blastInput.split('.')[-1], '.out'))
 
-    if (exists(blastOutput)):
+    if exists(blastOutput):
         printto(stream, "\tBlast results were found ... " + os.path.basename(blastOutput))
         return blastOutput
+
     printto(stream, '\tRunning igblast ... ' + os.path.basename(blastInput))
 
-    if chain == 'hv':
-        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_ighv_p " + \
-                                                       "-domain_system imgt " + \
-                                                       "-query %s -organism human " + \
-                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-    elif chain == 'kv':
-        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_igkv_p " + \
-                                                       "-domain_system imgt " + \
-                                                       "-query %s -organism human " + \
-                                                       "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-    elif chain == 'lv':
-        command = IGBLASTP + " -germline_db_V " + db + "/imgt_human_iglv_p " + \
-                                                        "-domain_system imgt " + \
-                                                        "-query %s -organism human " + \
-                                                        "-outfmt 7 -extend_align5end -num_threads %d -out %s"
-    else:
-        printto(stream, 'ERROR: unsupported chain type.', LEVEL.CRIT)
-        sys.exit()
-
-    os.system(command % (blastInput, threads, blastOutput))
+    command = buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastInput, blastOutput,
+                                  threads, protein=True, vOnly=True, stream=stream)
+    try:
+        check_output([command.split()[0]] + command.split()[1:])
+    except CalledProcessError as e:
+        printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
+                LEVEL.CRIT)
+        raise e
     return blastOutput
 
 
@@ -783,3 +757,33 @@ def writeParams(args, outDir):
 def createIfNot(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+
+def buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastInput, blastOutput, threads,
+                        vOnly=False, protein=False, stream=None):
+    if chain not in ['hv', 'lv', 'kv']:
+        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'hv', 'kv'.".format(chain))
+    igdata = os.path.expandvars(igdata)
+    db = os.path.expandvars(db)
+    exe = IGBLASTP if protein else IGBLASTN
+    cmd = "{exe}"
+    # construct arguments for germline database (VDJ)
+    germs = "V" if vOnly else "VDJ"
+
+    for germ in germs:
+        # c = first letter of chain except when chains are lv or kv, in that case, the D germline database still comes
+        # from imgt_<species>_ighd
+        c = 'h' if germ == 'D' and chain[0] != 'h' else chain[0]
+        cmd += ' -germline_db_{} '.format(germ) + \
+               os.path.join(db, 'imgt_{}_ig{}{}{}'.format(species, c, germ.lower(), '_p' if protein else ''))
+    # construct domain system
+    cmd += ' -domain_system ' + domainClassification
+    # construct input and organism type
+    cmd += ' -query {query}' + ' -organism {}'.format(species)
+    # add aux data
+    cmd += ' -auxiliary_data {}'.format(os.path.join(igdata, 'optional_file', '{}_gl.aux'.format(species)))
+    # formatting and output file
+    cmd += ' -show_translation -extend_align5end -outfmt 7 -num_threads {threads} -out {output}'
+    cmd = cmd.format(exe=exe, query=blastInput, output=blastOutput, threads=threads)
+    # printto(stream, "Executing {exe} command line: {cmd}".format(exe=exe, cmd=cmd))
+    return cmd

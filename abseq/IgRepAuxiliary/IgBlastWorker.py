@@ -36,7 +36,7 @@ def getAnnotationFields(chain):
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
         # should never happen (argparse takes care of this for us)
-        raise Exception("Unsupported chain type")
+        raise ValueError("Unsupported chain type")
 
 
 def createCloneRecord(chain):
@@ -57,7 +57,7 @@ def convertCloneRecordToOrderedList(cdrRecord, chain):
 def to_int(x):
     try:
         return int(x.strip())
-    except:
+    except ValueError:
         return None
 
 
@@ -86,25 +86,25 @@ def extractCDRInfo(blastOutput, chain, stream=None):
     # CCTCT  N/A  GGTGT
 
     with open(blastOutput) as blast:
-        while(True):
+        while True:
             try:
-                if (not line.startswith('# Query')): 
+                if not line.startswith('# Query'):
                     line = blast.readline()                       
-                    if (not line):
+                    if not line:
                         break 
                     continue            
                 cloneRecord = createCloneRecord(chain)
                 cloneRecord['queryid'] = line.split()[2].strip()
                 # parse  V-(D)-J rearrangement   
                 line = blast.readline()
-                while(line and 
-                      not line.startswith('# Query') and
+                while (line and
+                       not line.startswith('# Query') and
                        not line.startswith('# V-(D)-J rearrangement')):
                     line = blast.readline()
-                if (not line):
+                if not line:
                     filteredIDs.append(cloneRecord['queryid'])
                     break
-                if (line.startswith('# Query')):
+                if line.startswith('# Query'):
                     filteredIDs.append(cloneRecord['queryid'])
                     continue
                 line = blast.readline().strip().split('\t')
@@ -197,21 +197,21 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                        not line.startswith('# Query') and
                        not line.startswith("# Fields")):
                     line = blast.readline()
-                if (not line):
+                if not line:
                     filteredIDs.append(cloneRecord['queryid'])
                     break
-                if (line.startswith('# Query')):
+                if line.startswith('# Query'):
                     filteredIDs.append(cloneRecord['queryid'])
                     continue            
                 line = blast.readline()
                 noHits = to_int(line.split()[1])    
-                if (noHits == 0):
+                if noHits == 0:
                     filteredIDs.append(cloneRecord['queryid'])
                     continue 
                 # retrieve the top hit
                 # parse the top V gene info
                 line = blast.readline()
-                if (not line.startswith("V")): 
+                if not line.startswith("V"):
                     filteredIDs.append(cloneRecord['queryid'])
                     continue
                 hit = line.split()
@@ -232,13 +232,13 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                        not line.startswith("D") and 
                        not line.startswith("J")):
                     line = blast.readline()
-                if (not line):
+                if not line:
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     break
-                if (line.startswith('# Query')):
+                if line.startswith('# Query'):
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     continue         
-                if (line.startswith("D")):
+                if line.startswith("D"):
                     hit = line.split()
                     cloneRecord['dqstart'] = to_int(hit[8])
                     cloneRecord['dqend'] = to_int(hit[9])
@@ -250,13 +250,13 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                    not line.startswith("# Query") and
                    not line.startswith("J")):
                     line = blast.readline()
-                if (not line):
+                if not line:
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     break
-                if (line.startswith('# Query')):
+                if line.startswith('# Query'):
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     continue 
-                if (line.startswith("J")):
+                if line.startswith("J"):
                     hit = line.split()
                     cloneRecord['jqstart'] = to_int(hit[8])
                     cloneRecord['jqend'] = to_int(hit[9])
@@ -267,38 +267,38 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['jgaps'] = to_int(hit[7])           
                 cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain)) 
             except Exception as e:                
-                # print(line, cloneRecord)
-                # raise e
                 warning = True
                 continue            
-    if (len(cloneAnnot) > 0):
+    if len(cloneAnnot) > 0:
         # productive = no stop and in-frame
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
-        cloneAnnot = DataFrame(cloneAnnot, columns =  getAnnotationFields(chain)) 
+        cloneAnnot = DataFrame(cloneAnnot, columns = getAnnotationFields(chain))
         cloneAnnot.index = cloneAnnot.queryid
         del cloneAnnot['queryid']
     else:
         cloneAnnot = DataFrame()
-    if (warning):
+    if warning:
         printto(stream, "Warning: something went wrong while parsing %s" % (blastOutput), LEVEL.WARN)
-    return (cloneAnnot, filteredIDs)
+    return cloneAnnot, filteredIDs
 
 
-def analyzeSmallFile(fastaFile, chain, igBlastDB,
-                     seqType='dna', threads=8, outdir="", stream=None): # , bitScore = 0
+def analyzeSmallFile(fastaFile, chain, igBlastDB, seqType='dna', threads=8,
+                     outdir="", domainClassification='imgt', stream=None):
     # Run igblast
     if seqType.lower() == 'dna':
-        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB, outputDir=outdir, stream=stream)
+        blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB,
+                                  domainClassification=domainClassification, outputDir=outdir, stream=stream)
     else:
         # argparse already checks that it's ether dna or protein, so nothing fishy can pass into else statement here
-        blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB, outputDir=outdir, stream=stream)
+        blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB,
+                                  domainClassification=domainClassification, outputDir=outdir, stream=stream)
     return extractCDRInfo(blastOutput, chain, stream=stream)
     
 
 class IgBlastWorker(Process):
     def __init__(self, chain, igBlastDB, 
-                 seqType, threads, stream=None):
+                 seqType, threads, domainClassification='imgt', stream=None):
         super(IgBlastWorker, self).__init__() 
         self.chain = chain     
         self.igBlastDB = igBlastDB        
@@ -308,18 +308,12 @@ class IgBlastWorker(Process):
         self.resultsQueue = None
         self.exitQueue = None
         self.stream = stream
-#         self.args = None
-    
-#     def __init__(self, name, tasksQueue, resultsQueue):
-#         self.name = name
-#         self.tasksQueue = tasksQueue
-#         self.resultsQueue = resultsQueue
-    
+        self.domainClassification = domainClassification
+
     def run(self):
         while True:            
             nextTask = self.tasksQueue.get()
-#             print("process has started a run... " + self.name)
-            # poison pill check            
+            # poison pill check
             if nextTask is None:
                 printto(self.stream, "process has stopped ... " + self.name)
                 self.exitQueue.put("exit")
@@ -327,14 +321,11 @@ class IgBlastWorker(Process):
                 break
             try:
                 result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,                                                                                                      
-                                          self.seqType, self.threads, stream=self.stream)
-#                 print("process has completed analysis... " + self.name) 
-                self.resultsQueue.put(result)            
+                                          self.seqType, self.threads, domainClassification=self.domainClassification,
+                                          stream=self.stream)
+                self.resultsQueue.put(result)
             except Exception as e:
                 printto(self.stream, "An error occurred while processing " + os.path.basename(nextTask), LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
-#                 raise
-#                 sys.exit()
-                continue                       
-#             print("process has completed a run... " + self.name) 
+                continue
         return
