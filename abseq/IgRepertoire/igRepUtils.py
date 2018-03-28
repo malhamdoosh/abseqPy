@@ -787,3 +787,80 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastI
     cmd = cmd.format(exe=exe, query=blastInput, output=blastOutput, threads=threads)
     # printto(stream, "Executing {exe} command line: {cmd}".format(exe=exe, cmd=cmd))
     return cmd
+
+
+def ntIUPACEqual(sequence, iupac):
+    """
+    compares 2 nucleotide sequence based on the IUPAC format. If they are not of equal length,
+    they are automatically not equal. Comparison is case-insensitive
+
+    ref: https://www.ddbj.nig.ac.jp/ddbj/code-e.html
+
+    :param sequence: string
+                normal ACGT nucleotide sequence
+    :param iupac: string
+                IUPAC format nucleotide sequence
+    :return: bool
+    """
+    # string1 = unextended, # string2 = extended
+    exMap = {
+        'a': {'a'},
+        'c': {'c'},
+        'g': {'g'},
+        't': {'t'},
+        'm': {'a', 'c'},
+        'r': {'a', 'g'},
+        'w': {'a', 't'},
+        's': {'c', 'g'},
+        'y': {'c', 't'},
+        'k': {'g', 't'},
+        'v': {'a', 'c', 'g'},
+        'h': {'a', 'c', 't'},
+        'd': {'a', 'g', 't'},
+        'b': {'c', 'g', 't'},
+        'n': {'a', 'c', 'g', 't'}
+    }
+    if len(sequence) != len(iupac):
+        return False
+    for c1, c2 in zip(sequence, iupac):
+        possibleMatches = exMap.get(c2.lower(), None)
+        if None:
+            raise ValueError("{} is not present under the IUPAC NT comparison mapping".format(c2))
+        if c1.lower() not in possibleMatches:
+            return False
+    return True
+
+
+def aaIUPACEqual(sequence, iupac):
+    """
+    compares 2 amino acid sequence based on the IUPAC format. If they are not of equal length,
+    they are automatically not equal. Comparison is case-insensitive
+
+    ref: https://www.ddbj.nig.ac.jp/ddbj/code-e.html
+
+    :param sequence: string
+                normal amino acid sequence
+    :param iupac: string
+                IUPAC amino acid sequence
+    :return: bool
+    """
+    exMap = {
+        'B': {'D', 'N'},
+        'Z': {'Q', 'E'},
+        'X': {'A', 'R', 'N', 'D', 'C', 'Q', 'E',
+              'G', 'H', 'I', 'L', 'K', 'M', 'F',
+              'P', 'O', 'S', 'U', 'T', 'W', 'Y',
+              'V', 'B', 'Z', 'J'},
+        'J': {'L', 'I'}
+    }
+    if len(sequence) != len(iupac):
+        return False
+    for c1, c2 in zip(sequence, iupac):
+        if c1 != c2:
+            possibleMatches = exMap.get(c2.upper(), None)
+            if None:
+                raise ValueError("{} is not present under the IUPAC AA comparison mapping".format(c2))
+            if c1.upper() not in possibleMatches:
+                return False
+    return True
+
