@@ -179,7 +179,11 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                         cloneRecord['fr%d%s.gaps' % (i, 'g' if i == 3 else '')] = to_int(line[6])
                         line = blast.readline()
                     if line.lower().startswith('cdr' + str(i)):
-                        line = line.replace('(germline)', '').split()
+                        # IgBLAST has parenthesis beside CDR3 germline start/end, depending on the domain system
+                        # if domain_system == imgt, (germline)
+                        # if domain_system == kabat, (V gene only)
+                        line = line.replace('(germline)', '').replace('(V gene only)', '').split()
+
                         cloneRecord['cdr%d%s.start' % (i, 'g' if i == 3 else '')] = to_int(line[1])
                         cloneRecord['cdr%d%s.end' % (i, 'g' if i == 3 else '')] = to_int(line[2])
                         cloneRecord['cdr%d%s.mismatches' % (i, 'g' if i == 3 else '')] = to_int(line[5])

@@ -720,6 +720,21 @@ Amino acids are colored based on their physiochemical properties
 
 
 def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=None):
+    """
+
+    :param counts:
+    :param title:
+    :param filename:
+    :param removeOutliers:
+    :param scaled: boolean
+                proportion over max number of amino acid. If False, then proportion is set to be over the sum
+                of current position's number of amino acids. For example, position 23 might have N-2 total amino acid
+                counts ( i.e. sum(counts[22].values()) == N-2) because there are 2 sequences that don't have length
+                >= 23. If scaled was set to False, the proportion calculated for position 23 is x / N-2 rather than
+                x / N
+    :param stream:
+    :return:
+    """
     if eitherExists(filename):
         printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
         return
