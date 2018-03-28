@@ -243,8 +243,8 @@ def parseCommandLineArguments():
     optional.add_argument('-s', '--seqtype', default='dna', help="sequence type, supported seq type: dna or protein \
                                                                     [default=dna]",
                           choices=["dna", "protein"])
-    optional.add_argument('-ds', '--domain-classification', dest='domainClassification', default='imgt',
-                          help="domain classification to use. Either one of Kabat or IMGT numbering [default=imgt]",
+    optional.add_argument('-ds', '--domain_system', dest='domainClassification', default='imgt',
+                          help="domain system to use. Either one of Kabat or IMGT numbering [default=imgt]",
                           choices=['imgt', 'kabat'])
     optional.add_argument('-m', '--merger', help="choice between different mergers. Omit this if no -f2 option"
                                                  " is specified [default={}]".format(DEFAULT_MERGER),
