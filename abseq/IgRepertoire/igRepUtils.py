@@ -779,3 +779,7 @@ def writeParams(args, outDir):
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     return os.path.basename(filename)
 
+
+def createIfNot(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
