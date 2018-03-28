@@ -11,6 +11,7 @@ import numpy as np
 import math
 import numpy
 import random
+import itertools
 
 from collections import Counter, defaultdict
 from os.path import exists
@@ -799,15 +800,19 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
                 filename.replace(".png", "_scaled.png"),
                 scaled=True, stream=stream)
 
-        # write raw barLogo csv file
-        rawCountsFlattened = []
-        for pos, c in enumerate(aaCounts):
-            for aminoAcid, tally in c.items():
-                rawCountsFlattened.append((pos + 1, tally, aminoAcid))
+        # write raw barLogo csv file - in a human friendly way
         rawCountsFileName, _ = os.path.splitext(filename)
-        writeCSV(rawCountsFileName + "_raw.csv",
-                 'position,count,AA',
-                 "{},{},{}\n", rawCountsFlattened)
+        rawCountsFileName += '_raw.csv'
+        allAAs = ''.join(set(itertools.chain.from_iterable(count.keys() for count in aaCounts))).upper()
+        with open(rawCountsFileName, 'w') as fp:
+            # write header
+            positions = range(1, len(aaCounts) + 1)
+            fp.write('AminoAcid/Position,' + ','.join(map(str, positions)) + '\n')
+            for aa in sorted(allAAs):
+                aaBuffer = ""
+                for counter in aaCounts:
+                    aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / sum(counter.values()))
+                fp.write("{}{}\n".format(aa, aaBuffer))
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):
