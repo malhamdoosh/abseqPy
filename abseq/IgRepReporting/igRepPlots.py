@@ -804,6 +804,8 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
         rawCountsFileName, _ = os.path.splitext(filename)
         rawCountsFileName += '_raw.csv'
         allAAs = ''.join(set(itertools.chain.from_iterable(count.keys() for count in aaCounts))).upper()
+        # we take total to get a "scaled" fraction (i.e. the columns now don't always sum to 1)
+        total = max(sum(count.values()) for count in aaCounts)
         with open(rawCountsFileName, 'w') as fp:
             # write header
             positions = range(1, len(aaCounts) + 1)
@@ -811,7 +813,7 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
             for aa in sorted(allAAs):
                 aaBuffer = ""
                 for counter in aaCounts:
-                    aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / sum(counter.values()))
+                    aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / total)
                 fp.write("{}{}\n".format(aa, aaBuffer))
 
 
