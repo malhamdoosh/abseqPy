@@ -3,7 +3,7 @@
     Author: Monther Alhamdoosh    
     Python Version: 2.7
     Changes log: check git commits. 
-''' 
+'''
 
 import os
 import numpy as np
@@ -15,18 +15,18 @@ from abseq.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
 from abseq.logger import printto, LEVEL
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
-                    'identity', 'alignlen', 'bitscore',
-                    'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps', 
-                    'jgene', 'jqstart', 'jqend', 'jstart', 'jend', 'jmismatches', 'jgaps',
-                    'strand', 'stopcodon', 'v-jframe',
-                    'fr1.start', 'fr1.end', 'fr1.mismatches', 'fr1.gaps',
-                    'cdr1.start', 'cdr1.end', 'cdr1.mismatches', 'cdr1.gaps',
-                    'fr2.start', 'fr2.end', 'fr2.mismatches', 'fr2.gaps',
-                    'cdr2.start', 'cdr2.end', 'cdr2.mismatches', 'cdr2.gaps',
-                    'fr3.start', 'fr3g.end', 'fr3g.mismatches', 'fr3g.gaps', 'fr3.end',
-                    'cdr3g.start', 'cdr3g.end', 'cdr3g.mismatches', 'cdr3g.gaps', 'cdr3.start', 'cdr3.end',
-                    'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
-                    ]
+                     'identity', 'alignlen', 'bitscore',
+                     'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps',
+                     'jgene', 'jqstart', 'jqend', 'jstart', 'jend', 'jmismatches', 'jgaps',
+                     'strand', 'stopcodon', 'v-jframe',
+                     'fr1.start', 'fr1.end', 'fr1.mismatches', 'fr1.gaps',
+                     'cdr1.start', 'cdr1.end', 'cdr1.mismatches', 'cdr1.gaps',
+                     'fr2.start', 'fr2.end', 'fr2.mismatches', 'fr2.gaps',
+                     'cdr2.start', 'cdr2.end', 'cdr2.mismatches', 'cdr2.gaps',
+                     'fr3.start', 'fr3g.end', 'fr3g.mismatches', 'fr3g.gaps', 'fr3.end',
+                     'cdr3g.start', 'cdr3g.end', 'cdr3g.mismatches', 'cdr3g.gaps', 'cdr3.start', 'cdr3.end',
+                     'fr4.start', 'fr4.end', 'fr4.mismatches', 'fr4.gaps'
+                     ]
 
 
 def getAnnotationFields(chain):
@@ -40,17 +40,16 @@ def getAnnotationFields(chain):
 
 
 def createCloneRecord(chain):
-    cdrRecord = {}    
+    cdrRecord = {}
     for field in getAnnotationFields(chain):
         cdrRecord[field] = np.nan
     return cdrRecord
 
 
-def convertCloneRecordToOrderedList(cdrRecord, chain):    
+def convertCloneRecordToOrderedList(cdrRecord, chain):
     orderedList = []
     for field in getAnnotationFields(chain):
         orderedList.append(cdrRecord[field])
-    
     return orderedList
 
 
@@ -68,7 +67,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
     cloneAnnot = []
     filteredIDs = []
     line = ""
-    
+
     warning = False
     # RE: parsing IGBLAST:
     # VDJ junction details MAY give N/A instead of just missing:
@@ -89,10 +88,10 @@ def extractCDRInfo(blastOutput, chain, stream=None):
         while True:
             try:
                 if not line.startswith('# Query'):
-                    line = blast.readline()                       
+                    line = blast.readline()
                     if not line:
-                        break 
-                    continue            
+                        break
+                    continue
                 cloneRecord = createCloneRecord(chain)
                 cloneRecord['queryid'] = line.split()[2].strip()
                 # parse  V-(D)-J rearrangement   
@@ -109,8 +108,8 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     continue
                 line = blast.readline().strip().split('\t')
                 cloneRecord['strand'] = 'forward' if line[-1] == '+' else 'reversed'
-#                 print line, cloneRecord['strand']
-#                 sys.exit()
+                #                 print line, cloneRecord['strand']
+                #                 sys.exit()
 
                 # XXX: the or len(line) == 8 may happen to light chains too, when there is
                 # a rogue D-gene that was a hit. It then follows heavy chain's indexing
@@ -197,7 +196,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['fr3.end'] = cloneRecord['fr3g.end']
 
                 # parse alignment information between query and V, D and J genes
-                while (line and 
+                while (line and
                        not line.startswith('# Query') and
                        not line.startswith("# Fields")):
                     line = blast.readline()
@@ -206,24 +205,24 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     break
                 if line.startswith('# Query'):
                     filteredIDs.append(cloneRecord['queryid'])
-                    continue            
+                    continue
                 line = blast.readline()
-                noHits = to_int(line.split()[1])    
+                noHits = to_int(line.split()[1])
                 if noHits == 0:
                     filteredIDs.append(cloneRecord['queryid'])
-                    continue 
-                # retrieve the top hit
+                    continue
+                    # retrieve the top hit
                 # parse the top V gene info
                 line = blast.readline()
                 if not line.startswith("V"):
                     filteredIDs.append(cloneRecord['queryid'])
                     continue
                 hit = line.split()
-                score = float(hit[-1]) 
-                align = to_int(hit[4])   
-                sStart = to_int(hit[10])                
+                score = float(hit[-1])
+                align = to_int(hit[4])
+                sStart = to_int(hit[10])
                 cloneRecord['identity'] = float(hit[3])
-                cloneRecord['alignlen'] = align              
+                cloneRecord['alignlen'] = align
                 cloneRecord['bitscore'] = score
                 cloneRecord['vqstart'] = to_int(hit[8])
                 cloneRecord['vstart'] = sStart
@@ -233,7 +232,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                 line = blast.readline()
                 while (line and
                        not line.startswith("# Query") and
-                       not line.startswith("D") and 
+                       not line.startswith("D") and
                        not line.startswith("J")):
                     line = blast.readline()
                 if not line:
@@ -241,7 +240,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     break
                 if line.startswith('# Query'):
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
-                    continue         
+                    continue
                 if line.startswith("D"):
                     hit = line.split()
                     cloneRecord['dqstart'] = to_int(hit[8])
@@ -251,15 +250,15 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['dgaps'] = to_int(hit[7])
                 # parse the top J gene info
                 while (line and
-                   not line.startswith("# Query") and
-                   not line.startswith("J")):
+                       not line.startswith("# Query") and
+                       not line.startswith("J")):
                     line = blast.readline()
                 if not line:
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
                     break
                 if line.startswith('# Query'):
                     cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
-                    continue 
+                    continue
                 if line.startswith("J"):
                     hit = line.split()
                     cloneRecord['jqstart'] = to_int(hit[8])
@@ -268,16 +267,16 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     # jend is a little special, we need it for FR4 end deduction
                     cloneRecord['jend'] = to_int(hit[11])
                     cloneRecord['jmismatches'] = to_int(hit[5])
-                    cloneRecord['jgaps'] = to_int(hit[7])           
-                cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain)) 
-            except Exception as e:                
+                    cloneRecord['jgaps'] = to_int(hit[7])
+                cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
+            except Exception as e:
                 warning = True
-                continue            
+                continue
     if len(cloneAnnot) > 0:
         # productive = no stop and in-frame
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
-        cloneAnnot = DataFrame(cloneAnnot, columns = getAnnotationFields(chain))
+        cloneAnnot = DataFrame(cloneAnnot, columns=getAnnotationFields(chain))
         cloneAnnot.index = cloneAnnot.queryid
         del cloneAnnot['queryid']
     else:
@@ -298,14 +297,14 @@ def analyzeSmallFile(fastaFile, chain, igBlastDB, seqType='dna', threads=8,
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB,
                                   domainClassification=domainClassification, outputDir=outdir, stream=stream)
     return extractCDRInfo(blastOutput, chain, stream=stream)
-    
+
 
 class IgBlastWorker(Process):
-    def __init__(self, chain, igBlastDB, 
+    def __init__(self, chain, igBlastDB,
                  seqType, threads, domainClassification='imgt', stream=None):
-        super(IgBlastWorker, self).__init__() 
-        self.chain = chain     
-        self.igBlastDB = igBlastDB        
+        super(IgBlastWorker, self).__init__()
+        self.chain = chain
+        self.igBlastDB = igBlastDB
         self.seqType = seqType
         self.threads = threads
         self.tasksQueue = None
@@ -315,16 +314,16 @@ class IgBlastWorker(Process):
         self.domainClassification = domainClassification
 
     def run(self):
-        while True:            
+        while True:
             nextTask = self.tasksQueue.get()
             # poison pill check
             if nextTask is None:
                 printto(self.stream, "process has stopped ... " + self.name)
                 self.exitQueue.put("exit")
-#                 self.terminate()
+                #                 self.terminate()
                 break
             try:
-                result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,                                                                                                      
+                result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,
                                           self.seqType, self.threads, domainClassification=self.domainClassification,
                                           stream=self.stream)
                 self.resultsQueue.put(result)
