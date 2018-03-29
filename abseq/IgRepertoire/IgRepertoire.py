@@ -394,14 +394,17 @@ class IgRepertoire:
         paramFile = writeParams(self.args, outResDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
-    def analyzeProductivity(self, inplace=True):
+    def analyzeProductivity(self, inplaceProductive=True, inplaceFiltered=True):
         """
         analyze sample productivity
 
-        :param inplace:
+        :param inplaceProductive:
                     if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
-                    productive sequences after this method finishes. Set to false to retain all sequences
+                    productive sequences after this method finishes.
 
+        :param inplaceFiltered:
+                    if this is set to true, self.cloneAnnot and self.cloneSeqs will only contain
+                    unfiltered sequences after this method finishes.
         :return: None
         """
         logger = logging.getLogger(self.name)
@@ -464,14 +467,11 @@ class IgRepertoire:
         printto(logger, "Productivity report is being generated ... ")
         generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outResDir, stream=logger)
 
-        # TODO: analyze productive clones only
-        #             self.analyzeIgProtein()
-        #             sys.stdout.flush()
-        # Diversity analysis can be applied on productive clones only     
         before = int(self.cloneAnnot.shape[0])
         inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
 
-        if inplace:
+        # do not filter out "filtered" yet! - that has nothing to do with productivity
+        if inplaceProductive:
             cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
             self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
         else:
@@ -482,6 +482,11 @@ class IgRepertoire:
             int(before)
             ), LEVEL.INFO)
 
+        # filter out "filtered" now
+        if inplaceFiltered:
+            self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['filtered'] == 'No']
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+
     def analyzeDiversity(self):
         logger = logging.getLogger(self.name)
 
@@ -490,7 +495,7 @@ class IgRepertoire:
 
         if self.cloneAnnot is None or self.cloneSeqs is None:
             # we analyze productive clones ONLY
-            self.analyzeProductivity(inplace=True)
+            self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=True)
 
         if len(self.cloneAnnot) == 0:
             printto(logger, "WARNING: There are no productive sequences found (post-refinement) in {},"
@@ -595,7 +600,7 @@ class IgRepertoire:
             return
 
         if self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity()
+            self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=False)
 
         rsites = loadRestrictionSites(self.sitesFile)
         print("Restriction sites are being searched ... ")
@@ -826,7 +831,7 @@ class IgRepertoire:
                 if exists(os.path.join(self.auxDir, 'productivity',
                                        self.name + '_refined_clones_annot.h5')):
                     printto(logger, "Using refined clone annotation for primer specificity analysis")
-                    self.analyzeProductivity(inplace=False)
+                    self.analyzeProductivity(inplaceProductive=False, inplaceFiltered=False)
                 else:
                     printto(logger, "Using unrefined clone annotation for primer specificity analysis")
                     self.annotateClones(outAuxDir)

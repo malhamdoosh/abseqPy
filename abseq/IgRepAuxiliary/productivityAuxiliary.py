@@ -6,7 +6,6 @@
 '''
 from __future__ import division
 import gc
-import multiprocessing
 import sys
 import os
 
@@ -49,7 +48,7 @@ def loadRefineFlagInfo():
         'FR4Endless': "{:,} clones do not align with provided trim3 sequences",
         'fr4NotAsExpected': "The FR4 of {:,} clones do not start as expected",
         'noFR4': "{:,} clones do not have FR4 ",
-        'filterFRLength': "{:,} clones have different FR1, FR2, FR3, or FR4 length compared to the majority of the"
+        'filterFRLength': "{:,} clones have different FR1, FR2, FR3, or FR4 length compared to the majority of the "
                           "sequences with similar V/J germline gene (excluded)"
     }
     return list(refineFlagMsgs.keys()), refineFlagMsgs
@@ -115,34 +114,30 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         printto(stream, "All workers have completed their tasks successfully.")
         # Collect results
         printto(stream, "Results are being collated from all workers ...")
+        # End of parallel implementation
+        sys.stdout.flush()
+
         # invoking the result collection method
         cloneAnnotList, transSeqs, flags, frameworkLengths = collectRefineResults(resultsQueue, totalTasks,
                                                                                   noSeqs, refineFlagNames,
                                                                                   stream=stream)
-        # End of parallel implementation
-        sys.stdout.flush()
-
         printto(stream, "\tResults were collated successfully.")
 
-        # filter out sequences that do not map to the most common framework length
+        # mark each clone as filtered=yes if its framework len is not the most common among the same V/J germline gene
         printto(stream, "Filtering clones according to framework lengths ... ")
+        # display the tallies of all frameworks based on V/J germline gene to log file
         for gene in frameworkLengths:
             printto(stream, "{}:".format(gene), LEVEL.INFO)
             for region, counts in frameworkLengths[gene].items():
                 printto(stream, "\t{}: {}".format(region.upper(), str(counts)), LEVEL.INFO)
 
-        pool = multiprocessing.Pool(processes=threads)
-        results = [pool.apply_async(markClones, args=(clone, frameworkLengths, chain))
-                   for clone in cloneAnnotList]
+        # flag them if they're filtered based on FR len
+        for clone in cloneAnnotList:
+            flags['filterFRLength'] += markClones(clone, frameworkLengths, chain)
 
-        del cloneAnnotList
-        cloneAnnotList = []
-
-        for p in results:
-            # collect results
-            newClone, id_ = p.get()
-            cloneAnnotList.append(newClone)
-            flags['filterFRLength'] += id_
+        filtered = len(flags['filterFRLength'])
+        printto(stream, "\t{:.2%} ({}/{}) clones were marked as filtered-out using Framework region 1, 2, 3 "
+                        "and 4 lengths".format(filtered / cloneAnnot.shape[0], filtered, cloneAnnot.shape[0]))
 
         # print refine flags
         printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=stream)
@@ -160,7 +155,6 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             records.close()
 
     # Create new data frame of clone annotation
-
     # add new column for filtering based on FR region
     newColumns = getAnnotationFields(chain) + ['filtered']
     cloneAnnot = DataFrame(cloneAnnotList, columns=newColumns)
@@ -176,9 +170,6 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
     cloneSeqs.index = cloneSeqs.queryid
     del cloneSeqs['queryid']
 
-    filtered = len(flags['filterFRLength'])
-    printto(stream, "{:.2%} ({}/{}) clones are marked as filtered out using framework 1, 2, 3 and 4 lengths"
-            .format(filtered / cloneAnnot.shape[0], filtered, cloneAnnot.shape[0]))
     return cloneAnnot, cloneSeqs
 
 
@@ -187,14 +178,14 @@ def markClones(clone, frameworkLengths, chain):
     id_ = []
     if clone[annotationFields.index('v-jframe')] == 'In-frame':
         if _isExpectedFRLength(annotationFields, frameworkLengths, clone):
-            clone.append('no')
+            clone.append('No')
         else:
-            clone.append('yes')
+            clone.append('Yes')
             id_ = [clone[annotationFields.index('queryid')]]
     else:
         # not in frame, by default will not be considered by diversity anyway
-        clone.append('yes')
-    return clone, id_
+        clone.append('Yes')
+    return id_
 
 
 def collectRefineResults(resultsQueue, totalTasks, noSeqs, refineFlagNames, stream=None):
