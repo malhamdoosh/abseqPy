@@ -117,12 +117,12 @@ def fastq2fasta(fastqFile, outputDir, stream=None):
     # awk 'NR % 4 == 1 {print ">" $0 } NR % 4 == 2 {print $0}' my.fastq > my.fasta
     filename = os.path.basename(fastqFile)
     seqOut = os.path.join(outputDir, "seq")
-    isGZipped = filename.endswith(".gz")
+
     if not os.path.isdir(seqOut):
         os.makedirs(seqOut)
 
     # rename all fastq files to fasta, including gzipped files
-    if isGZipped:
+    if filename.endswith(".gz"):
         filename = os.path.join(seqOut, filename.replace(filename.split('.')[-2] + ".gz", 'fasta'))
         fastqFile = gunzip(fastqFile)
     else:
@@ -133,11 +133,13 @@ def fastq2fasta(fastqFile, outputDir, stream=None):
         return filename
 
     printto(stream, "\t" + os.path.basename(fastqFile) + " is being converted into FASTA ...")
-    command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
-               "{print $0}' " + fastqFile + " > " + filename
-               )
+    SeqIO.convert(fastqFile, 'fastq', filename, 'fasta')
 
-    os.system(command)
+    # not all systems have AWK by default (cough, windows)
+    # command = ("awk 'NR % 4 == 1 {sub(\"@\", \"\", $0) ; print \">\" $0} NR % 4 == 2 "
+    #            "{print $0}' " + fastqFile + " > " + filename
+    #            )
+    # os.system(command)
     return filename
 
 
