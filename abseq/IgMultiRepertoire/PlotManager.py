@@ -307,6 +307,9 @@ class PlotManager:
                     # 1.
                     tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
                     assert len(tieInds) > 1 or self.metadata[bestInd][1] in taken
+                    if self.metadata[bestInd][1] in taken:
+                        raise Exception("Sample name {} conflicts with {}"
+                                        .format(rs, self.metadata[bestInd][1]))
                     tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
                     sampleIndex = namedSamples.index(rs)
 
