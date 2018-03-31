@@ -6,7 +6,7 @@ import os
 
 from collections import defaultdict
 
-from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT, RSCRIPT_PAIRING_SEPARATOR
+from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT, RSCRIPT_PAIRING_SEPARATOR, RESULT_FOLDER
 
 """
 XXX: IMPORTANT NOTE
@@ -37,7 +37,7 @@ class PlotManager:
         self.end5File = args.primer5end
         self.end3File = args.primer3end
         self.args = args
-        self.nameFileMap = {}
+        self._nameToFileMap = {}
 
     # the following obeys the behaviour of -rs / --rscripts in AbSeq's parser rules.
     # It's trivially easy to write but it improves reading when checking for parser logic
@@ -92,7 +92,8 @@ class PlotManager:
             else:
                 arg1 = ""
                 arg2 = ""
-            import sys;sys.stdout.flush()
+            import sys;
+            sys.stdout.flush()
             retval = subprocess.call(["Rscript",
                                       ABSEQROOT + "/rscripts/masterScript.R",
                                       arg1,
@@ -106,7 +107,7 @@ class PlotManager:
                 print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
-    def processSingleInput(self, name, resultDirName=""):
+    def processSingleInput(self, name, resultDirName=RESULT_FOLDER):
         """
         parses name into metadata as Rscript file for R plot to know where the same file is located.
         :param name: string
@@ -119,22 +120,31 @@ class PlotManager:
         outDirName = os.path.join(self.args.outdir, resultDirName, name)
         self.metadata.append((outDirName, name))
 
-    def processInput(self, allFiles, resultDirName=""):
+    def requestedSamples(self, allFiles, resultDirName=RESULT_FOLDER, displayMatch=False):
         """
-        reads rscript argument and parses it into metadata as Rscript.tmp file for R plot to know where
-        the sample files are located. It also maps inferred "canonical" name into user provided name in -rs
+        return a filtered list of tuples according to allFiles and -rs argument; if -rs was specified, only samples
+        requested will be returned with the name as provided within -rs, otherwise all samples in alLFiles are returned
+        with AbSeq's inferred sample names
 
-        :param allFiles: iterable of tuples(pair-end) or string(single ended)
-                    all clustered files from a directory
+        :param allFiles: tuple
+                        2-tuple of _R1 and _R2 files
 
         :param resultDirName: string
-                    intermediate directory name (if any)
+                        name of result folder (usually report/)
 
-        :return: dict
-                    mapping between old inferred name and user provided -rs name
+        :param displayMatch: bool
+                        prints inferred pairing if set to true, to stdout
+
+        :return: list of tuples
+                        each tuple in the list has the format
+                        [((sample1_r1, sample1_r2), sample_name1), (sample2, sample_name2), ... ]
+                        where the first element has either a string (single ended) or a tuple (paired-end)
+                        and the second element as the user provided sample name in -rs or AbSeq's inferred
+                        name if -rs was not provided
         """
         from abseq.IgRepertoire.igRepUtils import inferSampleName
-        canonicalNameChangeMap = {}
+        # mapping = [ (sample1_r1, sample1_r2, rsName1), (sample2, rsName2), (...) ... ]
+        mapping = []
         for sample in allFiles:
             if type(sample) == tuple:
                 # paired end sample
@@ -147,39 +157,44 @@ class PlotManager:
             canonicalName = inferSampleName(f1name, merger=merger, fastqc=(self.args.task.lower() == 'fastqc'))
             outDirName = os.path.join(self.args.outdir, resultDirName, canonicalName)
             self.metadata.append((outDirName, canonicalName))
-            canonicalNameChangeMap[canonicalName] = canonicalName
+            mapping.append((sample, canonicalName))
 
-        # 1st. Filter out all samples that are not required. (by consulting -rs <args>)
-        # 2nd. Post filtering, remap all abseq canonical names to user provided names
-        if self.rscriptArgs and self.rscriptArgs != 'off':
-            self.mapAll()
-            print("AbSeq has inferred the following from -rs:")
-            for k, v in self.nameFileMap.items():
-                print("\t{:<20}: {:>20}".format(k, v))
+        if not self.rscriptArgs or self.rscriptArgs == 'off':
+            return mapping
+
+        # given directory names and canonical names, try to map files to names
+        self._mapAllFiles()
+
+        # metadata consists of old (abseq inferred) name, empty it and refill with user provided names
+        self.metadata = []
+        mapping = []
+        #                  (to)
+        # map inferred name => -rs name (user provided name)
+        requestedSampleCanonicalNames = {}
+        for rsName, val in self._nameToFileMap.items():
+            requestedSampleCanonicalNames[val[-1]] = rsName
+
+        if displayMatch:
+            print("AbSeq inferred the following pairing from -rs argument:")
+            for k, v in requestedSampleCanonicalNames.items():
+                print("\t{:<20}: {:>20}".format(v, k))
             sys.stdout.flush()
-            # take away samples that are not requested by user if -rs was specified
-            requestedSamples = self._getRscriptSamples()
-            self.metadata = filter(lambda x: x[1] in requestedSamples, self.metadata)
-            canonicalNameChangeMap = {k: v for k, v in canonicalNameChangeMap.items() if k in requestedSamples}
 
-            # remap abseq's inferred names to user provided ones - flatten rscriptArgs
-            for userProvidedNames in list(itertools.chain(*self.rscriptArgs)):
-                res = self._findBestMatch(userProvidedNames)[1]
-                # update new name
-                newName = self._findBestMatch(userProvidedNames, useProvidedName=True)[1]
-                # if user provided confusing names, eg: PCR1_L001 and PCR1 both refer to the same sample,
-                # we raise an exception immediately!
-                if res in canonicalNameChangeMap and canonicalNameChangeMap[res] != res and \
-                        canonicalNameChangeMap[res] != newName:
-                    raise Exception("Misleading -rs argument for {}, {} and {}"
-                                    .format(res, self._findBestMatch(userProvidedNames, useProvidedName=True)[1],
-                                            canonicalNameChangeMap[res]))
-                canonicalNameChangeMap[res] = newName
-
-            self.metadata = map(lambda x: (os.path.join(self.args.outdir, resultDirName, canonicalNameChangeMap[x[1]]),
-                                           canonicalNameChangeMap[x[1]]), self.metadata)
-
-        return canonicalNameChangeMap
+        for sample in allFiles:
+            if type(sample) == tuple:
+                # paired end sample
+                f1name, _ = sample
+                merger = True
+            else:
+                f1name = sample
+                merger = False
+            canonicalName = inferSampleName(f1name, merger=merger, fastqc=(self.args.task.lower() == 'fastqc'))
+            if canonicalName in requestedSampleCanonicalNames:
+                userProvidedName = requestedSampleCanonicalNames[canonicalName]
+                mapping.append((sample, userProvidedName))
+                self.metadata.append((os.path.join(self.args.outdir, resultDirName, userProvidedName),
+                                      userProvidedName))
+        return mapping
 
     def _getRscriptSamples(self):
         # whether or not there was python plotting, see if user explicitly chose samples
@@ -191,6 +206,14 @@ class PlotManager:
                     if res:
                         requestedSamples.add(res[1])
         return requestedSamples
+
+    def _findBestMatch(self, sampleName, useProvidedName=False):
+        if useProvidedName:
+            tmp = list(self._nameToFileMap[sampleName])
+            tmp[0] = os.path.join(os.path.split(tmp[0])[0], sampleName)
+            tmp[1] = sampleName
+            return tuple(tmp)
+        return self._nameToFileMap[sampleName]
 
     def _flushMetadata(self, abSeqRootDir):
         """
@@ -254,68 +277,60 @@ class PlotManager:
                     # self.outdir/PCR1_BZ123_..._L001,PCR1_L001
                     # self.outdir/PCR2_BZ123_..._L001,PCR2_L001
 
-    def _findBestMatch(self, sampleName, useProvidedName=False):
-        if useProvidedName:
-            tmp = list(self.nameFileMap[sampleName])
-            tmp[0] = os.path.join(os.path.split(tmp[0])[0], sampleName)
-            tmp[1] = sampleName
-            return tuple(tmp)
-        return self.nameFileMap[sampleName]
-
-    def mapAll(self):
-        sampleNameMap = defaultdict(list)
-        fileNameMap = defaultdict(list)
-        namedSamples = list(set(itertools.chain(*self.rscriptArgs)))
+    def _mapAllFiles(self):
         if self.rscriptArgs and self.rscriptArgs != 'off':
+            sampleNameMap = defaultdict(list)
+            fileNameMap = defaultdict(list)
+            namedSamples = list(set(itertools.chain(*self.rscriptArgs)))
             for rs in namedSamples:
                 for dirName, sampleName in self.metadata:
                     sampleNameMap[rs].append(max(_nameMatch(dirName, rs), _nameMatch(dirName, rs)))
             for dirName, sampleName in self.metadata:
                 for rs in namedSamples:
                     fileNameMap[sampleName].append(max(_nameMatch(dirName, rs), _nameMatch(dirName, rs)))
-        finalMap = self.nameFileMap
-        taken = set()
-        for rs in namedSamples:
-            bestInd = int(np.argmax(sampleNameMap[rs]))
-            # check scores of each (dirName, sampleName), if there's an obvious winner, we're done
-            # also make sure that we've not chosen the winner before, it doesn't make sense to have a one to many rel.s
-            # else, resolve ties
-            if sampleNameMap[rs].count(sampleNameMap[rs][bestInd]) == 1 and self.metadata[bestInd][1] not in taken:
-                finalMap[rs] = self.metadata[bestInd]
-                taken.add(finalMap[rs][1])
-            else:
-                # if there's a tie:
-                # 1. get sampleName of all tiedIndices
-                # 2. check that at least of of the (dir, sampleName) score has this sample as their max score
-                # 3. if it doesn't, raise ambiguous exception
-                # 4. if it does, make sure there's only one winner, then assign that as the match.
+            taken = set()
+            for rs in namedSamples:
+                bestInd = int(np.argmax(sampleNameMap[rs]))
+                # check scores of each (dirName, sampleName), if there's an obvious winner, we're done
+                # also make sure that we've not chosen the winner before,
+                # it doesn't make sense to have a one to many rel.s else, resolve ties
+                if sampleNameMap[rs].count(sampleNameMap[rs][bestInd]) == 1 and self.metadata[bestInd][1] not in taken:
+                    self._nameToFileMap[rs] = self.metadata[bestInd]
+                    taken.add(self._nameToFileMap[rs][1])
+                else:
+                    # if there's a tie:
+                    # 1. get sampleName of all tiedIndices
+                    # 2. check that at least of of the (dir, sampleName) score has this sample as their max score
+                    # 3. if it doesn't, raise ambiguous exception
+                    # 4. if it does, make sure there's only one winner, then assign that as the match.
 
-                # 1.
-                tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
-                assert len(tieInds) > 1 or self.metadata[bestInd][1] in taken
-                tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
-                sampleIndex = namedSamples.index(rs)
+                    # 1.
+                    tieInds = [i for i, x in enumerate(sampleNameMap[rs]) if x == sampleNameMap[rs][bestInd]]
+                    assert len(tieInds) > 1 or self.metadata[bestInd][1] in taken
+                    tiedSamples = [self.metadata[i][1] for i in tieInds if self.metadata[i][1] not in taken]
+                    sampleIndex = namedSamples.index(rs)
 
-                # 2.
-                # check that either one of the files have MAX score = sample
-                for s in tiedSamples:
-                    if sampleIndex == int(np.argmax(fileNameMap[s])):
-                        break
-                else:   # 3
-                    other = namedSamples[int(np.argmax(fileNameMap[s]))]
-                    raise Exception("Your naming scheme for {} is too ambiguous with {} and {}, try a more specific one"
-                                    .format(s, other, rs))
+                    # 2.
+                    # check that either one of the files have MAX score = sample
+                    for s in tiedSamples:
+                        if sampleIndex == int(np.argmax(fileNameMap[s])):
+                            break
+                    else:  # 3
+                        other = namedSamples[int(np.argmax(fileNameMap[s]))]
+                        raise Exception(
+                            "Your naming scheme for {} is too ambiguous with {} and {}, try a more specific one"
+                            .format(s, other, rs))
 
-                # 4
-                # check that there's no more tie. You can't have a tie in a tiebreaker algorithm ...
-                if len(set([fileNameMap[s][sampleIndex] for s in tiedSamples])) > 1:
-                    raise Exception("Multiple files match this sample name!")
+                    # 4
+                    # check that there's no more tie. You can't have a tie in a tiebreaker algorithm ...
+                    if len(set([fileNameMap[s][sampleIndex] for s in tiedSamples])) > 1:
+                        raise Exception("Multiple files match this sample name!")
 
-                bestSampleScoreInd = int(np.argmax([fileNameMap[s][sampleIndex] for s in tiedSamples]))
-                tmp = [i for i, p in enumerate(self.metadata) if p[1] == tiedSamples[bestSampleScoreInd]]
-                assert len(tmp) == 1
-                finalMap[rs] = self.metadata[tmp[0]]
-                taken.add(finalMap[rs][1])
+                    bestSampleScoreInd = int(np.argmax([fileNameMap[s][sampleIndex] for s in tiedSamples]))
+                    tmp = [i for i, p in enumerate(self.metadata) if p[1] == tiedSamples[bestSampleScoreInd]]
+                    assert len(tmp) == 1
+                    self._nameToFileMap[rs] = self.metadata[tmp[0]]
+                    taken.add(self._nameToFileMap[rs][1])
 
 
 def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchScore=5, mismatchScore=-3):
@@ -340,6 +355,3 @@ def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchS
                                    matchScore if string1[j - 1] == string2[i - 1] else mismatchScore), 0)
             maxval = max(maxval, matrix[i][j])
     return maxval
-
-
-

@@ -20,24 +20,22 @@ class IgMultiRepertoire:
         self.resource = args.threads
         self.plotManager = PlotManager(args)
         if os.path.isdir(args.f1):
-            clusterFiles = self._pairFiles(args.f1, args)
-
-            canonicalNameChangeMap = self.plotManager.processInput(clusterFiles, resultDirName=RESULT_FOLDER)
-
             # get requested samples from -rs (if specified / if any) only
-            self.sampleCount = len(canonicalNameChangeMap)
+            filteredClusterFiles = self.plotManager.requestedSamples(self._pairFiles(args.f1, args), displayMatch=True)
+
+            self.sampleCount = len(filteredClusterFiles)
 
             # calculate resource (averaged over all samples)
             avgResource = int(floor(self.resource / self.sampleCount))
             avgResource = avgResource if avgResource > 0 else 1
-            for sample in clusterFiles:
+
+            for sample, sampleName in filteredClusterFiles:
                 modifiedArgs = deepcopy(args)
                 modifiedArgs.merger = args.merger if args.merger is not None else DEFAULT_MERGER
                 modifiedArgs.threads = avgResource
                 if type(sample) == tuple:
                     # paired end sample
                     f1name, f2name = sample
-                    inferredName = inferSampleName(f1name, merger=True, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = f2name
                     f1Fmt = detectFileFormat(modifiedArgs.f1)
@@ -49,23 +47,19 @@ class IgMultiRepertoire:
                 else:
                     # single ended
                     f1name = sample
-                    inferredName = inferSampleName(f1name, merger=False, fastqc=(args.task.lower() == 'fastqc'))
                     modifiedArgs.f1 = f1name
                     modifiedArgs.f2 = None
                     modifiedArgs.merger = None
                     modifiedArgs.fmt = detectFileFormat(f1name)
 
-                # if abseq's inferred sample name is in the map ==> sample was specified in -rs
-                # we also need to remap the name
-                if inferredName in canonicalNameChangeMap:
-                    modifiedArgs.name = canonicalNameChangeMap[inferredName]
-                    modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
-                    # <outdir>/result/<sample_name>/<sample_name>.log
-                    modifiedArgs.log = os.path.join(modifiedArgs.outdir, RESULT_FOLDER, modifiedArgs.name,
-                                                    '{}.log'.format(modifiedArgs.name))
-                    self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
+                modifiedArgs.name = sampleName
+                modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
+                # <outdir>/result/<sample_name>/<sample_name>.log
+                modifiedArgs.log = os.path.join(modifiedArgs.outdir, RESULT_FOLDER, modifiedArgs.name,
+                                                '{}.log'.format(modifiedArgs.name))
+                self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
         else:
-            self.plotManager.processSingleInput(args.name, resultDirName=RESULT_FOLDER)
+            self.plotManager.processSingleInput(args.name)
             args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
