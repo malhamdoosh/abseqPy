@@ -186,7 +186,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
         _error('Unknown system architecture. Non windows, mac or linux detected')
     binary = (installation_dir + '/' + 'clustalo').replace('//', '/')
     # install binary
-    _ = check_output(['curl', addr, '-o', binary])
+    _ = check_output(['curl', addr, '-o', binary, '-k'])
     # add execution bit
     os.chmod(binary, 0o777)
     return binary
@@ -195,7 +195,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
 def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
-    _ = check_output(['curl', addr, '-o', zipname])
+    _ = check_output(['curl', addr, '-o', zipname, '-k'])
     unzipped_name = 'FastQC'
     zip_ref = zipfile.ZipFile(zipname, 'r')
     zip_ref.extractall(installation_dir)
@@ -236,7 +236,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
     target_dir = os.path.abspath(installation_dir)
 
     os.chdir(installation_dir)
-    _ = check_output(['curl', '-L', addr, '-o', tarname])
+    _ = check_output(['curl', '-L', addr, '-o', tarname, '-k'])
     _ = check_output(['tar', '-xvzf', tarname])
     ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
     os.chdir(ghs_dir)
@@ -291,7 +291,7 @@ def download_imgt(download_dir, species, species_layman):
     for url in links:
         gene = url[url.find("+") + 1:url.find("&")].lower()
         output = "{}_{}.imgt.raw".format(path + species_layman, gene)
-        _ = check_output(['curl', '-L', url + species, '-o', output])
+        _ = check_output(['curl', '-L', url + species, '-o', output, '-k'])
         # TODO: parse file to get pure genes only
         with open(output[:output.rfind(".")], "w") as writer, \
                 open(output) as reader:
@@ -395,42 +395,42 @@ class ExternalDependencyInstaller(install):
         except ImportError:
             install_TAMO()
 
-        if 'IGDATA' not in os.environ:
-            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-                blast.download_edit_imgt_pl(d)
-                igdata_dir = (d + '/igdata').replace('//', '/')
-                if not os.path.exists(igdata_dir):
-                    os.makedirs(igdata_dir)
-                blast.download_internal_data(igdata_dir)
-                blast.download_optional_file(igdata_dir)
-        else:
-            print("Found IGDATA in ENV, skipping download")
-
-        if 'IGBLASTDB' not in os.environ:
-            # download human and mouse IMGT GeneDB
-            download_imgt(d, "Homo+sapiens", "human")
-            download_imgt(d, "Mus", "mouse")
-
-            # create IGBLASTDB's directory
-            if not os.path.exists(d + '/databases/'):
-                os.makedirs(d + '/databases/')
-
-            # if we don't have edit_imgt_file.pl script, download it!
-            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
-                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-                    blast.download_edit_imgt_pl(d)
-
-            # if we don't have makeblastdb, download it!
-            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
-                retvals = install_igblast(d)
-                for b in retvals:
-                    _syml(b, d_bin)
-
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
-        else:
-            print("Found IGBLASTDB in ENV, skipping download")
-
+#        if 'IGDATA' not in os.environ:
+#            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+#                blast.download_edit_imgt_pl(d)
+#                igdata_dir = (d + '/igdata').replace('//', '/')
+#                if not os.path.exists(igdata_dir):
+#                    os.makedirs(igdata_dir)
+#                blast.download_internal_data(igdata_dir)
+#                blast.download_optional_file(igdata_dir)
+#        else:
+#            print("Found IGDATA in ENV, skipping download")
+#
+#        if 'IGBLASTDB' not in os.environ:
+#            # download human and mouse IMGT GeneDB
+#            download_imgt(d, "Homo+sapiens", "human")
+#            download_imgt(d, "Mus", "mouse")
+#
+#            # create IGBLASTDB's directory
+#            if not os.path.exists(d + '/databases/'):
+#                os.makedirs(d + '/databases/')
+#
+#            # if we don't have edit_imgt_file.pl script, download it!
+#            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
+#                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+#                    blast.download_edit_imgt_pl(d)
+#
+#            # if we don't have makeblastdb, download it!
+#            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
+#                retvals = install_igblast(d)
+#                for b in retvals:
+#                    _syml(b, d_bin)
+#
+#            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
+#            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+#        else:
+#            print("Found IGBLASTDB in ENV, skipping download")
+#
         # replace install.run(self)
         # install.run(self)
         self.do_egg_install()
