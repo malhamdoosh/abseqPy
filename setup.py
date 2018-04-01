@@ -395,42 +395,42 @@ class ExternalDependencyInstaller(install):
         except ImportError:
             install_TAMO()
 
-#        if 'IGDATA' not in os.environ:
-#            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-#                blast.download_edit_imgt_pl(d)
-#                igdata_dir = (d + '/igdata').replace('//', '/')
-#                if not os.path.exists(igdata_dir):
-#                    os.makedirs(igdata_dir)
-#                blast.download_internal_data(igdata_dir)
-#                blast.download_optional_file(igdata_dir)
-#        else:
-#            print("Found IGDATA in ENV, skipping download")
-#
-#        if 'IGBLASTDB' not in os.environ:
-#            # download human and mouse IMGT GeneDB
-#            download_imgt(d, "Homo+sapiens", "human")
-#            download_imgt(d, "Mus", "mouse")
-#
-#            # create IGBLASTDB's directory
-#            if not os.path.exists(d + '/databases/'):
-#                os.makedirs(d + '/databases/')
-#
-#            # if we don't have edit_imgt_file.pl script, download it!
-#            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
-#                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-#                    blast.download_edit_imgt_pl(d)
-#
-#            # if we don't have makeblastdb, download it!
-#            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
-#                retvals = install_igblast(d)
-#                for b in retvals:
-#                    _syml(b, d_bin)
-#
-#            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
-#            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
-#        else:
-#            print("Found IGBLASTDB in ENV, skipping download")
-#
+        if 'IGDATA' not in os.environ:
+            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+                blast.download_edit_imgt_pl(d)
+                igdata_dir = (d + '/igdata').replace('//', '/')
+                if not os.path.exists(igdata_dir):
+                    os.makedirs(igdata_dir)
+                blast.download_internal_data(igdata_dir)
+                blast.download_optional_file(igdata_dir)
+        else:
+            print("Found IGDATA in ENV, skipping download")
+
+        if 'IGBLASTDB' not in os.environ:
+            # download human and mouse IMGT GeneDB
+            download_imgt(d, "Homo+sapiens", "human")
+            download_imgt(d, "Mus", "mouse")
+
+            # create IGBLASTDB's directory
+            if not os.path.exists(d + '/databases/'):
+                os.makedirs(d + '/databases/')
+
+            # if we don't have edit_imgt_file.pl script, download it!
+            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
+                with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+                    blast.download_edit_imgt_pl(d)
+
+            # if we don't have makeblastdb, download it!
+            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
+                retvals = install_igblast(d)
+                for b in retvals:
+                    _syml(b, d_bin)
+
+            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
+            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+        else:
+            print("Found IGBLASTDB in ENV, skipping download")
+
         # replace install.run(self)
         # install.run(self)
         self.do_egg_install()
