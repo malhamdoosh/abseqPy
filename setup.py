@@ -321,10 +321,13 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
         clean_fasta = os.path.join(output_dir, 'imgt_' + f[:f.find(".")])
         os.system(edit_imgt_bin + ' ' + os.path.join(data_dir, f) + ' > ' + clean_fasta)
         records = []
+        seen = set()
         for rec in SeqIO.parse(clean_fasta, 'fasta'):
             rec.description = ''
             rec.seq = rec.seq.upper()
-            records.append(rec)
+            if rec.id not in seen:
+                records.append(rec)
+                seen.add(rec.id)
         SeqIO.write(records, clean_fasta, 'fasta')
         _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'nucl', '-in', clean_fasta])
         if len(re.findall('ig[hkl][vc]', clean_fasta)) > 0:
