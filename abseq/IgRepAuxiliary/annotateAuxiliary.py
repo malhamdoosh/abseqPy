@@ -77,7 +77,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
                 # Initialize workers
                 for i in range(noWorkers):
                     w = IgBlastWorker(igRep.chain, igRep.db,
-                                      seqType, int(ceil(noWorkers / totalFiles)), stream=stream)
+                                      seqType, int(ceil(noWorkers / totalFiles)),
+                                      domainClassification=domainClassification, stream=stream)
                     w.tasksQueue = tasks
                     w.resultsQueue = outcomes
                     w.exitQueue = exitQueue      
