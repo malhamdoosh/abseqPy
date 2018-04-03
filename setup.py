@@ -317,17 +317,24 @@ def download_imgt(download_dir, species, species_layman):
 
 def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
     from Bio import SeqIO
+    from collections import defaultdict
     for f in os.listdir(data_dir):
         clean_fasta = os.path.join(output_dir, 'imgt_' + f[:f.find(".")])
         os.system(edit_imgt_bin + ' ' + os.path.join(data_dir, f) + ' > ' + clean_fasta)
         records = []
-        seen = set()
+        seen = defaultdict(int)
         for rec in SeqIO.parse(clean_fasta, 'fasta'):
             rec.description = ''
             rec.seq = rec.seq.upper()
             if rec.id not in seen:
-                records.append(rec)
-                seen.add(rec.id)
+                seen[rec.id] += 1
+            else:
+                # IGHV1-45*03_1, IGHV1-45*03_2 ...
+                old_id = rec.id
+                rec.id = "{}_{}".format(rec.id, str(seen[rec.id]))
+                seen[old_id] += 1
+            records.append(rec)
+                
         SeqIO.write(records, clean_fasta, 'fasta')
         _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'nucl', '-in', clean_fasta])
         if len(re.findall('ig[hkl][vc]', clean_fasta)) > 0:
