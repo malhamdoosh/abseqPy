@@ -260,7 +260,17 @@ def install_leehom(installation_dir='.'):
 
 
 def install_flash(installation_dir='.'):
-    pass
+    from six.moves.urllib import request
+    addr = "http://ccb.jhu.edu/software/FLASH/FLASH-1.2.11-windows-bin.zip"
+    flash_ins_dir = os.path.join(installation_dir, "flash")
+    if not os.path.exists(flash_ins_dir):
+        os.makedirs(flash_ins_dir)
+    flash_zip = 'flash.zip'
+    request.urlretrieve(addr, flash_zip)
+    zip_ref = zipfile.ZipFile(flash_zip)
+    zip_ref.extractall(flash_ins_dir)
+    for f in os.listdir(flash_ins_dir):
+        shutil.move(f, os.path.join(installation_dir, 'bin'))
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):

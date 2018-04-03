@@ -8,6 +8,7 @@
 
 import os
 import sys
+import platform
 
 # ==========================================
 #           ABSEQ's VERSION
@@ -77,7 +78,7 @@ class PriorityPath:
 DEFAULT_TOP_CLONE_VALUE = 100
 RSCRIPT_PAIRING_SEPARATOR = ';'
 RSCRIPT_SAMPLE_SEPARATOR = '|'
-DEFAULT_MERGER = 'leehom'
+DEFAULT_MERGER = 'leehom' if platform.system() != "Windows" else 'flash'
 WEBLOGO = 'weblogo'
 
 
