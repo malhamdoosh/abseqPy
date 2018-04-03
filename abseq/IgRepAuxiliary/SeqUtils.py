@@ -242,14 +242,14 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
                 tree = UPGMA(groupedMotifs[ighv], DFUNC)
                 print_tree_id(tree)
 
-                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=ighv, logger=stream)
+                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=(ighv + " family clustering"), logger=stream)
 
             lists = groupedMotifs.values()
             tree = UPGMA([m for lst in lists for m in lst], DFUNC)
             print_tree_id(tree)
 
             newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_newick.dnd')
-            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, logger=stream)
+            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title="Clustering of all IGHV", logger=stream)
 
             sys.stdout.close()
             sys.stdout = _old_stdout
@@ -293,7 +293,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     # plot dendogram in matplotlib
     phylipTree.ladderize()
     fig, axes = plt.subplots(figsize=(8, 5))
-    Phylo.draw(phylipTree, do_show=False, axes=axes, branch_labels=lambda c: c.branch_length)
+    Phylo.draw(phylipTree, do_show=False, axes=axes, show_confidence=True)
     axes.set_title(title)
     fig.savefig(newickClusterFile.replace('.dnd', '.png'), dpi=300)
     plt.close()
