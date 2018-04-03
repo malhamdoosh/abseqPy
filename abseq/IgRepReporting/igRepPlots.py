@@ -54,22 +54,23 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
 
     if sum(ighvDist.values()):
         plotDist(ighvDist, sampleName, outputFile)
-        # box plot of sequence length in each class
-        fig, ax = plt.subplots()
         classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
-        ax.boxplot(map(lambda x: ighvSizes[x], classes))
-        ind = np.arange(1, len(classes) + 1)
-        ax.set_xticks(ind)
-        ax.set_xticklabels(classes, rotation=45)
-        ax.set_title("Sequence Lengths in " + sampleName)
         outputFile, ext = os.path.splitext(outputFile)
         outputFile += ("_box" + ext)
-        fig.savefig(outputFile, dpi=300)
+        # box plot of sequence length in each class
+        if PlotManager.pythonPlotOn():
+            fig, ax = plt.subplots()
+            ax.boxplot(map(lambda x: ighvSizes[x], classes))
+            ind = np.arange(1, len(classes) + 1)
+            ax.set_xticks(ind)
+            ax.set_xticklabels(classes, rotation=45)
+            ax.set_title("Sequence Lengths in " + sampleName)
+            fig.savefig(outputFile, dpi=300)
+            plt.close()
         writeCSV(outputFile.replace('.png', '.csv'), 'x,y\n', "{},{}\n",
                  [(klass, val) for klass in classes for val in ighvSizes[klass]])
         for k in classes:
             printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
-        plt.close()
 
 
 def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',

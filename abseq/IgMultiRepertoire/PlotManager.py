@@ -13,7 +13,6 @@ XXX: IMPORTANT NOTE
 As of Nov 22 2017: 
 The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False is:
     1) plotSeqLenDist           -- will be moved to R #TODO
-    2) plotSeqLenDistClasses    -- will be moved to R #TODO
     3) plotVenn                 - mostly used by restriction sites
     4) plotHeatMap              - generateStatsHeatmap
     5) plotHeatmapFromDF
@@ -21,6 +20,7 @@ The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False is:
 The plots that OBEY pythonPlotOn() = False is:
     1) all diversity plots (rarefaction, duplication, recapture)
     2) plotDist()
+    3) plotSeqLenDistClasses
 """
 
 
@@ -36,6 +36,7 @@ class PlotManager:
         self.metadata = []
         self.end5File = args.primer5end
         self.end3File = args.primer3end
+        self.upstream = args.upstream
         self.args = args
         self._nameToFileMap = {}
 
@@ -86,18 +87,21 @@ class PlotManager:
             # todo: because main script overridden stdout to AbSeq.log
             # todo: change this to per-sample basis when logging is implemented correctly.
             # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
-            if self.end5File or self.end3File:
-                arg1 = str(self.end5File)
-                arg2 = str(self.end3File)
-            else:
-                arg1 = ""
-                arg2 = ""
-            import sys;
+            DUMMY_VALUE = "None"
+            # primer args
+            arg1 = str(self.end5File)
+            arg2 = str(self.end3File)
+
+            # upstream args
+            arg3 = "{:.0f}".format(self.upstream[0]) if self.upstream else DUMMY_VALUE
+            arg4 = "{:.0f}".format(self.upstream[1]) if self.upstream else DUMMY_VALUE
             sys.stdout.flush()
             retval = subprocess.call(["Rscript",
                                       ABSEQROOT + "/rscripts/masterScript.R",
                                       arg1,
-                                      arg2],
+                                      arg2,
+                                      arg3,
+                                      arg4],
                                      stdout=sys.stdout,
                                      stderr=sys.stdout
                                      )

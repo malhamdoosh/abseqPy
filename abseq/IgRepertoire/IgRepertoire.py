@@ -731,7 +731,7 @@ class IgRepertoire:
 
         upstreamFile = os.path.abspath(upstreamFile)
 
-        expectLength = int(self.upstream[1] - self.upstream[0] + 1)
+        expectLength = self.upstream[1] - self.upstream[0] + 1
 
         # plot the distribution of sequence length
         plotUpstreamLenDist(upstreamFile, expectLength, self.name, outResDir, stream=logger)
@@ -789,7 +789,7 @@ class IgRepertoire:
             printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
-        expectLength = int(self.upstream[1] - self.upstream[0] + 1)
+        expectLength = self.upstream[1] - self.upstream[0] + 1
 
         plotUpstreamLenDist(upstreamFile, expectLength, self.name, outResDir, stream=logger)
 

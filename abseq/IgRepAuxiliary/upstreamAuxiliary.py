@@ -18,12 +18,11 @@ from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsFamilyLevel, \
 from abseq.logger import LEVEL, printto
 
 _UPSTREAM_SEQ_FILE_SEP = '|'
-_VALID_SEQ_FASTA_TEMPLATE = "{}_{}_{}_{}_valid_seqs.fasta"
-_FAULTY_SEQ_FASTA_TEMPLATE = "{}_{}_{}_{}_faulty_trans.fasta"
-_STARTCOD_SEQ_FASTA_TEMPLATE = "{}_{}_{}_{}_no_atg.fasta"
+_VALID_SEQ_FASTA_TEMPLATE = "{}_{}_{:.0f}_{:.0f}_valid_seqs.fasta"
+_FAULTY_SEQ_FASTA_TEMPLATE = "{}_{}_{:.0f}_{:.0f}_faulty_trans.fasta"
+_STARTCOD_SEQ_FASTA_TEMPLATE = "{}_{}_{:.0f}_{:.0f}_no_atg.fasta"
 
 
-# todo: R plot these
 def plotUpstreamLenDist(upstreamFile, expectLength, name, outDir, stream=None):
     """
     plots length distribution of upstream sequences. 4 different sets of plots are generated:
@@ -280,7 +279,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
         if plotDist:
             writeCountsCategoriesToFile(ighvSignalsCounts,
                                         sampleName,
-                                        os.path.join(outResDir, "{}_{}_{}_{}_valid_"
+                                        os.path.join(outResDir, "{}_{}_{:.0f}_{:.0f}_valid_"
                                                      .format(sampleName, type, expectLength[0], expectLength[1])),
                                         title)
     if sum(faultyTransCounts.values()):
@@ -292,7 +291,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
         if plotDist:
             writeCountsCategoriesToFile(faultyTransCounts,
                                         sampleName,
-                                        os.path.join(outResDir, "{}_{}_{}_{}_faulty_"
+                                        os.path.join(outResDir, "{}_{}_{:.0f}_{:.0f}_faulty_"
                                                      .format(sampleName, type, *expectLength)),
                                         'Faulty Translations')
         printto(stream, "\tTotal faulty secretion signals is {} (excluded)".format(len(flattenRecs)), LEVEL.INFO)
@@ -308,7 +307,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
         if plotDist:
             writeCountsCategoriesToFile(noStartCodonCounts,
                                         sampleName,
-                                        os.path.join(outResDir, "{}_{}_{}_{}_no_atg_"
+                                        os.path.join(outResDir, "{}_{}_{:.0f}_{:.0f}_no_atg_"
                                                      .format(sampleName, type, *expectLength)),
                                         "Upstream sequences without start codon")
         printto(stream,
@@ -409,7 +408,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
     ighvSignals = compressor(ighvSignals)
     generateMotifs(ighvSignals,
                    align=(expectLength[0] < expectLength[1]),
-                   outputPrefix=os.path.join(outResDir, ("{}_{}_{}_{}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
+                   outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
                    clusterMotifs=clusterMotifs,
                    stream=stream)
 
@@ -417,7 +416,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
         faultySeq = compressor(faultySeq)
         generateMotifs(faultySeq,
                        align=True,
-                       outputPrefix=os.path.join(outResDir, ("{}_{}_{}_{}_faulty_" + level).format(*OUTPUT_FILE_PACKET)),
+                       outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_faulty_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
@@ -426,20 +425,19 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
         generateMotifs(noStartCodonSeq,
                        align=True,
                        outputPrefix=os.path.join(outResDir,
-                                                 ("{}_{}_{}_{}_untranslated_" + level).format(*OUTPUT_FILE_PACKET)),
+                                                 ("{}_{}_{:.0f}_{:.0f}_untranslated_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
                        stream=stream)
         generateMotifs(ighvSignals,
                        align=False,
-                       outputPrefix=os.path.join(outResDir, ("{}_{}_{}_{}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
+                       outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=True,
                        clusterMotifs=clusterMotifs,
                        stream=stream)
 
 
-# todo: R plot these!
 def writeCountsCategoriesToFile(countsVariant, sampleName, filePrefix, title=''):
     # gene level
     countsVariant = compressCountsGeneLevel(countsVariant)

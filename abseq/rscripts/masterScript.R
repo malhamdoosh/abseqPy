@@ -31,6 +31,7 @@ source(paste0(abSeqRoot, '/rscripts/recapture.R'))
 source(paste0(abSeqRoot, '/rscripts/regionAnalysis.R'))
 source(paste0(abSeqRoot, '/rscripts/spectratype.R'))
 source(paste0(abSeqRoot, '/rscripts/topNDist.R'))
+source(paste0(abSeqRoot, '/rscripts/boxPlot.R'))
 
 # main functions are here
 source(paste0(abSeqRoot, '/rscripts/annotAnalysis.R'))
@@ -38,6 +39,7 @@ source(paste0(abSeqRoot, '/rscripts/abundanceAnalysis.R'))
 source(paste0(abSeqRoot, '/rscripts/productivityAnalysis.R'))
 source(paste0(abSeqRoot, '/rscripts/diversityAnalysis.R'))
 source(paste0(abSeqRoot, '/rscripts/primerSpecificity.R'))
+source(paste0(abSeqRoot, '/rscripts/upstreamAnalysis.R'))
 
 
 
@@ -161,13 +163,70 @@ for (i in 1:length(pairings)) {
     }
     primerDirectories <- unlist(lapply(directories, paste0, "/primer_specificity/"))
     args <- commandArgs(trailingOnly=TRUE)
-    if (length(args) == 2) {
-      primer5File <- args[1]
-      primer3File <- args[2]
+    primer5File <- args[1]
+    primer3File <- args[2]
+    if (primer5File != "None" || primer3File != "None") {
       primerAnalysis(primer5File, primer3File, primerDirectories, primerOut, combinedNames, mashedNames)
     }
   }
   
+  ##################################################
+  #                                                #
+  #               UPSTREAM 5UTR PLOTS              #
+  #                                                #
+  ##################################################
+  if ('utr5' %in% analysis) {
+    utr5Out <- paste0(outputDir, "utr5/")
+    if (!file.exists(utr5Out)) {
+      dir.create(utr5Out)
+    }
+    utr5Directories <- unlist(lapply(directories, paste0, "/utr5/"))
+    args <- commandArgs(trailingOnly=TRUE)
+    upstreamStart <- args[3]
+    upstreamEnd <- args[4]
+    if (upstreamStart != "None" && upstreamEnd != "None") {
+      expectedLength <- as.integer(upstreamEnd) - as.integer(upstreamStart) + 1
+      # upstreamEnd is probably Inf 
+      if (is.na(expectedLength)) {
+        upstreamRange <- paste0(upstreamStart, "_", 'inf')
+      } else {
+        upstreamRange <- paste0(expectedLength, "_", expectedLength)
+      }
+      upstreamDist(utr5Directories, utr5Out, expectedLength, paste0(upstreamStart, "_", upstreamEnd), sampleNames, combinedNames, mashedNames, FALSE)
+      upstreamAnalysis(utr5Directories, utr5Out, expectedLength, upstreamRange, sampleNames, combinedNames, mashedNames, FALSE)
+    }
+  }
+  
+  ##################################################
+  #                                                #
+  #               UPSTREAM SEC.S PLOTS             #
+  #                                                #
+  ##################################################
+  if ('secretion' %in% analysis) {
+    secOut <- paste0(outputDir, "secretion/")
+    if (!file.exists(secOut)) {
+      dir.create(secOut)
+    }
+    secDirectories <- unlist(lapply(directories, paste0, "/secretion/"))
+    args <- commandArgs(trailingOnly=TRUE)
+    upstreamStart <- args[3]
+    upstreamEnd <- args[4]
+    if (upstreamStart != "None" && upstreamEnd != "None") {
+      expectedLength <- as.integer(upstreamEnd) - as.integer(upstreamStart) + 1
+      # upstreamEnd is probably Inf 
+      if (is.na(expectedLength)) {
+        upstreamRange <- paste0(upstreamStart, "_", 'inf')
+      } else {
+        upstreamRange <- paste0(expectedLength, "_", expectedLength)
+        upstreamRangeTrimmed <- paste0("1_", expectedLength - 1)
+      }
+      upstreamDist(secDirectories, secOut, expectedLength, paste0(upstreamStart, "_", upstreamEnd), sampleNames, combinedNames, mashedNames, TRUE)
+      upstreamAnalysis(secDirectories, secOut, expectedLength, upstreamRange, sampleNames, combinedNames, mashedNames, TRUE)
+      if (!is.na(expectedLength)) {
+        upstreamAnalysis(secDirectories, secOut, expectedLength, upstreamRangeTrimmed, sampleNames, combinedNames, mashedNames, TRUE)
+      }
+    }
+  }
 }
 
 # print warnings
