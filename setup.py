@@ -19,6 +19,8 @@ from setuptools.command.install import install
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
+CURL_UNSAFE = '-k'
+# CURL_UNSAFE = ''   # uncomment this to use safe curl
 
 # VERSIONING:
 # 1. [singleton] ==> minimum version
@@ -47,7 +49,7 @@ class FTPBlast:
 
     def install_bins(self, binary, installation_dir):
         path = '/blast/executables/igblast/release/{}/'.format(self.version) + binary
-        installation_path = (installation_dir + '/' + binary).replace('//', '/')
+        installation_path = os.path.join(installation_dir, binary)
         if not os.path.exists(installation_dir):
             os.makedirs(installation_dir)
         with open(installation_path, "wb") as fp:
@@ -58,13 +60,13 @@ class FTPBlast:
         _ = check_output(['tar', '-xvzf', binary])
         os.chdir(old_dir)
 
-        return glob.glob(installation_dir + '/ncbi-igblast-' + self.version + '/bin/*')
+        return glob.glob(os.path.join(installation_dir, 'ncbi-igblast-' + self.version, 'bin') + os.path.sep + '*')
 
     def download_edit_imgt_pl(self, download_dir):
         path = '/blast/executables/igblast/release/edit_imgt_file.pl'
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
-        download_path = (download_dir + '/edit_imgt_file.pl').replace('//', '/')
+        download_path = os.path.join(download_dir, 'edit_imgt_file.pl')
         with open(download_path, "wb") as fp:
             self.ftp.retrbinary('RETR ' + path, fp.write)
         os.chmod(download_path, 0o777)
@@ -76,13 +78,13 @@ class FTPBlast:
         for s in species:
             self.ftp.cwd(s)
             filenames = self.ftp.nlst()
-            download_path = (download_dir + '/internal_data/' + s + '/').replace('//', '/')
+            download_path = os.path.join(download_dir, 'internal_data', s)
             os.makedirs(download_path)
             for filename in filenames:
                 # ignore rhesus_monkey's CVS directory
                 if filename == 'CVS':
                     continue
-                with open(download_path + filename, "wb") as fp:
+                with open(os.path.join(download_path, filename), "wb") as fp:
                     self.ftp.retrbinary('RETR ' + filename, fp.write)
             self.ftp.cwd('../')
 
@@ -90,10 +92,10 @@ class FTPBlast:
         path = '/blast/executables/igblast/release/optional_file/'
         self.ftp.cwd(path)
         filenames = self.ftp.nlst()
-        download_path = (download_dir + '/optional_file/').replace('//', '/')
+        download_path = os.path.join(download_dir, 'optional_file')
         os.makedirs(download_path)
         for filename in filenames:
-            with open(download_path + filename, "wb") as fp:
+            with open(os.path.join(download_path, filename), "wb") as fp:
                 self.ftp.retrbinary('RETR ' + filename, fp.write)
 
 
@@ -145,7 +147,7 @@ def _syml(src, dest):
     binary_name = os.path.basename(src)
     if src:
         link_src = os.path.abspath(src)
-        link_dest = (dest + '/' + binary_name).replace('//', '/')
+        link_dest = os.path.join(dest, binary_name)
         # anaconda / conda doesn't like os.symlink
         if 'continuum' in sys.version.lower() or 'anaconda' in sys.version.lower():
             _ = check_output(['ln', '-s', link_src, link_dest])
@@ -167,7 +169,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
     plat, bit = _get_sys_info()
 
     # clustalo needs to create a dir
-    installation_dir = (installation_dir + '/' + 'clustal-omega').replace('//', '/')
+    installation_dir = os.path.join(installation_dir, 'clustal-omega')
     if not os.path.exists(installation_dir):
         os.makedirs(installation_dir)
 
@@ -184,9 +186,9 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
         addr = 'http://www.clustal.org/omega/clustal-omega-1.2.2-win64.zip'
     else:
         _error('Unknown system architecture. Non windows, mac or linux detected')
-    binary = (installation_dir + '/' + 'clustalo').replace('//', '/')
+    binary = os.path.join(installation_dir, 'clustalo')
     # install binary
-    _ = check_output(['curl', addr, '-o', binary])
+    _ = check_output(['curl', addr, '-o', binary, CURL_UNSAFE])
     # add execution bit
     os.chmod(binary, 0o777)
     return binary
@@ -195,12 +197,12 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
 def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
-    _ = check_output(['curl', addr, '-o', zipname])
+    _ = check_output(['curl', addr, '-o', zipname, CURL_UNSAFE])
     unzipped_name = 'FastQC'
     zip_ref = zipfile.ZipFile(zipname, 'r')
     zip_ref.extractall(installation_dir)
     zip_ref.close()
-    binary = (installation_dir + '/' + unzipped_name + '/' + 'fastqc').replace('//', '/')
+    binary = os.path.join(installation_dir, unzipped_name, 'fastqc')
     os.chmod(binary, 0o777)
     return binary
 
@@ -224,7 +226,7 @@ def install_leehom(installation_dir='.'):
     # go back to our original dir
     os.chdir(old_dir)
 
-    return (installation_dir + '/leeHom' + '/src/leeHomMulti').replace('//', '/')
+    return os.path.join(installation_dir, 'leeHom', 'src', 'leeHomMulti')
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
@@ -236,7 +238,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
     target_dir = os.path.abspath(installation_dir)
 
     os.chdir(installation_dir)
-    _ = check_output(['curl', '-L', addr, '-o', tarname])
+    _ = check_output(['curl', '-L', addr, '-o', tarname, CURL_UNSAFE])
     _ = check_output(['tar', '-xvzf', tarname])
     ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
     os.chdir(ghs_dir)
@@ -268,7 +270,7 @@ def install_TAMO():
     # TAMO comes packed with AbSeq, just need to install it!
     _ = check_output(['tar', 'xvzf', 'TAMO.tar.gz'])
     old_dir = os.path.abspath(".")
-    os.chdir("TAMO-1.0_120321/")
+    os.chdir("TAMO-1.0_120321")
     # install!
     _ = check_output(['python', 'setup.py', 'install'])
     # remove files (tar?)
@@ -286,13 +288,12 @@ def download_imgt(download_dir, species, species_layman):
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGLJ&species="
     ]
 
-    path = (download_dir + '/imgt_' + species_layman + "/").replace('//', '/')
+    path = os.path.join(download_dir, 'imgt_' + species_layman)
     os.makedirs(path)
     for url in links:
         gene = url[url.find("+") + 1:url.find("&")].lower()
-        output = "{}_{}.imgt.raw".format(path + species_layman, gene)
-        _ = check_output(['curl', '-L', url + species, '-o', output])
-        # TODO: parse file to get pure genes only
+        output = "{}_{}.imgt.raw".format(os.path.join(path, species_layman), gene)
+        _ = check_output(['curl', '-L', url + species, '-o', output, CURL_UNSAFE])
         with open(output[:output.rfind(".")], "w") as writer, \
                 open(output) as reader:
 
@@ -317,13 +318,16 @@ def download_imgt(download_dir, species, species_layman):
 def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
     from Bio import SeqIO
     for f in os.listdir(data_dir):
-        clean_fasta = output_dir + 'imgt_' + f[:f.find(".")]
-        os.system(edit_imgt_bin + ' ' + data_dir + f + ' > ' + clean_fasta)
+        clean_fasta = os.path.join(output_dir, 'imgt_' + f[:f.find(".")])
+        os.system(edit_imgt_bin + ' ' + os.path.join(data_dir, f) + ' > ' + clean_fasta)
         records = []
+        seen = set()
         for rec in SeqIO.parse(clean_fasta, 'fasta'):
             rec.description = ''
             rec.seq = rec.seq.upper()
-            records.append(rec)
+            if rec.id not in seen:
+                records.append(rec)
+                seen.add(rec.id)
         SeqIO.write(records, clean_fasta, 'fasta')
         _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'nucl', '-in', clean_fasta])
         if len(re.findall('ig[hkl][vc]', clean_fasta)) > 0:
@@ -398,7 +402,7 @@ class ExternalDependencyInstaller(install):
         if 'IGDATA' not in os.environ:
             with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
                 blast.download_edit_imgt_pl(d)
-                igdata_dir = (d + '/igdata').replace('//', '/')
+                igdata_dir = os.path.join(d, 'igdata')
                 if not os.path.exists(igdata_dir):
                     os.makedirs(igdata_dir)
                 blast.download_internal_data(igdata_dir)
@@ -412,22 +416,26 @@ class ExternalDependencyInstaller(install):
             download_imgt(d, "Mus", "mouse")
 
             # create IGBLASTDB's directory
-            if not os.path.exists(d + '/databases/'):
-                os.makedirs(d + '/databases/')
+            database_dir = os.path.join(d, 'databases')
+            if not os.path.exists(database_dir):
+                os.makedirs(database_dir)
 
             # if we don't have edit_imgt_file.pl script, download it!
-            if not os.path.exists((d + '/edit_imgt_file.pl').replace('//', '/')):
+            if not os.path.exists(os.path.join(d, 'edit_imgt_file.pl')):
                 with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
                     blast.download_edit_imgt_pl(d)
 
             # if we don't have makeblastdb, download it!
-            if not os.path.exists((d_bin + '/makeblastdb').replace('//', '/')):
+            if not os.path.exists(os.path.join(d_bin, 'makeblastdb')):
                 retvals = install_igblast(d)
                 for b in retvals:
                     _syml(b, d_bin)
 
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_human/', d + '/databases/')
-            igblast_compat(d + '/edit_imgt_file.pl', d_bin + '/makeblastdb', d + '/imgt_mouse/', d + '/databases/')
+            igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
+                           os.path.join(d, 'imgt_human'),
+                           os.path.join(d, 'databases'))
+            igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
+                           os.path.join(d, 'imgt_mouse'), os.path.join(d, 'databases'))
         else:
             print("Found IGBLASTDB in ENV, skipping download")
 
