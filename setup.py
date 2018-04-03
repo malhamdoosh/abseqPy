@@ -230,23 +230,30 @@ def install_leehom(installation_dir='.'):
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
-    addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs922/ghostpdl-{}.tar.gz'.format(
-        version)
-    tarname = os.path.basename(addr)
-    old_dir = os.path.abspath('.')
-
+    plat, bit = _get_sys_info()
     target_dir = os.path.abspath(installation_dir)
 
-    os.chdir(installation_dir)
-    _ = check_output(['curl', '-L', addr, '-o', tarname, CURL_UNSAFE])
-    _ = check_output(['tar', '-xvzf', tarname])
-    ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
-    os.chdir(ghs_dir)
-    _ = check_output(['./configure', '--prefix={}'.format(target_dir)])
-    _ = check_output(['make', '-j', str(threads)])
-    _ = check_output(['make', 'install'])
-    os.chdir(old_dir)
+    if plat != WIN:
+        addr = 'https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{}/ghostpdl-{}.tar.gz'.format(
+            version.replace('.', ''), version)
+        tarname = os.path.basename(addr)
+        old_dir = os.path.abspath('.')
 
+        os.chdir(installation_dir)
+        _ = check_output(['curl', '-L', addr, '-o', tarname, CURL_UNSAFE])
+        _ = check_output(['tar', '-xvzf', tarname])
+        ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
+        os.chdir(ghs_dir)
+        _ = check_output(['./configure', '--prefix={}'.format(target_dir)])
+        _ = check_output(['make', '-j', str(threads)])
+        _ = check_output(['make', 'install'])
+        os.chdir(old_dir)
+    else:
+        binary = "gs{}w64.exe".format(version.replace('.', ''))
+        addr = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{0}/gs{0}w64.exe"\
+            .format(version.replace('.', ''))
+        _ = check_output(['curl', '-L', addr, '-O', CURL_UNSAFE])
+        os.rename(binary, os.path.join(target_dir, 'bin', 'gs'))
     # dont need to return binary directory, it's already in installation_dir/bin
 
 

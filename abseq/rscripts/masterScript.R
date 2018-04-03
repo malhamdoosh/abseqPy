@@ -62,7 +62,7 @@ for (i in 1:length(pairings)) {
   sampleNames <- unlist(strsplit(pair[2], ","))
   
   # to get the result folder, we just need to look at any one of them, and take the full path until the penultimate directory
-  decomposed <- unlist(strsplit(directories[1], "/"))
+  decomposed <- unlist(strsplit(directories[1], .Platform$file.sep))
   resultFolder <- paste0(head(decomposed, n = length(decomposed) - 1), collapse = "/")
   
   mashedNames <- paste(sampleNames, collapse = "_")
