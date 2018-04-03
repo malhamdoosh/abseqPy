@@ -7,6 +7,7 @@
 from __future__ import division
 import os
 import sys
+import glob
 import gc
 
 from multiprocessing import Queue
@@ -125,8 +126,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
 
             # Clean folders to save space
             # TODO: remove .fasta and .out files
-            if (noSeqs > igRep.seqsPerFile and 
-                os.path.exists(filesDir + "/" + prefix + "part1" + ext)):
-                os.system("rm " + filesDir + "/*" + ext)
+            if noSeqs > igRep.seqsPerFile and os.path.exists(filesDir + os.path.sep + prefix + "part1" + ext):
+                for f in glob.glob(filesDir + os.path.sep + "*" + ext):
+                    os.remove(f)
 
         return cloneAnnot, filteredIDs

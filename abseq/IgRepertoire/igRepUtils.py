@@ -7,6 +7,7 @@
 import argparse
 import gzip
 import shutil
+import glob
 import sys
 import os
 
@@ -406,7 +407,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
                                                                     , os.path.basename(readFile2)))
             command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
             os.system(command % (readFile1, readFile2, outputPrefix, threads))
-            os.system('gunzip ' + mergedFastq + '.gz')
+
+            gunzip(mergedFastq + '.gz')
             # os.system("mv %s.* %s" % (outputPrefix, seqOut))
             # os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
@@ -420,7 +422,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
             # the merger params souldn't be hardcoded
             command = "flash %s %s -t %d -o %s -r 300 -f 450 -s 50"
             os.system(command % (readFile1, readFile2, threads, outputPrefix))
-            os.system("mv %s.* %s" % (outputPrefix, seqOut))
+            for f in glob.glob("{}.*".format(outputPrefix)):
+                shutil.move(f, seqOut)
         else:
             printto(stream, "\tMerged reads file " + os.path.basename(mergedFastq) + ' was found!', LEVEL.WARN)
     #     elif (merger == 'seqprep'):
