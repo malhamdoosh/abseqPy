@@ -218,7 +218,7 @@ class IgRepertoire:
         # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
         self.warnOldDir = any(map(lambda x: exists(os.path.join(self.auxDir, x)),
                                   ["abundance", "productivity", "diversity", "restriction_sites",
-                                   "primer_specificity", 'upstream']))
+                                   "primer_specificity", 'utr5', 'secretion']))
 
         setupLogger(self.name, self.task, log)
 
@@ -703,8 +703,8 @@ class IgRepertoire:
     def analyzeSecretionSignal(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, 'upstream')
-        outAuxDir = os.path.join(self.auxDir, 'upstream')
+        outResDir = os.path.join(self.resultDir, 'secretion')
+        outAuxDir = os.path.join(self.auxDir, 'secretion')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
@@ -712,7 +712,7 @@ class IgRepertoire:
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
-            printto(logger, "WARNING: Remove 'upstream' directory if you've changed the filtering criteria.",
+            printto(logger, "WARNING: Remove 'secretion' directory if you've changed the filtering criteria.",
                     LEVEL.WARN)
 
         # need self.cloneAnnot dataframe for further analysis
@@ -721,7 +721,7 @@ class IgRepertoire:
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_upigv_{:.0f}_{:.0f}.fasta"\
+        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"\
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not exists(upstreamFile):
@@ -762,8 +762,8 @@ class IgRepertoire:
     def analyze5UTR(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, 'upstream')
-        outAuxDir = os.path.join(self.auxDir, 'upstream')
+        outResDir = os.path.join(self.resultDir, 'utr5')
+        outAuxDir = os.path.join(self.auxDir, 'utr5')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
@@ -771,7 +771,7 @@ class IgRepertoire:
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
-            printto(logger, "WARNING: Remove 'upstream' directory if you've changed the filtering criteria",
+            printto(logger, "WARNING: Remove 'utr5' directory if you've changed the filtering criteria",
                     LEVEL.WARN)
 
         # requires self.cloneAnnot dataframe for further analysis

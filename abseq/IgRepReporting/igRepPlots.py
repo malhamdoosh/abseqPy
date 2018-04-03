@@ -62,8 +62,11 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
         ax.set_xticks(ind)
         ax.set_xticklabels(classes, rotation=45)
         ax.set_title("Sequence Lengths in " + sampleName)
-        outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
+        outputFile, ext = os.path.splitext(outputFile)
+        outputFile += ("_box" + ext)
         fig.savefig(outputFile, dpi=300)
+        writeCSV(outputFile.replace('.png', '.csv'), 'x,y\n', "{},{}\n",
+                 [(klass, val) for klass in classes for val in ighvSizes[klass]])
         for k in classes:
             printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
         plt.close()
