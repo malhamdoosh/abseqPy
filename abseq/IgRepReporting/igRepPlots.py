@@ -778,6 +778,7 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
     ax.tick_params(axis='both', which='major', labelsize=14)
     ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1), fontsize='x-small')
     fig.savefig(filename, dpi=300)
+    plt.close()
 
 
 def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
