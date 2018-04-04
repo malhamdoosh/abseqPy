@@ -400,11 +400,8 @@ class ExternalDependencyInstaller(install):
         else:
             print("Found igblast, skipping installation")
 
-        try:
-            import TAMO
-            print("Found TAMO, skipping installation")
-        except ImportError:
-            install_TAMO()
+        # install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
+        install_TAMO()
 
         if 'IGDATA' not in os.environ:
             with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
