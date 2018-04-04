@@ -19,7 +19,7 @@ class _Level:
 # LOG FILE HEADER - displayed on the top of each *.log file depending on analysis task
 _BANNER = {
     'all': "Running the complete QC pipeline",
-    'fastq': "Sequencing QC Analysis",
+    'fastqc': "Sequencing QC Analysis",
     'annotate': "Clone Identification and Classification",
     'abundance': "IGV Abundance and QC Plots",
     'productivity': "Clone Productivity Analysis",
