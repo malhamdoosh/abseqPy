@@ -579,125 +579,127 @@ class IgRepertoire:
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeRestrictionSites(self):
-        logger = logging.getLogger(self.name)
-
-        outResDir = os.path.join(self.resultDir, "restriction_sites")
-        outAuxDir = os.path.join(self.auxDir, "restriction_sites")
-
-        if not os.path.isdir(outResDir):
-            os.makedirs(outResDir)
-
-        if not os.path.isdir(outAuxDir):
-            os.makedirs(outAuxDir)
-        elif self.warnOldDir:
-            printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
-                    LEVEL.WARN)
-
-        siteHitsFile = os.path.join(outResDir, self.name + "_{}.csv"
-                                    .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
-
-        if exists(siteHitsFile):
-            print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
-            return
-
-        if self.cloneAnnot is None or self.cloneSeqs is None:
-            self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=False)
-
-        rsites = loadRestrictionSites(self.sitesFile, stream=logger)
-        printto(logger, "Restriction sites are being searched ... ")
-        gc.collect()
-
-        queryIds = self.cloneAnnot.index
-        siteHitsCount = {}
-        siteHitSeqsCount = {}
-        hitRegion = {}
-        siteHitSeqsGermline = {}
-        seqsCutByAny = 0
-        siteHitsSeqsIDs = {}
-        siteHitsSeqsIGV = {}
-        for site in rsites.keys():
-            siteHitsCount[site] = 0
-            siteHitSeqsCount[site] = 0
-            hitRegion[site] = Counter({'fr1': 0, 'cdr1': 0,
-                                       'fr2': 0, 'cdr2': 0,
-                                       'fr3': 0, 'cdr3': 0,
-                                       'fr4': 0})
-            siteHitSeqsGermline[site] = []
-            siteHitsSeqsIDs[site] = set()
-            siteHitsSeqsIGV[site] = set()
-        germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
-        procSeqs = 0
-        #         if (MEM_GB > 20):
-        #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
-        #                   (use safeOpen from IgRepertoire.utils) if not sure
-        #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
+        # todo
+        raise NotImplementedError
+        # logger = logging.getLogger(self.name)
+        #
+        # outResDir = os.path.join(self.resultDir, "restriction_sites")
+        # outAuxDir = os.path.join(self.auxDir, "restriction_sites")
+        #
+        # if not os.path.isdir(outResDir):
+        #     os.makedirs(outResDir)
+        #
+        # if not os.path.isdir(outAuxDir):
+        #     os.makedirs(outAuxDir)
+        # elif self.warnOldDir:
+        #     printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
+        #             LEVEL.WARN)
+        #
+        # siteHitsFile = os.path.join(outResDir, self.name + "_{}.csv"
+        #                             .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
+        #
+        # if exists(siteHitsFile):
+        #     print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
+        #     return
+        #
+        # if self.cloneAnnot is None or self.cloneSeqs is None:
+        #     self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=False)
+        #
+        # rsites = loadRestrictionSites(self.sitesFile, stream=logger)
+        # printto(logger, "Restriction sites are being searched ... ")
+        # gc.collect()
+        #
+        # queryIds = self.cloneAnnot.index
+        # siteHitsCount = {}
+        # siteHitSeqsCount = {}
+        # hitRegion = {}
+        # siteHitSeqsGermline = {}
+        # seqsCutByAny = 0
+        # siteHitsSeqsIDs = {}
+        # siteHitsSeqsIGV = {}
+        # for site in rsites.keys():
+        #     siteHitsCount[site] = 0
+        #     siteHitSeqsCount[site] = 0
+        #     hitRegion[site] = Counter({'fr1': 0, 'cdr1': 0,
+        #                                'fr2': 0, 'cdr2': 0,
+        #                                'fr3': 0, 'cdr3': 0,
+        #                                'fr4': 0})
+        #     siteHitSeqsGermline[site] = []
+        #     siteHitsSeqsIDs[site] = set()
+        #     siteHitsSeqsIGV[site] = set()
+        # germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
+        # procSeqs = 0
+        # #         if (MEM_GB > 20):
+        # #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
+        # #                   (use safeOpen from IgRepertoire.utils) if not sure
+        # #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
+        # #         else:
+        # # SeqIO.index can only open string file names and they must be uncompressed
+        # records = SeqIO.index(gunzip(self.readFile1), self.format)
+        # for id_ in queryIds:
+        #     record = records[id_]
+        #     try:
+        #         qsRec = self.cloneAnnot.loc[record.id].to_dict()
+        #         qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
+        #         if isnan(qsRec['fr4.end']):
+        #             end = len(record.seq)
         #         else:
-        # SeqIO.index can only open string file names and they must be uncompressed
-        records = SeqIO.index(gunzip(self.readFile1), self.format)
-        for id_ in queryIds:
-            record = records[id_]
-            try:
-                qsRec = self.cloneAnnot.loc[record.id].to_dict()
-                qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
-                if isnan(qsRec['fr4.end']):
-                    end = len(record.seq)
-                else:
-                    end = int(qsRec['fr4.end'])
-                seq = str(record.seq[qstart:end])
-                seqRC = str(Seq(seq).reverse_complement())
-                cut = False
-                for site in siteHitsCount.keys():
-                    hits = findHits(seq, rsites[site])
-                    strand = "forward"
-                    if len(hits) == 0:
-                        hits = findHits(seqRC, rsites[site])
-                        strand = "reversed"
-                    if len(hits) > 0:
-                        siteHitsCount[site] += len(hits)
-                        siteHitSeqsCount[site] += 1
-                        hitsRegion = findHitsRegion(qsRec, hits)
-                        if (len(set(hitsRegion).intersection(germline)) > 0
-                                and len(siteHitSeqsGermline[site]) < 10000):
-                            siteHitSeqsGermline[site].append((strand, str(record.seq)))
-                            siteHitsSeqsIGV[site].add(qsRec['vgene'].split('*')[0])
-                        hitRegion[site] += Counter(hitsRegion)
-                        siteHitsSeqsIDs[site].add(record.id)
-                        cut = True
-                if cut:
-                    seqsCutByAny += 1
-                procSeqs += 1
-                if procSeqs % self.seqsPerFile == 0:
-                    print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
-            #                 break
-            except BaseException as e:
-                print(qstart, end, len(record.seq), str(record.seq))
-                print(e)
-                raise
-        print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
-        # # print out the results
-        f = open(siteHitsFile, 'w')
-        f.write("Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),"
-                "No.Molecules,Percentage of Molecules (%),FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4, V Germlines \n")
-        sites = sorted(siteHitSeqsCount, key=siteHitSeqsCount.get)
-        for site in sites:
-            f.write("{},{},{},{:.3%},{},{:.3%},{},{},{},{},{},{},{},{}\n"
-                    .format(site, rsites[site], siteHitsCount[site],
-                            siteHitsCount[site] / sum(siteHitsCount.values()),
-                            siteHitSeqsCount[site], siteHitSeqsCount[site] / len(queryIds),
-                            hitRegion[site]['fr1'], hitRegion[site]['cdr1'], hitRegion[site]['fr2'],
-                            hitRegion[site]['cdr2'], hitRegion[site]['fr3'], hitRegion[site]['cdr3'],
-                            hitRegion[site]['fr4'], '|'.join(siteHitsSeqsIGV[site])))
-            # write the first 100 sequences cut in the germline of each restriction enzyme
-            seqs = []
-            for (strand, seq) in siteHitSeqsGermline[site]:
-                seqs.append(SeqRecord(Seq(seq), id='seq' + str(len(seqs)) + strand))
-            SeqIO.write(seqs, siteHitsFile.replace('.csv', '_germline' + site + '.fasta'), 'fasta')
-        f.write("Sequences cut by any of the above enzymes, {}, {:.3%}\n"
-                .format(seqsCutByAny, seqsCutByAny / len(queryIds)))
-        f.close()
-        # Ven Diagram of overlapping sequences
-        plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'), stream=logger)
-        print("Restriction enzyme results were written to " + siteHitsFile)
+        #             end = int(qsRec['fr4.end'])
+        #         seq = str(record.seq[qstart:end])
+        #         seqRC = str(Seq(seq).reverse_complement())
+        #         cut = False
+        #         for site in siteHitsCount.keys():
+        #             hits = findHits(seq, rsites[site])
+        #             strand = "forward"
+        #             if len(hits) == 0:
+        #                 hits = findHits(seqRC, rsites[site])
+        #                 strand = "reversed"
+        #             if len(hits) > 0:
+        #                 siteHitsCount[site] += len(hits)
+        #                 siteHitSeqsCount[site] += 1
+        #                 hitsRegion = findHitsRegion(qsRec, hits)
+        #                 if (len(set(hitsRegion).intersection(germline)) > 0
+        #                         and len(siteHitSeqsGermline[site]) < 10000):
+        #                     siteHitSeqsGermline[site].append((strand, str(record.seq)))
+        #                     siteHitsSeqsIGV[site].add(qsRec['vgene'].split('*')[0])
+        #                 hitRegion[site] += Counter(hitsRegion)
+        #                 siteHitsSeqsIDs[site].add(record.id)
+        #                 cut = True
+        #         if cut:
+        #             seqsCutByAny += 1
+        #         procSeqs += 1
+        #         if procSeqs % self.seqsPerFile == 0:
+        #             print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
+        #     #                 break
+        #     except BaseException as e:
+        #         print(qstart, end, len(record.seq), str(record.seq))
+        #         print(e)
+        #         raise
+        # print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
+        # # # print out the results
+        # f = open(siteHitsFile, 'w')
+        # f.write("Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),"
+        #         "No.Molecules,Percentage of Molecules (%),FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4, V Germlines \n")
+        # sites = sorted(siteHitSeqsCount, key=siteHitSeqsCount.get)
+        # for site in sites:
+        #     f.write("{},{},{},{:.3%},{},{:.3%},{},{},{},{},{},{},{},{}\n"
+        #             .format(site, rsites[site], siteHitsCount[site],
+        #                     siteHitsCount[site] / sum(siteHitsCount.values()),
+        #                     siteHitSeqsCount[site], siteHitSeqsCount[site] / len(queryIds),
+        #                     hitRegion[site]['fr1'], hitRegion[site]['cdr1'], hitRegion[site]['fr2'],
+        #                     hitRegion[site]['cdr2'], hitRegion[site]['fr3'], hitRegion[site]['cdr3'],
+        #                     hitRegion[site]['fr4'], '|'.join(siteHitsSeqsIGV[site])))
+        #     # write the first 100 sequences cut in the germline of each restriction enzyme
+        #     seqs = []
+        #     for (strand, seq) in siteHitSeqsGermline[site]:
+        #         seqs.append(SeqRecord(Seq(seq), id='seq' + str(len(seqs)) + strand))
+        #     SeqIO.write(seqs, siteHitsFile.replace('.csv', '_germline' + site + '.fasta'), 'fasta')
+        # f.write("Sequences cut by any of the above enzymes, {}, {:.3%}\n"
+        #         .format(seqsCutByAny, seqsCutByAny / len(queryIds)))
+        # f.close()
+        # # Ven Diagram of overlapping sequences
+        # plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'), stream=logger)
+        # print("Restriction enzyme results were written to " + siteHitsFile)
 
     def analyzeSecretionSignal(self):
         logger = logging.getLogger(self.name)
