@@ -6,21 +6,17 @@
 '''
 
 import sys
+
 from multiprocessing import Process
 from numpy import isnan
 from Bio.Seq import Seq
 
 import abseq.IgRepAuxiliary.restrictionAuxiliary
+from abseq.logger import printto, LEVEL
 
 
 class RestrictionSitesScanner(Process):
-    '''
-    Restriction Sites Scanner
-    '''
-    def __init__(self, records, cloneAnnot, procCounter, sites, simpleScan = True):
-        '''
-        Constructor
-        '''
+    def __init__(self, records, cloneAnnot, procCounter, sites, simpleScan=True, stream=None):
         super(RestrictionSitesScanner, self).__init__()
         self.records = records
         self.cloneAnnot = cloneAnnot
@@ -29,31 +25,31 @@ class RestrictionSitesScanner(Process):
         self.simpleScan = simpleScan
         self.tasksQueue = None
         self.exitQueue = None
-        self.resultsQueue = None   
+        self.resultsQueue = None
+        self.stream = stream
         
     def run(self):
         print(self.name + " process is now ready to start a new job ...")
         sys.stdout.flush() 
         while True:            
             nextTask = self.tasksQueue.get()
-            #t = time.time()
-            if (nextTask is None):
-                print(self.name + " process has stopped." )
+            # t = time.time()
+            if nextTask is None:
+                printto(self.stream, self.name + " process has stopped.")
                 self.exitQueue.put("exit")
                 break
-            #print("Waiting for a job took: {0:f}".format(time.time() - t))    
+            # print("Waiting for a job took: {0:f}".format(time.time() - t))
             try:
-                #t = time.time()
+                # t = time.time()
                 if self.simpleScan:
                     self.runSimple(nextTask)
                 else:
                     self.runDetailed(nextTask)
-                #print("Running a job took: {0:f}".format(time.time() - t))    
+                # print("Running a job took: {0:f}".format(time.time() - t))
             except Exception as e:
-                print("An error occurred while processing " + self.name)
-                print(e)
-                #raise
-                sys.exit()
+                printto(self.stream, "An error occurred while processing " + self.name, LEVEL.ERR)
+                # raise
+                # sys.exit()
                 self.resultsQueue.put(None)
                 continue
         return
@@ -61,12 +57,12 @@ class RestrictionSitesScanner(Process):
     def runSimple(self, nextTask):
         stats = abseq.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
         stats['total'] = len(nextTask)      
-        for id in nextTask:
+        for id_ in nextTask:
             # record = raw sequence (taken from m.dict())
-            record = self.records[id]
-            qsRec = self.cloneAnnot.loc[id].to_dict()
+            record = self.records[id_]
+            qsRec = self.cloneAnnot.loc[id_].to_dict()
             qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
-            if (isnan(qsRec['fr4.end'])):
+            if isnan(qsRec['fr4.end']):
                 end = len(record)
             else:
                 end = int(qsRec['fr4.end'])
@@ -81,7 +77,7 @@ class RestrictionSitesScanner(Process):
                 if len(hits) > 0:
                     stats["siteHitsCount"][site] += len(hits) 
                     stats["siteHitSeqsCount"][site] += 1                     
-                    stats["siteHitsSeqsIDs"][site].append(id)   
+                    stats["siteHitsSeqsIDs"][site].append(id_)
                     cut = True                 
             if cut:
                 stats["seqsCutByAny"] += 1
@@ -94,7 +90,7 @@ class RestrictionSitesScanner(Process):
   
 def sliceRecord((rec, qsRec)):
     qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
-    if (isnan(qsRec['fr4.end'])):
+    if isnan(qsRec['fr4.end']):
         end = len(rec.seq)
     else:
         end = int(qsRec['fr4.end'])

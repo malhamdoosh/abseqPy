@@ -542,7 +542,8 @@ class IgRepertoire:
         if not os.path.isdir(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
-            print("WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.")
+            printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
+                    LEVEL.WARN)
 
         siteHitsFile = os.path.join(outResDir, self.name + "_{}_rsasimple.csv"
                                     .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
@@ -566,7 +567,7 @@ class IgRepertoire:
             rsaResults.to_csv(siteHitsFile,
                               header=True,
                               index=False)
-            print("RSA results were written to " + os.path.basename(siteHitsFile))
+            printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
             if overlapResults.get("order2", None) is not None:
                 overlapResults["order2"].to_csv(overlap2File,
                                                 header=True, index=True)
@@ -602,11 +603,10 @@ class IgRepertoire:
         if self.cloneAnnot is None or self.cloneSeqs is None:
             self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=False)
 
-        rsites = loadRestrictionSites(self.sitesFile)
-        print("Restriction sites are being searched ... ")
+        rsites = loadRestrictionSites(self.sitesFile, stream=logger)
+        printto(logger, "Restriction sites are being searched ... ")
         gc.collect()
-        self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-        self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'No']
+
         queryIds = self.cloneAnnot.index
         siteHitsCount = {}
         siteHitSeqsCount = {}
@@ -634,12 +634,12 @@ class IgRepertoire:
         #         else:
         # SeqIO.index can only open string file names and they must be uncompressed
         records = SeqIO.index(gunzip(self.readFile1), self.format)
-        for id in queryIds:
-            record = records[id]
+        for id_ in queryIds:
+            record = records[id_]
             try:
                 qsRec = self.cloneAnnot.loc[record.id].to_dict()
                 qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
-                if (isnan(qsRec['fr4.end'])):
+                if isnan(qsRec['fr4.end']):
                     end = len(record.seq)
                 else:
                     end = int(qsRec['fr4.end'])
@@ -673,7 +673,6 @@ class IgRepertoire:
                 print(qstart, end, len(record.seq), str(record.seq))
                 print(e)
                 raise
-        records.close()
         print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
         # # print out the results
         f = open(siteHitsFile, 'w')

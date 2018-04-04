@@ -37,8 +37,9 @@ from abseq.logger import printto, LEVEL
 # from TAMO import MotifTools
 # from TAMO.MotifTools import Motif
 
-def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
-    if (outDict is None):
+
+def readSeqFileIntoDict(seqFile, format="fastq", outDict=None, stream=None):
+    if outDict is None:
         outDict = {}
     try:
         if format == "fastq":
@@ -68,7 +69,7 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
         else:
             raise Exception("Unknown sequence file format")
     except Exception as e: 
-        print("Something went wrong while reading a sequence file")
+        printto(stream, "Something went wrong while reading a sequence file", LEVEL.EXCEPT)
         raise e
     return outDict
 
