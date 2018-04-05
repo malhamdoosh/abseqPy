@@ -48,7 +48,7 @@ upstreamAnalysis <- function(upstreamDirectories, upstreamOut, expectedLength, u
   
 }
 
-upstreamDist <- function(upstreamDirectories, upstreamOut, exepctedLength, upstreamLengthRange, sampleNames, combinedNames, mashedNames, secsig) {
+upstreamDist <- function(upstreamDirectories, upstreamOut, expectedLength, upstreamLengthRange, sampleNames, combinedNames, mashedNames, secsig) {
   if (secsig) {
     fname <- "secsig"
   } else {
