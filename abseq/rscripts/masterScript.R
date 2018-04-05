@@ -166,7 +166,7 @@ for (i in 1:length(pairings)) {
     primer5File <- args[1]
     primer3File <- args[2]
     if (primer5File != "None" || primer3File != "None") {
-      primerAnalysis(primer5File, primer3File, primerDirectories, primerOut, combinedNames, mashedNames)
+      primerAnalysis(primer5File, primer3File, primerDirectories, primerOut, sampleNames, combinedNames, mashedNames)
     }
   }
   
