@@ -69,7 +69,7 @@ def calcRSAOverlapOrder2(order1, sites, stream=None):
 
 
 def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, threads, stream=None):
-    sitesInfo = loadRestrictionSites(sitesFile)
+    sitesInfo = loadRestrictionSites(sitesFile, stream=stream)
     seqsPerWorker = len(sitesInfo)
     workers = []   
     try:
