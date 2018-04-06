@@ -63,7 +63,7 @@ def calcRSAOverlapOrder2(order1, sites, stream=None):
                 overlap[-1].append(inter / uni)
             else:
                 overlap[-1].append(1)
-    overlap = DataFrame(overlap, columns=sites, index=sites)    
+    overlap = DataFrame(overlap, columns=sites, index=sites)
     # overlap = linkage(overlap)
     return overlap
 
@@ -202,8 +202,8 @@ def loadRestrictionSites(sitesFile, stream=None):
             try:
                 fields = line.split()
                 if sites.get(fields[0], None) is not None:
-                    print(fields[0] + " is duplicated.")
-                site = fields[1].upper()
+                    printto(stream, fields[0] + " is duplicated.", LEVEL.WARN)
+                site = fields[1].upper().strip()
                 site = replaceIUPACLetters(site)
                 site = site.replace('N', '.').replace('(', '[').replace(')', ']')                
                 sites[fields[0]] = site
