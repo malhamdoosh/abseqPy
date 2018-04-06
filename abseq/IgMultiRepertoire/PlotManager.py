@@ -268,7 +268,7 @@ class PlotManager:
                 fp.write(abSeqRootDir + "\n")
                 for differentPairings in writeBuffer:
                     # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: x[0].lstrip("/") if x else '', differentPairings)) + "?")
+                    fp.write(','.join(map(lambda x: os.path.abspath(x[0]) if x else '', differentPairings)) + "?")
                     fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
                     # final result, rscripts_meta.tmp looks like:
                     # (pairings come first)
