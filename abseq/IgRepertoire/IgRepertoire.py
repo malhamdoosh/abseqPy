@@ -221,6 +221,7 @@ class IgRepertoire:
                                    "primer_specificity", 'utr5', 'secretion']))
 
         setupLogger(self.name, self.task, log)
+        writeParams(self.args, self.resultDir)
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
