@@ -155,7 +155,7 @@ for the best matched germline hit.
 IMGT classification system is used to delineate the V domain 
 '''
 def runIgblastn(blastInput, chain, threads=8,
-                db='$IGBLASTDB', igdata="$IGDATA", domainClassification='imgt',
+                db='$IGBLASTDB', igdata="$IGDATA", domainSystem='imgt',
                 outputDir="", species='human', stream=None):
     if chain not in ['hv', 'kv', 'lv']:
         raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
@@ -172,7 +172,7 @@ def runIgblastn(blastInput, chain, threads=8,
 
     printto(stream, '\tRunning igblast ... ' + os.path.basename(blastInput))
 
-    command = buildIgBLASTCommand(igdata, db, chain, species, domainClassification,
+    command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem,
                                   blastInput, blastOutput, threads, protein=False, stream=stream)
     try:
         check_output([command.split()[0]] + command.split()[1:])
@@ -187,7 +187,7 @@ def runIgblastn(blastInput, chain, threads=8,
 '''
 IMGT classification system is used to delineate the V domain 
 '''
-def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA', domainClassification='imgt',
+def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA', domainSystem='imgt',
                 outputDir="", species='human', stream=None):
     if chain not in ['hv', 'kv', 'lv']:
         raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
@@ -200,7 +200,7 @@ def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA',
 
     printto(stream, '\tRunning igblast ... ' + os.path.basename(blastInput))
 
-    command = buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastInput, blastOutput,
+    command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, blastOutput,
                                   threads, protein=True, vOnly=True, stream=stream)
     try:
         check_output([command.split()[0]] + command.split()[1:])
@@ -764,7 +764,7 @@ def createIfNot(directory):
         os.makedirs(directory)
 
 
-def buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastInput, blastOutput, threads,
+def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, blastOutput, threads,
                         vOnly=False, protein=False, stream=None):
     if chain not in ['hv', 'lv', 'kv']:
         raise ValueError("Unsupported chain type {}, expected one of 'lv', 'hv', 'kv'.".format(chain))
@@ -782,7 +782,7 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainClassification, blastI
         cmd += ' -germline_db_{} '.format(germ) + \
                os.path.join(db, 'imgt_{}_ig{}{}{}'.format(species, c, germ.lower(), '_p' if protein else ''))
     # construct domain system
-    cmd += ' -domain_system ' + domainClassification
+    cmd += ' -domain_system ' + domainSystem
     # construct input and organism type
     cmd += ' -query {query}' + ' -organism {}'.format(species)
     # add aux data

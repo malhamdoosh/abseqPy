@@ -21,7 +21,7 @@ from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 from abseq.logger import printto, LEVEL
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassification='imgt', stream=None):
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='imgt', stream=None):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
 
@@ -58,7 +58,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
         if noWorkers == 1 or noSplit:
             cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
                                                        seqType, noWorkers, outdir,
-                                                       domainClassification=domainClassification, stream=stream)
+                                                       domainSystem=domainSystem, stream=stream)
             sys.stdout.flush()
         else:
             # split FASTA file into smaller files
@@ -79,7 +79,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
                 for i in range(noWorkers):
                     w = IgBlastWorker(igRep.chain, igRep.db,
                                       seqType, int(ceil(noWorkers / totalFiles)),
-                                      domainClassification=domainClassification, stream=stream)
+                                      domainSystem=domainSystem, stream=stream)
                     w.tasksQueue = tasks
                     w.resultsQueue = outcomes
                     w.exitQueue = exitQueue      

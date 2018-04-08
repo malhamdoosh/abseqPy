@@ -287,21 +287,21 @@ def extractCDRInfo(blastOutput, chain, stream=None):
 
 
 def analyzeSmallFile(fastaFile, chain, igBlastDB, seqType='dna', threads=8,
-                     outdir="", domainClassification='imgt', stream=None):
+                     outdir="", domainSystem='imgt', stream=None):
     # Run igblast
     if seqType.lower() == 'dna':
         blastOutput = runIgblastn(fastaFile, chain, threads, igBlastDB,
-                                  domainClassification=domainClassification, outputDir=outdir, stream=stream)
+                                  domainSystem=domainSystem, outputDir=outdir, stream=stream)
     else:
         # argparse already checks that it's ether dna or protein, so nothing fishy can pass into else statement here
         blastOutput = runIgblastp(fastaFile, chain, threads, igBlastDB,
-                                  domainClassification=domainClassification, outputDir=outdir, stream=stream)
+                                  domainSystem=domainSystem, outputDir=outdir, stream=stream)
     return extractCDRInfo(blastOutput, chain, stream=stream)
 
 
 class IgBlastWorker(Process):
     def __init__(self, chain, igBlastDB,
-                 seqType, threads, domainClassification='imgt', stream=None):
+                 seqType, threads, domainSystem='imgt', stream=None):
         super(IgBlastWorker, self).__init__()
         self.chain = chain
         self.igBlastDB = igBlastDB
@@ -311,7 +311,7 @@ class IgBlastWorker(Process):
         self.resultsQueue = None
         self.exitQueue = None
         self.stream = stream
-        self.domainClassification = domainClassification
+        self.domainSystem = domainSystem
 
     def run(self):
         while True:
@@ -324,7 +324,7 @@ class IgBlastWorker(Process):
                 break
             try:
                 result = analyzeSmallFile(nextTask, self.chain, self.igBlastDB,
-                                          self.seqType, self.threads, domainClassification=self.domainClassification,
+                                          self.seqType, self.threads, domainSystem=self.domainSystem,
                                           stream=self.stream)
                 self.resultsQueue.put(result)
             except Exception as e:

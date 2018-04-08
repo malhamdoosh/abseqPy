@@ -55,7 +55,7 @@ class IgRepertoire:
     """
     creates an AbSeq.IgRepertoire object with QC methods
     """
-    def __init__(self, f1, f2=None, name=None, fmt='fastq', chain='hv', seqtype='dna', domainClassification='imgt',
+    def __init__(self, f1, f2=None, name=None, fmt='fastq', chain='hv', seqtype='dna', domainSystem='imgt',
                  merger='leehom', outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
                  sstart=(1, Inf), qstart=(1, Inf), clonelimit=100, actualqstart=-1, trim5=0, trim3=0,
                  fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
@@ -77,7 +77,7 @@ class IgRepertoire:
                                 respectively
         :param seqtype: string
                                 accepted values are dna or protein
-        :param domainClassification: string
+        :param domainSystem: string
                                 imgt or kabat numbering
         :param merger: string
                                 name of merger to use. This is ignored if f2 is not provided
@@ -187,7 +187,7 @@ class IgRepertoire:
         self.sStart = sstart
         self.qStart = qstart
         self.seqType = seqtype
-        self.domainClassification = domainClassification
+        self.domainSystem = domainSystem
 
         if task in ['secretion', '5utr']:
             self.upstream = upstream
@@ -319,7 +319,7 @@ class IgRepertoire:
             # Estimate the IGV family abundance for each library
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
                                                                self.seqType, outdir=outAuxDir,
-                                                               domainClassification=self.domainClassification,
+                                                               domainSystem=self.domainSystem,
                                                                stream=logger)
             sys.stdout.flush()
             gc.collect()
