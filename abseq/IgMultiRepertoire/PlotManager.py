@@ -27,7 +27,7 @@ The plots that OBEY pythonPlotOn() = False is:
 class PlotManager:
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
-    _tmpFile = "rscripts_meta.tmp"
+    _cfg = "abseq.cfg"
 
     def __init__(self, args):
         self.rscriptArgs = args.rscripts
@@ -37,6 +37,7 @@ class PlotManager:
         self.end5File = args.primer5end
         self.end3File = args.primer3end
         self.upstream = args.upstream
+        self.outputDir = args.outdir
         self.args = args
         self._nameToFileMap = {}
 
@@ -83,7 +84,7 @@ class PlotManager:
         :return: None. Side effects: plots in R if specified as such
         """
         if not PlotManager._pythonPlotting:
-            self._flushMetadata(ABSEQROOT)
+            self._flushCFG(ABSEQROOT)
             # todo: because main script overridden stdout to AbSeq.log
             # todo: change this to per-sample basis when logging is implemented correctly.
             # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
@@ -96,19 +97,19 @@ class PlotManager:
             arg3 = "{:.0f}".format(self.upstream[0]) if self.upstream else DUMMY_VALUE
             arg4 = "{:.0f}".format(self.upstream[1]) if self.upstream else DUMMY_VALUE
             sys.stdout.flush()
-            retval = subprocess.call(["Rscript",
-                                      ABSEQROOT + "/rscripts/masterScript.R",
-                                      arg1,
-                                      arg2,
-                                      arg3,
-                                      arg4],
-                                     stdout=sys.stdout,
-                                     stderr=sys.stdout
-                                     )
-            if retval != 0:
-                print("-" * 30)
-                print("Error detected in R plotting")
-                print("-" * 30)
+            # retval = subprocess.call(["Rscript",
+            #                           ABSEQROOT + "/rscripts/masterScript.R",
+            #                           arg1,
+            #                           arg2,
+            #                           arg3,
+            #                           arg4],
+            #                          stdout=sys.stdout,
+            #                          stderr=sys.stdout
+            #                          )
+            # if retval != 0:
+            #     print("-" * 30)
+            #     print("Error detected in R plotting")
+            #     print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def processSingleInput(self, name, resultDirName=RESULT_FOLDER):
@@ -219,25 +220,7 @@ class PlotManager:
             return tuple(tmp)
         return self._nameToFileMap[sampleName]
 
-    def _flushMetadata(self, abSeqRootDir):
-        """
-        AbSeq's way of communicating with external Rscript. AbSeq's python component supplies R with
-        all the necessary information to find (CSVs) and generate plots.
-
-        The first line is the absolute path to abseq's root directory.
-
-        Output format is of:
-        /path/to/sampleDirectory1, /path/to/sampleDirectory2, ... /path/to/sampleDirectoryN ? sampleName1, ..., sampleNameN
-
-        Where commas separate pairings of samples and question mark denotes that everything on RHS is the
-        canonical sample name used throughout AbSeq for each given sample (in the order they appeared on LHS)
-
-        Non-paired samples (even paired samples requires R to plot sample individually) will have the format of:
-
-        /path/to/sampleDirectory/ ? sampleName
-        (it's the same as multi-sample except that there are no commas)
-        :return: None. Side effect : writes a temporary file
-        """
+    def _flushCFG(self, abSeqRootDir):
         # only write metadata if we have to plot in R
         if not self._pythonPlotting:
             writeBuffer = []
@@ -263,23 +246,11 @@ class PlotManager:
             # the individual samples has to be plotted too!
             writeBuffer += map(lambda x: [x], self.metadata)
 
-            with open(PlotManager._tmpFile, "w") as fp:
+            with open(os.path.join(self.outputDir, PlotManager._cfg), "w") as fp:
                 # tell R where AbSeq lives
                 fp.write(abSeqRootDir + "\n")
                 for differentPairings in writeBuffer:
-                    # write all directories for a given pairing, then the canonical name, separated by a '?' token
-                    fp.write(','.join(map(lambda x: os.path.abspath(x[0]) if x else '', differentPairings)) + "?")
                     fp.write(','.join(map(lambda x: x[1] if x else '', differentPairings)) + "\n")
-                    # final result, rscripts_meta.tmp looks like:
-                    # (pairings come first)
-                    # self.outdir/PCR1_BZ123_ACGGCT_GCGTA_L001,self.outdir/PCR2_BZC1_ACGGTA_GAGA_L001,...?PCR1_L001,...
-                    # self.outdir/PCR4_BZ123_ACGG_ACGG_L001,self.outdir/PCR5_...,..?PCR4_L001,PCR5_L001,...
-                    # .
-                    # .
-                    # .
-                    # (then single samples)
-                    # self.outdir/PCR1_BZ123_..._L001,PCR1_L001
-                    # self.outdir/PCR2_BZ123_..._L001,PCR2_L001
 
     def _mapAllFiles(self):
         if self.rscriptArgs and self.rscriptArgs != 'off':
