@@ -89,7 +89,11 @@ class PlotManager:
                     # this will NEVER happen.
                     raise ValueError("Uhhh ... ?")
                 for comparison in ast.literal_eval(pairings[-1][1]):
-                    fp.write(comparison.replace(" ", '').strip() + '\n')
+                    userSamples = map(lambda x: x.strip(), comparison.split(","))
+                    for s in userSamples:
+                        if s not in sampleNames:
+                            raise ValueError("Unknown sample name {}, not one of {}".format(s, sampleNames))
+                    fp.write(','.join(userSamples) + '\n')
 
             for sample in sampleNames:
                 fp.write(sample + '\n')
