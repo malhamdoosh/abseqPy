@@ -5,6 +5,7 @@ import numpy as np
 import os
 
 from collections import defaultdict
+from Bio import pairwise2
 
 from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT, RSCRIPT_PAIRING_SEPARATOR, RESULT_FOLDER
 
@@ -311,25 +312,7 @@ class PlotManager:
                     taken.add(self._nameToFileMap[rs][1])
 
 
-def _nameMatch(string1, string2, deletionPenalty=-3, insertionPenalty=-3, matchScore=5, mismatchScore=-3):
-    """
-    returns local edit distance between 2 strings
-    :param string1: a string type
-    :param string2: a string type
-    :param deletionPenalty: penalty score for a deletion
-    :param insertionPenalty: penalty score for an insertion
-    :param matchScore: reward score for each match
-    :param mismatchScore: penalty score for a substitution
-    :return: Local edit distance between string 1 and string 2
-    """
-    string1 = string1.strip()
-    string2 = string2.strip()
-    matrix = [[0] * (len(string1) + 1)] * (len(string2) + 1)
-    maxval = 0
-    for i in range(1, len(string2) + 1):
-        for j in range(1, len(string1) + 1):
-            matrix[i][j] = max(matrix[i][j - 1] + deletionPenalty, matrix[i - 1][j] + insertionPenalty,
-                               matrix[i - 1][j - 1] + (
-                                   matchScore if string1[j - 1] == string2[i - 1] else mismatchScore), 0)
-            maxval = max(maxval, matrix[i][j])
-    return maxval
+def _nameMatch(string1, string2):
+    # match: 2, mismatch: 1, gap: -1
+    return pairwise2.align.localms(string1, string2, 2, -1, -1, -1)[0][2]
+
