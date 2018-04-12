@@ -530,7 +530,7 @@ setup(name="AbSeq",
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
       setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'six'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn'],
+                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       packages=find_packages(),
       # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
       # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)

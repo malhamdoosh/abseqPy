@@ -42,7 +42,7 @@ def main():
             with IgMultiRepertoire(argsVals) as igRepertoire:
 
                 # show a pretty banner before beginning analysis
-                print(formattedTitle(argsVals.task))
+                print(formattedTitle(argsVals.task, argsVals.yaml is not None))
 
                 if argsVals.task == 'all':
                     igRepertoire.runFastqc()

@@ -1,14 +1,13 @@
 import os
 
 from multiprocessing import Queue
-from copy import deepcopy
-from math import floor
 
-from abseq.config import DEFAULT_MERGER, RESULT_FOLDER
+from abseq.config import RESULT_FOLDER
 from abseq.IgMultiRepertoire.GeneralWorker import GeneralWorker, GeneralWorkerException
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
 from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
+from abseq.argsParser import parseYAML, parseArgs
 
 
 class IgMultiRepertoire:
@@ -16,55 +15,25 @@ class IgMultiRepertoire:
         self.queue = Queue()
         self.result = Queue()
         self.buffer = []
-        self.sampleCount = 0
         self.resource = args.threads
         self.plotManager = PlotManager(args)
-        if os.path.isdir(args.f1):
-            # get requested samples from -rs (if specified / if any) only
-            filteredClusterFiles = self.plotManager.requestedSamples(self._pairFiles(args.f1, args), displayMatch=True)
-
-            self.sampleCount = len(filteredClusterFiles)
-
-            # calculate resource (averaged over all samples)
-            avgResource = int(floor(self.resource / self.sampleCount))
-            avgResource = avgResource if avgResource > 0 else 1
-
-            for sample, sampleName in filteredClusterFiles:
-                modifiedArgs = deepcopy(args)
-                modifiedArgs.merger = args.merger if args.merger is not None else DEFAULT_MERGER
-                modifiedArgs.threads = avgResource
-                if type(sample) == tuple:
-                    # paired end sample
-                    f1name, f2name = sample
-                    modifiedArgs.f1 = f1name
-                    modifiedArgs.f2 = f2name
-                    f1Fmt = detectFileFormat(modifiedArgs.f1)
-                    if f1Fmt != detectFileFormat(modifiedArgs.f2):
-                        raise Exception("Detected mismatch in file extensions {} and {}!"
-                                        " Both should be either FASTA or FASTQ.".format(modifiedArgs.f1,
-                                                                                        modifiedArgs.f2))
-                    modifiedArgs.fmt = f1Fmt
-                else:
-                    # single ended
-                    f1name = sample
-                    modifiedArgs.f1 = f1name
-                    modifiedArgs.f2 = None
-                    modifiedArgs.merger = None
-                    modifiedArgs.fmt = detectFileFormat(f1name)
-
-                modifiedArgs.name = sampleName
-                modifiedArgs.outdir = os.path.abspath(modifiedArgs.outdir) + os.path.sep
-                # <outdir>/result/<sample_name>/<sample_name>.log
-                modifiedArgs.log = os.path.join(modifiedArgs.outdir, RESULT_FOLDER, modifiedArgs.name,
-                                                '{}.log'.format(modifiedArgs.name))
-                self.buffer.append(IgRepertoire(**vars(modifiedArgs)))
+        sampleNames = []
+        if args.yaml is not None:
+            documents, hasComparisons = parseYAML(args.yaml)
+            for yamlArg in documents[:(-1 if hasComparisons else len(documents))]:
+                arg = parseArgs(yamlArg)
+                arg.outdir = os.path.abspath(arg.outdir) + os.path.sep
+                arg.log = os.path.join(arg.outdir, RESULT_FOLDER, arg.name, arg.name + ".log")
+                sampleNames.append(arg.name)
+                self.buffer.append(IgRepertoire(**vars(arg)))
+            self.plotManager.processComparisons(documents, sampleNames, hasComparisons)
         else:
             self.plotManager.processSingleInput(args.name)
             args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
-            self.sampleCount += 1
             self.buffer.append(IgRepertoire(**vars(args)))
+        self.sampleCount = len(self.buffer)
 
     def __enter__(self):
         return self

@@ -30,7 +30,8 @@ _BANNER = {
     'rsa': "Comprehensive Restriction Sites Analysis",
     'primer': "Primer Specificity Analysis",
     'seqlen': "Sequence Length Distribution",
-    'seqlenclass': "Class Sequence Length Distribution"
+    'seqlenclass': "Class Sequence Length Distribution",
+    'default': "Conducting AbSeq on all sample(s)"
 }
 
 LEVEL = _Level()
@@ -69,8 +70,11 @@ def setupLogger(name, task, logfile, stream=sys.stdout, flevel=LEVEL.fileLevel, 
     logger.addHandler(ch)
 
 
-def formattedTitle(task):
-    title = _BANNER.get(task, None)
+def formattedTitle(task, defaultTitle=False):
+    if defaultTitle:
+        title = _BANNER['default']
+    else:
+        title = _BANNER.get(task, None)
     if title is None:
         raise Exception("Unknown task requested. Available tasks are: {}".format(','.join(_BANNER.keys())))
     string = "-" * 100 + '\n'

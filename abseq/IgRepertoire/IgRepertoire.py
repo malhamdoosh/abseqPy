@@ -23,9 +23,9 @@ from numpy import Inf, random, isnan, logical_not
 from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
     writeCountsCategoriesToFile, findUpstreamMotifs
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
-from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER
+from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen
+    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen, detectFileFormat
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -55,12 +55,12 @@ class IgRepertoire:
     """
     creates an AbSeq.IgRepertoire object with QC methods
     """
-    def __init__(self, f1, f2=None, name=None, fmt='fastq', chain='hv', seqtype='dna', domainSystem='imgt',
-                 merger='leehom', outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
-                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=100, actualqstart=-1, trim5=0, trim3=0,
+    def __init__(self, f1, f2=None, name=None, fmt=None, chain='hv', seqtype='dna', domainSystem='imgt',
+                 merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
+                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, actualqstart=-1, trim5=0, trim3=0,
                  fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
-                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=None, log=None,
-                 rscripts=None):
+                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=DEFAULT_TASK, log=None,
+                 yaml=None):
         """
 
         :param f1: string
@@ -153,7 +153,7 @@ class IgRepertoire:
                                 is responsible for the "banner" printed in the log file.
         :param log: string
                                 path to logger file
-        :param rscripts: string
+        :param yaml: string
                                 dummy variable. Used in commandline mode
         """
         fargs, _, _, values = inspect.getargvalues(inspect.currentframe())
@@ -162,7 +162,6 @@ class IgRepertoire:
         # sanitizeArgs(self.args)
 
         self.task = task.lower().strip()
-        self.format = fmt
         self.chain = chain
         self.name = name
         self.fr4cut = fr4cut
@@ -206,6 +205,7 @@ class IgRepertoire:
 
         self.readFile1 = f1
         self.readFile2 = f2
+        self.format = fmt if fmt is not None else detectFileFormat(self.readFile1)
         self.merger = merger
         self.merge = 'no' if self.merger is None else 'yes'
 
