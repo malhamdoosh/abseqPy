@@ -25,7 +25,7 @@ from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractU
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel
+    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -330,7 +330,6 @@ class IgRepertoire:
             # export the CDR/FR annotation to a file
             printto(logger, "\tClones annotation file is being written to " +
                     os.path.basename(cloneAnnotFile))
-            #             self.cloneAnnot.to_csv(cloneAnnotFile, sep='\t', header=True, index=True)
             self.cloneAnnot.to_hdf(cloneAnnotFile, "cloneAnnot", mode='w')
             paramFile = writeParams(self.args, outResDir)
             printto(logger, "The analysis parameters have been written to " + paramFile)
@@ -338,24 +337,9 @@ class IgRepertoire:
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
-        if outDirFilter is None:
-            outDirFilter = outAuxDir
+        outDirFilter = outAuxDir if outDirFilter is None else outDirFilter
         # Filter clones based on bitscore, alignLen, qStart, and sStart
-        printto(logger, "Clones are being filtered based on the following criteria: ", LEVEL.INFO)
-        printto(logger, "\tBit score: " + repr(self.bitScore), LEVEL.INFO)
-        printto(logger, "\tAlignment length: " + repr(self.alignLen), LEVEL.INFO)
-        printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
-        printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
-        selectedRows = (
-                (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &     # check bit-Score
-                (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
-                (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &     # check alignment length
-                (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
-                (self.cloneAnnot['vstart'] >= self.sStart[0]) &         # check subject (V gene) start position
-                (self.cloneAnnot['vstart'] <= self.sStart[1]) &
-                (self.cloneAnnot['vqstart'] >= self.qStart[0]) &        # check query (V gene) start position
-                (self.cloneAnnot['vqstart'] <= self.qStart[1])
-        )
+        selectedRows = self._filterCloneAnnot(logger)
         filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
 
         if len(filteredIDs) > 0:
@@ -379,14 +363,9 @@ class IgRepertoire:
         outResDir = os.path.join(self.resultDir, "abundance")
         outAuxDir = os.path.join(self.auxDir, "abundance")
 
-        if not os.path.isdir(outResDir):
-            os.makedirs(outResDir)
+        createIfNot(outResDir)
+        createIfNot(outAuxDir)
 
-        if not os.path.isdir(outAuxDir):
-            os.makedirs(outAuxDir)
-        elif self.warnOldDir:
-            printto(logger, "WARNING: remove the 'abundance' directory if you changed the filtering criteria.",
-                    LEVEL.WARN)
         if self.cloneAnnot is None:
             self.annotateClones(outAuxDir)
 
@@ -413,14 +392,13 @@ class IgRepertoire:
         outResDir = os.path.join(self.resultDir, "productivity")
         outAuxDir = os.path.join(self.auxDir, "productivity")
 
-        if not os.path.isdir(outResDir):
-            os.makedirs(outResDir)
+        createIfNot(outResDir)
 
         if not os.path.isdir(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
-            printto(logger, "WARNING: remove the 'productivity' directory if you changed the filtering criteria.",
-                    LEVEL.WARN)
+            printto(logger, "WARNING: remove the 'productivity' directory and re-run AbSeq "
+                            "if you have relaxed the filtering criteria!", LEVEL.WARN)
 
         refinedCloneAnnotFile = os.path.join(outAuxDir, self.name + "_refined_clones_annot.h5")
         cloneSeqFile = os.path.join(outAuxDir, self.name + "_clones_seq.h5")
@@ -463,6 +441,15 @@ class IgRepertoire:
 
             self.cloneSeqs = read_hdf(cloneSeqFile, "cloneSequences")
             printto(logger, "\tClone sequences were loaded successfully")
+
+            # since we loaded it from the saved (old) HDF5 dataframes, we need to re-apply all filtering criteria
+            printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
+            before = self.cloneAnnot.shape[0]
+            selectedRows = self._filterCloneAnnot(logger)
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
         # display statistics
         printto(logger, "Productivity report is being generated ... ")
@@ -820,8 +807,8 @@ class IgRepertoire:
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
         elif self.warnOldDir:
-            printto(logger, "WARNING: remove the 'primer_specificity' directory if "
-                            "you changed the filtering criteria.", LEVEL.WARN)
+            printto(logger, "WARNING: remove the 'primer_specificity' directory and re-run AbSeq "
+                            "if you have relaxed the filtering criteria!", LEVEL.WARN)
 
         primerAnnotFile = os.path.join(outAuxDir, self.name + "_primer_annot.h5")
 
@@ -830,25 +817,28 @@ class IgRepertoire:
             # Load self.cloneAnnot for further analysis.
             # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
             if self.cloneAnnot is None:
-                if exists(os.path.join(self.auxDir, 'productivity',
-                                       self.name + '_refined_clones_annot.h5')):
-                    printto(logger, "Using refined clone annotation for primer specificity analysis")
-                    self.analyzeProductivity(inplaceProductive=False, inplaceFiltered=False)
-                else:
-                    printto(logger, "Using unrefined clone annotation for primer specificity analysis")
-                    self.annotateClones(outAuxDir)
+                self.annotateClones(outAuxDir)
             # add additional primer related data to the dataframe generated by either abundance/productivity analysis
             # before we begin primer analysis
             self.cloneAnnot = addPrimerData(self.cloneAnnot, self.readFile, self.format, self.fr4cut,
                                             self.trim5End, self.trim3End, self.actualQstart,
                                             self.end5, self.end3, self.end5offset, self.threads, stream=logger)
-            # save new "extended dataframe" into primer_specificity directory
+            # save new "primer column-ed dataframe" into primer_specificity directory
             self.cloneAnnot.to_hdf(primerAnnotFile, "primerCloneAnnot", mode='w', complib='blosc')
 
         else:
             printto(logger, "The primer clone annotation files were found and being loaded ... ", LEVEL.WARN)
             self.cloneAnnot = read_hdf(primerAnnotFile, "primerCloneAnnot")
             printto(logger, "\tPrimer clone annotation loaded successfully")
+
+            # since we loaded it from the saved (old) HDF5 dataframes, we need to re-apply all filtering criteria
+            printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
+            before = self.cloneAnnot.shape[0]
+            selectedRows = self._filterCloneAnnot(logger)
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
         # TODO: Fri Feb 23 17:13:09 AEDT 2018
         # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
@@ -916,6 +906,24 @@ class IgRepertoire:
             print("Protein sequences have been already analyzed ... ")
         else:
             self.analyzeAbundance()
+
+    def _filterCloneAnnot(self, logger):
+        printto(logger, "Clones are being filtered based on the following criteria: ", LEVEL.INFO)
+        printto(logger, "\tBit score: " + repr(self.bitScore), LEVEL.INFO)
+        printto(logger, "\tAlignment length: " + repr(self.alignLen), LEVEL.INFO)
+        printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
+        printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
+        selectedRows = (
+                (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &     # check bit-Score
+                (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
+                (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &     # check alignment length
+                (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
+                (self.cloneAnnot['vstart'] >= self.sStart[0]) &         # check subject (V gene) start position
+                (self.cloneAnnot['vstart'] <= self.sStart[1]) &
+                (self.cloneAnnot['vqstart'] >= self.qStart[0]) &        # check query (V gene) start position
+                (self.cloneAnnot['vqstart'] <= self.qStart[1])
+        )
+        return selectedRows
 
 
 #     def extractProductiveRNAs(self):
