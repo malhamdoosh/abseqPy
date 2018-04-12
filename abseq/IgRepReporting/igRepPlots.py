@@ -748,9 +748,7 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
     if removeOutliers:
         sel = totals > 0.01 * max(totals)
         counts = [counts[i] for i in range(len(counts)) if sel[i]]
-    # print(0.01*max(totals), totals[sel], len(counts))
-    fig, ax = plt.subplots(figsize=(8, 5))
-    # calculate AA proportions for each position 
+    # calculate AA proportions for each position
     if scaled:
         barFractions = [[ct.get(aa, 0) / float(max(totals)) for aa in AA]
                         for ct in counts]
@@ -767,18 +765,20 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
             byAABase[i].append(s)
             s += bf[i]
     # Generate the bar plot: one bar plot per AA
-    for i, aa in enumerate(AA):
-        ax.bar(numpy.arange(len(barFractions)) + .05, byAA[i],
-               width=0.9, bottom=byAABase[i], color=AA_colours[i],
-               label=AA[i], lw=0)
-    ax.set_title(title, fontsize=20)
-    ax.set_ylim(0, 1)
-    ax.set_xticks(numpy.arange(len(counts)) + .5)
-    ax.set_xticklabels([ct.most_common(1)[0][0] for ct in counts])
-    ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1), fontsize='x-small')
-    fig.savefig(filename, dpi=300)
-    plt.close()
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for i, aa in enumerate(AA):
+            ax.bar(numpy.arange(len(barFractions)) + .05, byAA[i],
+                   width=0.9, bottom=byAABase[i], color=AA_colours[i],
+                   label=AA[i], lw=0)
+        ax.set_title(title, fontsize=20)
+        ax.set_ylim(0, 1)
+        ax.set_xticks(numpy.arange(len(counts)) + .5)
+        ax.set_xticklabels([ct.most_common(1)[0][0] for ct in counts])
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1), fontsize='x-small')
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
@@ -820,6 +820,12 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
                 for counter in aaCounts:
                     aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / total)
                 fp.write("{}{}\n".format(aa, aaBuffer))
+
+        # write barLogo csv file - in long format
+        plotFileName, _ = os.path.splitext(filename)
+        plotFileName += '.csv'
+        writeCSV(plotFileName, "position,aa,count\n", "{},{},{}\n", vals=
+                 [(p, aa, counts) for p, cnt in enumerate(aaCounts) for aa, counts in cnt.items()])
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):
