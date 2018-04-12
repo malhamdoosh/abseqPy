@@ -3,19 +3,16 @@ import os
 from multiprocessing import Queue
 
 from abseq.config import RESULT_FOLDER
-from abseq.IgMultiRepertoire.GeneralWorker import GeneralWorker, GeneralWorkerException
+from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
-from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat
 from abseq.argsParser import parseYAML, parseArgs
 
 
 class IgMultiRepertoire:
     def __init__(self, args):
-        self.queue = Queue()
         self.result = Queue()
         self.buffer = []
-        self.resource = args.threads
         self.plotManager = PlotManager(args)
         sampleNames = []
         if args.yaml is not None:
@@ -50,135 +47,16 @@ class IgMultiRepertoire:
         """
         noExceptionRaised = exc_tb is None and exc_val is None and exc_tb is None
 
-        if noExceptionRaised:
-            # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
-            # (duh)
-            if (self.buffer[0].end3 or self.buffer[0].end5) and self.buffer[0].task != 'primer':
-                print("Primer file detected, conducting primer specificity analysis ... ")
-                self.analyzePrimerSpecificity()
-
-        self.queue.close()
-        self.queue.join_thread()
         self.result.close()
         self.result.join_thread()
 
         if noExceptionRaised:
             self.plotManager.plot()
 
-    def analyzeAbundance(self):
-        self._beginWork(GeneralWorker.ABUN)
-
-    def runFastqc(self):
-        self._beginWork(GeneralWorker.FASTQC)
-
-    def analyzeDiversity(self):
-        self._beginWork(GeneralWorker.DIVER)
-
-    def analyzeProductivity(self):
-        self._beginWork(GeneralWorker.PROD)
-
-    def annotateClones(self, outDirFilter=None):
-        self._beginWork(GeneralWorker.ANNOT, outDirFilter=outDirFilter)
-
-    def analyzeRestrictionSites(self):
-        self._beginWork(GeneralWorker.RSA)
-
-    def analyzePrimerSpecificity(self):
-        self._beginWork(GeneralWorker.PRIM)
-
-    def analyze5UTR(self):
-        self._beginWork(GeneralWorker.UTR5)
-
-    def analyzeRestrictionSitesSimple(self):
-        self._beginWork(GeneralWorker.RSAS)
-
-    def analyzeSecretionSignal(self):
-        self._beginWork(GeneralWorker.SECR)
-
-    def analyzeSeqLen(self, klass=False):
-        self._beginWork(GeneralWorker.SEQLEN, klass=klass)
-
-    def finish(self):
-        self.__exit__(None, None, None)
-
-    def _pairFiles(self, folder, args):
-        """
-        given a list of files, attempt to pair them based on prefix name
-        :param folder: folder in which these files are found in
-        :return: list of files, if element of list is a tuple, then it's detected as paired end,
-        or else it will just be a string
-        """
-        files = [f for f in os.listdir(os.path.abspath(folder)) if not f.startswith(".")]
-
-        def findPartner(fname):
-            lookingFor = "_r2" if '_r1' in fname.lower() else "_r1"
-            canonicalName = fname[:fname.lower().rfind("_r1" if lookingFor == '_r2' else '_r2')]
-            for f in files:
-                if f.lower().startswith(canonicalName.lower()) and lookingFor in f.lower():
-                    return f
-            return None
-
-        def reorderRead(a, b):
-            """
-            return reads as (_R1, _R2)
-            :param a: arbitrary file (R1/R2)
-            :param b: arbitrary file (R1/R2)
-            :return: Ordered file (R1, R2)
-            """
-            if '_r1' in a.lower():
-                return a, b
-            return b, a
-
-        def distinct(files):
-            seen = set()
-            reduced = []
-            for f in files:
-                if type(f) == tuple:
-                    sampleName = inferSampleName(f[0], args.merger, args.task.lower() == 'fastqc')
-                else:
-                    sampleName = inferSampleName(f, args.merger, args.task.lower() == 'fastqc')
-                if sampleName not in seen:
-                    seen.add(sampleName)
-                    reduced.append(f)
-            return reduced
-
-        def acceptedFormat(filename):
-            return detectFileFormat(filename, noRaise=True) is not None
-
-        res = []
-        paired = set()
-        for f in files:
-            if f in paired or not acceptedFormat(f):
-                continue
-            if "_r1" in f.lower() or "_r2" in f.lower():
-                partner = findPartner(f)
-                if partner is None:
-                    raise Exception("Failed to find opposite read for file {}".format(f))
-                res.append(reorderRead(os.path.abspath(os.path.join(folder,  f)),
-                                       os.path.abspath(os.path.join(folder, partner))))
-                paired.add(partner)
-            else:
-                # single file
-                res.append(os.path.abspath(os.path.join(folder, f)))
-
-        return distinct(res)
-
-    def _beginWork(self, jobdesc, *args, **kwargs):
-
-        # fill self.queue with data from self.buffer
-        assert self.queue.empty()
-        assert len(self.buffer) == self.sampleCount
-        for _ in range(len(self.buffer)):
-            self.queue.put(self.buffer.pop())
-        assert len(self.buffer) == 0
+    def rockNRoll(self):
 
         # initialize workers
-        workers = [GeneralWorker(self.queue, self.result, jobdesc, *args, **kwargs) for _ in
-                   range(min(self.sampleCount, self.resource))]
-
-        # since macOSX doesn't support .qsize(). also, .empty() and .qsize() are
-        # unreliable ==> we use poison pills
-        self._fillPoisonPill(self.resource + 10, self.queue)
+        workers = [AbSeqWorker(rep, self.result) for rep in self.buffer]
 
         try:
             # start workers
@@ -191,19 +69,14 @@ class IgMultiRepertoire:
                 if type(res) == tuple:
                     # XXX: encountered an exception! - here, decide to raise it immediately.
                     # all accompanying processes will halt immediately due to this raise.
-                    raise GeneralWorkerException(*res)
+                    raise AbSeqWorkerException(*res)
                 self.buffer.append(res)
 
             for w in workers:
                 w.join()
             # done
 
-            # empty out original queue from Nones
-            while not self.queue.empty():
-                res = self.queue.get()
-                assert res is None
-
-        except GeneralWorkerException as e:
+        except AbSeqWorkerException as e:
             print("\n\n{}".format(e.errors))
             print("\n\nSomething went horribly wrong while trying to run AbSeq!")
             print("GeneralWorker stacktrace:")
@@ -219,7 +92,3 @@ class IgMultiRepertoire:
             for w in workers:
                 w.terminate()
 
-    @staticmethod
-    def _fillPoisonPill(n, queue, pill=None):
-        for _ in range(n):
-            queue.put(pill)
