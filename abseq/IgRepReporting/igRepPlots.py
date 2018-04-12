@@ -83,7 +83,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
-    if type("") == type(counts):
+    if type(counts) == str:
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         if len(sizes) == 0:
@@ -91,7 +91,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()
-    elif type(counts) == type([]):
+    elif type(counts) == list:
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
     elif type(counts) == type(Counter()):
@@ -142,7 +142,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         ax.set_xlabel("Sequence Length (aa)")
     if autoscale:
         ax.set_xticks(np.arange(autoscale[0], autoscale[1] + 1, 5))
-    if (not normed):
+    if not normed:
         ax.set_ylabel("Count")
     # ax.set_ylim(top=len(sizes))
     else:

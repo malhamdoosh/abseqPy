@@ -12,15 +12,15 @@ from abseq.config import RSCRIPT_SAMPLE_SEPARATOR, ABSEQROOT, RSCRIPT_PAIRING_SE
 XXX: IMPORTANT NOTE
 As of Nov 22 2017: 
 The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False is:
-    1) plotSeqLenDist           -- will be moved to R #TODO
-    3) plotVenn                 - mostly used by restriction sites
-    4) plotHeatMap              - generateStatsHeatmap
-    5) plotHeatmapFromDF
-    6) barLogo                  - generateCumulativeLogo
+    1) plotSeqLenDist
+    2) plotVenn                 - mostly used by restriction sites
+    3) plotHeatMap              - generateStatsHeatmap
+    4) plotHeatmapFromDF
 The plots that OBEY pythonPlotOn() = False is:
     1) all diversity plots (rarefaction, duplication, recapture)
     2) plotDist()
     3) plotSeqLenDistClasses
+    4) barLogo                  - generateCumulativeLogo
 """
 
 

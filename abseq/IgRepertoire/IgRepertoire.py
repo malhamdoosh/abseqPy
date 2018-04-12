@@ -11,7 +11,7 @@ import logging
 import sys
 import inspect
 
-from collections import Counter
+from collections import Counter, defaultdict
 from os.path import exists
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -25,7 +25,7 @@ from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractU
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot
+    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -262,21 +262,6 @@ class IgRepertoire:
                                      self.threads, self.merger, self.auxDir, stream=logger)
             self.readFile = mergedFastq
 
-        outResDir = os.path.join(self.resultDir, 'annot')
-        if not os.path.exists(outResDir):
-            os.makedirs(outResDir)
-
-        # generate plot of clone sequence length distribution
-        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist.png')
-        plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
-                       maxbins=40, histtype='bar', removeOutliers=False,
-                       normed=True, stream=logger)
-        # generate plot of clone sequence length distribution with outliers removed
-        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
-        plotSeqLenDist(self.readFile, self.name, outputFile, self.format,
-                       maxbins=40, histtype='bar', removeOutliers=True,
-                       normed=True, stream=logger)
-
     def annotateClones(self, outDirFilter=None):
         logger = logging.getLogger(self.name)
 
@@ -355,6 +340,22 @@ class IgRepertoire:
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
         self.cloneAnnot = self.cloneAnnot[selectedRows]
+
+        # generate plot of clone sequence length distribution
+        seqLengths = defaultdict(int)
+        records = SeqIO.index(gunzip(self.readFile), self.format)
+        for id_ in self.cloneAnnot.index:
+            seqLengths[len(records[id_])] += 1
+        count = Counter(seqLengths)
+        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist.png')
+        plotSeqLenDist(count, self.name, outputFile, self.format,
+                       maxbins=40, histtype='bar', removeOutliers=False,
+                       normed=True, stream=logger)
+        # generate plot of clone sequence length distribution with outliers removed
+        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
+        plotSeqLenDist(count, self.name, outputFile, self.format,
+                       maxbins=40, histtype='bar', removeOutliers=True,
+                       normed=True, stream=logger)
 
     def analyzeAbundance(self):
         # Estimate the IGV family abundance for each library
