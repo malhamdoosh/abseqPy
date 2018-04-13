@@ -16,20 +16,26 @@ class IgMultiRepertoire:
         self.plotManager = PlotManager(args)
         sampleNames = []
         if args.yaml is not None:
+            outdirs = set()
             documents, hasComparisons = parseYAML(args.yaml)
             for yamlArg in documents[:(-1 if hasComparisons else len(documents))]:
                 arg = parseArgs(yamlArg)
                 arg.outdir = os.path.abspath(arg.outdir) + os.path.sep
+                outdirs.add(arg.outdir)
                 arg.log = os.path.join(arg.outdir, RESULT_FOLDER, arg.name, arg.name + ".log")
                 sampleNames.append(arg.name)
                 self.buffer.append(IgRepertoire(**vars(arg)))
-            self.plotManager.processComparisons(documents, sampleNames, hasComparisons)
+            if len(outdirs) == 1:
+                outdir = list(outdirs)[0]
+            else:
+                raise Exception("Multiple output directory in YAML is currently not supported (yet)")
+            self.plotManager.processComparisons(documents, sampleNames, hasComparisons, outdir)
         else:
-            self.plotManager.processSingleInput(args.name)
-            args.outdir = os.path.abspath(args.outdir) + os.path.sep
+            outdir = args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
             self.buffer.append(IgRepertoire(**vars(args)))
+            self.plotManager.processSingleInput(args.name, outdir)
         self.sampleCount = len(self.buffer)
 
     def __enter__(self):

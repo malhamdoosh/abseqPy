@@ -1,4 +1,4 @@
-import subprocess
+import os
 import ast
 import sys
 
@@ -76,13 +76,13 @@ class PlotManager:
             #     print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
-    def processSingleInput(self, name):
-        with open(PlotManager._cfg, 'w') as fp:
+    def processSingleInput(self, name, outdir):
+        with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')
             fp.write(name + '\n')
 
-    def processComparisons(self, pairings, sampleNames, hasComparisons):
-        with open(PlotManager._cfg, 'w') as fp:
+    def processComparisons(self, pairings, sampleNames, hasComparisons, outdir):
+        with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')
 
             if hasComparisons:
