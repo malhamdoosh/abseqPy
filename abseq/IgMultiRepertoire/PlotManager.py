@@ -23,7 +23,7 @@ The plots that OBEY pythonPlotOn() = False is:
 class PlotManager:
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
-    _tmpFile = "rscripts_meta.tmp"
+    _cfg = "abseq.cfg"
 
     def __init__(self, args):
         PlotManager._pythonPlotting = False
@@ -31,6 +31,7 @@ class PlotManager:
         self.end5File = args.primer5end
         self.end3File = args.primer3end
         self.upstream = args.upstream
+        self.outputDir = args.outdir
         self.args = args
 
     @staticmethod
@@ -47,7 +48,7 @@ class PlotManager:
         plots csv files. If python plotting was on, then this function will have no effect
         :return: None. Side effects: plots in R if specified as such
         """
-        if PlotManager._pythonPlotting:
+        if not PlotManager._pythonPlotting:
             # todo: because main script overridden stdout to AbSeq.log
             # todo: change this to per-sample basis when logging is implemented correctly.
             # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
@@ -60,28 +61,28 @@ class PlotManager:
             arg3 = "{:.0f}".format(self.upstream[0]) if self.upstream else DUMMY_VALUE
             arg4 = "{:.0f}".format(self.upstream[1]) if self.upstream else DUMMY_VALUE
             sys.stdout.flush()
-            retval = subprocess.call(["Rscript",
-                                      ABSEQROOT + "/rscripts/masterScript.R",
-                                      arg1,
-                                      arg2,
-                                      arg3,
-                                      arg4],
-                                     stdout=sys.stdout,
-                                     stderr=sys.stdout
-                                     )
-            if retval != 0:
-                print("-" * 30)
-                print("Error detected in R plotting")
-                print("-" * 30)
+            # retval = subprocess.call(["Rscript",
+            #                           ABSEQROOT + "/rscripts/masterScript.R",
+            #                           arg1,
+            #                           arg2,
+            #                           arg3,
+            #                           arg4],
+            #                          stdout=sys.stdout,
+            #                          stderr=sys.stdout
+            #                          )
+            # if retval != 0:
+            #     print("-" * 30)
+            #     print("Error detected in R plotting")
+            #     print("-" * 30)
             # os.remove(PlotManager._tmpFile)        TODO: necessary?
 
     def processSingleInput(self, name):
-        with open(PlotManager._tmpFile, 'w') as fp:
+        with open(PlotManager._cfg, 'w') as fp:
             fp.write(ABSEQROOT + '\n')
             fp.write(name + '\n')
 
     def processComparisons(self, pairings, sampleNames, hasComparisons):
-        with open(PlotManager._tmpFile, 'w') as fp:
+        with open(PlotManager._cfg, 'w') as fp:
             fp.write(ABSEQROOT + '\n')
 
             if hasComparisons:
