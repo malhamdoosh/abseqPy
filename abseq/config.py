@@ -125,7 +125,7 @@ RESULT_FOLDER = 'report'
 AUX_FOLDER = 'auxiliary'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
-if sys.platform == 'darwin':
+if sys.platform == 'darwin' or platform.system() == "Windows":
     from psutil import virtual_memory
     mem = virtual_memory()
     MEM_GB = mem.total/GB

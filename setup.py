@@ -30,7 +30,7 @@ versions = {
     'clustalo': ["1.2.2", '1.2.4'],
     'leehom': True,
     'flash': True,
-    'igblast': ['1.8.0'],
+    'igblast': ['1.7.0'],
     'fastqc': ['0.11.6', '0.11.7'],
     'gs': ['9.22']
 }
@@ -208,7 +208,8 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
         zip_ref.close()
         # windows has no symlink, go straight to bin directory!
         for f in os.listdir(os.path.join(clustalo_installation_dir, windows_bin[:windows_bin.find('.zip')])):
-            shutil.move(f, os.path.join(installation_dir, 'bin'))
+            src_ = os.path.join(clustalo_installation_dir, windows_bin[:windows_bin.find('.zip')], f)
+            shutil.move(src_, os.path.join(installation_dir, 'bin'))
     else:
         _error('Unknown system architecture. Non windows, mac or linux detected')
 
@@ -218,7 +219,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
 def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     from six.moves.urllib import request
     plat, _ = _get_sys_info()
-    addr = 'https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
+    addr = 'http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
     request.urlretrieve(addr, zipname)
     unzipped_name = 'FastQC'
@@ -229,7 +230,7 @@ def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     # windows has no symlinks, move to bin immediately
     if plat == WIN:
         for f in os.listdir(fastqc_dir):
-            shutil.move(f, os.path.join(installation_dir, 'bin'))
+            shutil.move(os.path.join(fastqc_dir, f), os.path.join(installation_dir, 'bin', f))
         binary = os.path.join(installation_dir, 'bin', 'fastqc')
     else:
         binary = os.path.join(fastqc_dir, 'fastqc')
@@ -270,7 +271,7 @@ def install_flash(installation_dir='.'):
     zip_ref = zipfile.ZipFile(flash_zip)
     zip_ref.extractall(flash_ins_dir)
     for f in os.listdir(flash_ins_dir):
-        shutil.move(f, os.path.join(installation_dir, 'bin'))
+        shutil.move(os.path.join(flash_ins_dir, f), os.path.join(installation_dir, 'bin', f))
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
@@ -295,7 +296,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
         os.chdir(old_dir)
     else:
         binary = "gs{}w64.exe".format(version.replace('.', ''))
-        addr = "https://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{0}/gs{0}w64.exe"\
+        addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{0}/gs{0}w64.exe"\
             .format(version.replace('.', ''))
         request.urlretrieve(addr, binary)
         os.rename(binary, os.path.join(target_dir, 'bin', 'gs'))
