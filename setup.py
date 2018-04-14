@@ -30,7 +30,7 @@ versions = {
     'clustalo': ["1.2.2", '1.2.4'],
     'leehom': True,
     'flash': True,
-    'igblast': ['1.8.0'],
+    'igblast': ['1.7.0'],
     'fastqc': ['0.11.6', '0.11.7'],
     'gs': ['9.22']
 }
