@@ -26,7 +26,8 @@ from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractU
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen, detectFileFormat
+    writeListToFile, writeParams, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
+    createIfNot, safeOpen, detectFileFormat, countSeqs
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -225,6 +226,7 @@ class IgRepertoire:
         writeParams(self.args, self.resultDir)
         self._tasks = []
         self._setupTasks()
+        self._summaryFile = os.path.join(self.resultDir, "summary.txt")
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
@@ -281,6 +283,8 @@ class IgRepertoire:
         if self.readFile is None:
             self.mergePairedReads()
 
+        writeSummary(self._summaryFile, "RawReads", countSeqs(self.readFile))
+
         if exists(cloneAnnotFile):
             if self.task == "annotate":
                 printto(logger, "\tClones annotation file found and no further work needed ... " +
@@ -322,6 +326,9 @@ class IgRepertoire:
             paramFile = writeParams(self.args, outResDir)
             printto(logger, "The analysis parameters have been written to " + paramFile)
 
+            # write number of annotated reads
+            writeSummary(self._summaryFile, "AnnotatedReads", self.cloneAnnot.shape[0])
+
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
@@ -359,6 +366,8 @@ class IgRepertoire:
         plotSeqLenDist(count, self.name, outputFile, self.format,
                        maxbins=40, histtype='bar', removeOutliers=True,
                        normed=True, stream=logger)
+        # write number of filtered reads
+        writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
 
     def analyzeAbundance(self):
         # Estimate the IGV family abundance for each library
@@ -469,10 +478,13 @@ class IgRepertoire:
         else:
             cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
         printto(logger, "Percentage of productive clones {:.2%} ({:,}/{:,})".format(
-            cloneAnnot.shape[0] / before,
+            0 if before == 0 else cloneAnnot.shape[0] / before,
             int(cloneAnnot.shape[0]),
             int(before)
             ), LEVEL.INFO)
+
+        # write number of productive reads
+        writeSummary(self._summaryFile, "ProductiveReads", cloneAnnot.shape[0])
 
         # filter out "filtered" now
         if inplaceFiltered:
