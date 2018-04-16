@@ -7,6 +7,7 @@
 from __future__ import division
 import os
 import sys
+import glob
 import gc
 
 from multiprocessing import Queue
@@ -20,7 +21,7 @@ from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 from abseq.logger import printto, LEVEL
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassification='imgt', stream=None):
+def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='imgt', stream=None):
         noWorkers = igRep.threads
         seqsPerFile = igRep.seqsPerFile
 
@@ -57,7 +58,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
         if noWorkers == 1 or noSplit:
             cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
                                                        seqType, noWorkers, outdir,
-                                                       domainClassification=domainClassification, stream=stream)
+                                                       domainSystem=domainSystem, stream=stream)
             sys.stdout.flush()
         else:
             # split FASTA file into smaller files
@@ -78,7 +79,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
                 for i in range(noWorkers):
                     w = IgBlastWorker(igRep.chain, igRep.db,
                                       seqType, int(ceil(noWorkers / totalFiles)),
-                                      domainClassification=domainClassification, stream=stream)
+                                      domainSystem=domainSystem, stream=stream)
                     w.tasksQueue = tasks
                     w.resultsQueue = outcomes
                     w.exitQueue = exitQueue      
@@ -125,8 +126,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainClassifi
 
             # Clean folders to save space
             # TODO: remove .fasta and .out files
-            if (noSeqs > igRep.seqsPerFile and 
-                os.path.exists(filesDir + "/" + prefix + "part1" + ext)):
-                os.system("rm " + filesDir + "/*" + ext)
+            if noSeqs > igRep.seqsPerFile and os.path.exists(filesDir + os.path.sep + prefix + "part1" + ext):
+                for f in glob.glob(filesDir + os.path.sep + "*" + ext):
+                    os.remove(f)
 
         return cloneAnnot, filteredIDs

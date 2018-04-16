@@ -37,8 +37,9 @@ from abseq.logger import printto, LEVEL
 # from TAMO import MotifTools
 # from TAMO.MotifTools import Motif
 
-def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
-    if (outDict is None):
+
+def readSeqFileIntoDict(seqFile, format="fastq", outDict=None, stream=None):
+    if outDict is None:
         outDict = {}
     try:
         if format == "fastq":
@@ -68,13 +69,14 @@ def readSeqFileIntoDict(seqFile, format = "fastq", outDict = None):
         else:
             raise Exception("Unknown sequence file format")
     except Exception as e: 
-        print("Something went wrong while reading a sequence file")
+        printto(stream, "Something went wrong while reading a sequence file", LEVEL.EXCEPT)
         raise e
     return outDict
 
 
 def generateMotif(sequences, name, alphabet, filename, 
-                  align=False, transSeq=False, protein=False, weights=None, outDir=None, stream=None):
+                  align=False, transSeq=False, protein=False, weights=None, outDir=None,
+                  threads=2, stream=None):
     """
 
     :param sequences: list of strings
@@ -89,6 +91,7 @@ def generateMotif(sequences, name, alphabet, filename,
     :param protein:
     :param weights:
     :param outDir:
+    :param threads:
     :param stream:
     :return:
     """
@@ -113,7 +116,7 @@ def generateMotif(sequences, name, alphabet, filename,
             seqs = random.sample(seqs, 10000) 
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
-        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, stream=stream)
+        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, threads=threads, stream=stream)
 #                 print(alignedSeq[:10])
     else:                
         # if alignment is not required, add "-" to short sequences
@@ -150,7 +153,7 @@ def createAlphabet(align=False, transSeq=False, extendAlphabet=False, protein=Fa
 
 
 def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
-                        extendAlphabet=False, clusterMotifs=False, protein=False, stream=None):
+                        extendAlphabet=False, clusterMotifs=False, protein=False, threads=2, stream=None):
     from TAMO.MotifTools import Motif
     ighvMotifs = []
     if clusterMotifs and 'gene' in outputPrefix:
@@ -171,7 +174,8 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     for group in groups:    
         filename = os.path.join(logosFolder, group.replace('/', '') + '.png')
         seqs = seqGroups[group]
-        m = generateMotif(seqs, group, alphabet, filename, align, transSeq, protein, outDir=logosFolder)
+        m = generateMotif(seqs, group, alphabet, filename, align, transSeq, protein, outDir=logosFolder,
+                          threads=threads, stream=stream)
         if m is None:
             # motif file found, no further work required
             return
@@ -242,14 +246,14 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
                 tree = UPGMA(groupedMotifs[ighv], DFUNC)
                 print_tree_id(tree)
 
-                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=ighv, logger=stream)
+                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=(ighv + " family clustering"), logger=stream)
 
             lists = groupedMotifs.values()
             tree = UPGMA([m for lst in lists for m in lst], DFUNC)
             print_tree_id(tree)
 
             newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_newick.dnd')
-            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, logger=stream)
+            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title="Clustering of all IGHV", logger=stream)
 
             sys.stdout.close()
             sys.stdout = _old_stdout
@@ -293,7 +297,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     # plot dendogram in matplotlib
     phylipTree.ladderize()
     fig, axes = plt.subplots(figsize=(8, 5))
-    Phylo.draw(phylipTree, do_show=False, axes=axes, branch_labels=lambda c: c.branch_length)
+    Phylo.draw(phylipTree, do_show=False, axes=axes, show_confidence=True)
     axes.set_title(title)
     fig.savefig(newickClusterFile.replace('.dnd', '.png'), dpi=300)
     plt.close()

@@ -41,7 +41,7 @@ There will be more information on contribution guidelines in the wikipage.
 Before proceeding, you should confirm that you have at least these tools readily available:
 
 * [C/C++ compilers](https://gcc.gnu.org/)
-* [curl](https://curl.haxx.se/)
+* [perl](https://www.perl.org/get.html)
 * [git](https://git-scm.com/)
 * [make](https://en.wikipedia.org/wiki/Make_(software))
 * [python](https://www.python.org) v2.7

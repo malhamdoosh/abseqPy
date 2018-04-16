@@ -8,6 +8,7 @@
 
 import os
 import sys
+import platform
 
 # ==========================================
 #           ABSEQ's VERSION
@@ -77,7 +78,8 @@ class PriorityPath:
 DEFAULT_TOP_CLONE_VALUE = 100
 RSCRIPT_PAIRING_SEPARATOR = ';'
 RSCRIPT_SAMPLE_SEPARATOR = '|'
-DEFAULT_MERGER = 'leehom'
+DEFAULT_MERGER = 'leehom' if platform.system() != "Windows" else 'flash'
+DEFAULT_TASK = 'abundance'
 WEBLOGO = 'weblogo'
 
 
@@ -123,7 +125,7 @@ RESULT_FOLDER = 'report'
 AUX_FOLDER = 'auxiliary'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
-if sys.platform == 'darwin':
+if sys.platform == 'darwin' or platform.system() == "Windows":
     from psutil import virtual_memory
     mem = virtual_memory()
     MEM_GB = mem.total/GB

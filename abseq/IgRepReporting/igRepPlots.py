@@ -54,19 +54,23 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
 
     if sum(ighvDist.values()):
         plotDist(ighvDist, sampleName, outputFile)
-        # box plot of sequence length in each class
-        fig, ax = plt.subplots()
         classes = sorted(ighvDist, key=ighvDist.get, reverse=True)
-        ax.boxplot(map(lambda x: ighvSizes[x], classes))
-        ind = np.arange(1, len(classes) + 1)
-        ax.set_xticks(ind)
-        ax.set_xticklabels(classes, rotation=45)
-        ax.set_title("Sequence Lengths in " + sampleName)
-        outputFile = os.path.sep.join(outputFile.split(os.path.sep)[:-1] + ["box_" + outputFile.split(os.path.sep)[-1]])
-        fig.savefig(outputFile, dpi=300)
+        outputFile, ext = os.path.splitext(outputFile)
+        outputFile += ("_box" + ext)
+        # box plot of sequence length in each class
+        if PlotManager.pythonPlotOn():
+            fig, ax = plt.subplots()
+            ax.boxplot(map(lambda x: ighvSizes[x], classes))
+            ind = np.arange(1, len(classes) + 1)
+            ax.set_xticks(ind)
+            ax.set_xticklabels(classes, rotation=45)
+            ax.set_title("Sequence Lengths in " + sampleName)
+            fig.savefig(outputFile, dpi=300)
+            plt.close()
+        writeCSV(outputFile.replace('.png', '.csv'), 'x,y\n', "{},{}\n",
+                 [(klass, val) for klass in classes for val in ighvSizes[klass]])
         for k in classes:
             printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
-        plt.close()
 
 
 def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
@@ -79,7 +83,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
-    if type("") == type(counts):
+    if type(counts) == str:
         with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         if len(sizes) == 0:
@@ -87,7 +91,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()
-    elif type(counts) == type([]):
+    elif type(counts) == list:
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
     elif type(counts) == type(Counter()):
@@ -138,7 +142,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         ax.set_xlabel("Sequence Length (aa)")
     if autoscale:
         ax.set_xticks(np.arange(autoscale[0], autoscale[1] + 1, 5))
-    if (not normed):
+    if not normed:
         ax.set_ylabel("Count")
     # ax.set_ylim(top=len(sizes))
     else:
@@ -744,9 +748,7 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
     if removeOutliers:
         sel = totals > 0.01 * max(totals)
         counts = [counts[i] for i in range(len(counts)) if sel[i]]
-    # print(0.01*max(totals), totals[sel], len(counts))
-    fig, ax = plt.subplots(figsize=(8, 5))
-    # calculate AA proportions for each position 
+    # calculate AA proportions for each position
     if scaled:
         barFractions = [[ct.get(aa, 0) / float(max(totals)) for aa in AA]
                         for ct in counts]
@@ -763,17 +765,20 @@ def barLogo(counts, title, filename, removeOutliers=False, scaled=False, stream=
             byAABase[i].append(s)
             s += bf[i]
     # Generate the bar plot: one bar plot per AA
-    for i, aa in enumerate(AA):
-        ax.bar(numpy.arange(len(barFractions)) + .05, byAA[i],
-               width=0.9, bottom=byAABase[i], color=AA_colours[i],
-               label=AA[i], lw=0)
-    ax.set_title(title, fontsize=20)
-    ax.set_ylim(0, 1)
-    ax.set_xticks(numpy.arange(len(counts)) + .5)
-    ax.set_xticklabels([ct.most_common(1)[0][0] for ct in counts])
-    ax.tick_params(axis='both', which='major', labelsize=14)
-    ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1), fontsize='x-small')
-    fig.savefig(filename, dpi=300)
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for i, aa in enumerate(AA):
+            ax.bar(numpy.arange(len(barFractions)) + .05, byAA[i],
+                   width=0.9, bottom=byAABase[i], color=AA_colours[i],
+                   label=AA[i], lw=0)
+        ax.set_title(title, fontsize=20)
+        ax.set_ylim(0, 1)
+        ax.set_xticks(numpy.arange(len(counts)) + .5)
+        ax.set_xticklabels([ct.most_common(1)[0][0] for ct in counts])
+        ax.tick_params(axis='both', which='major', labelsize=14)
+        ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1), fontsize='x-small')
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
@@ -815,6 +820,12 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
                 for counter in aaCounts:
                     aaBuffer += ',' + "{:.3}".format(float(counter.get(aa, 0)) / total)
                 fp.write("{}{}\n".format(aa, aaBuffer))
+
+        # write barLogo csv file - in long format
+        plotFileName, _ = os.path.splitext(filename)
+        plotFileName += '.csv'
+        writeCSV(plotFileName, "position,aa,count\n", "{},{},{}\n", vals=
+                 [(p, aa, counts) for p, cnt in enumerate(aaCounts) for aa, counts in cnt.items()])
 
 
 def writeCSV(filename, header, template, vals, zip=False, metadata=""):

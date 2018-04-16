@@ -19,7 +19,7 @@ class _Level:
 # LOG FILE HEADER - displayed on the top of each *.log file depending on analysis task
 _BANNER = {
     'all': "Running the complete QC pipeline",
-    'fastq': "Sequencing QC Analysis",
+    'fastqc': "Sequencing QC Analysis",
     'annotate': "Clone Identification and Classification",
     'abundance': "IGV Abundance and QC Plots",
     'productivity': "Clone Productivity Analysis",
@@ -30,7 +30,8 @@ _BANNER = {
     'rsa': "Comprehensive Restriction Sites Analysis",
     'primer': "Primer Specificity Analysis",
     'seqlen': "Sequence Length Distribution",
-    'seqlenclass': "Class Sequence Length Distribution"
+    'seqlenclass': "Class Sequence Length Distribution",
+    'default': "Conducting AbSeq on all sample(s)"
 }
 
 LEVEL = _Level()
@@ -69,8 +70,11 @@ def setupLogger(name, task, logfile, stream=sys.stdout, flevel=LEVEL.fileLevel, 
     logger.addHandler(ch)
 
 
-def formattedTitle(task):
-    title = _BANNER.get(task, None)
+def formattedTitle(task, defaultTitle=False):
+    if defaultTitle:
+        title = _BANNER['default']
+    else:
+        title = _BANNER.get(task, None)
     if title is None:
         raise Exception("Unknown task requested. Available tasks are: {}".format(','.join(_BANNER.keys())))
     string = "-" * 100 + '\n'

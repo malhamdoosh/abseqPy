@@ -26,7 +26,7 @@ canonicalizeTitle <- function(str) {
   }
 }
 
-primerAnalysis <- function(primer5File, primer3File, primerDirectories, primerOut, combinedNames, mashedNames) {
+primerAnalysis <- function(primer5File, primer3File, primerDirectories, primerOut, sampleNames, combinedNames, mashedNames) {
   if (primer5File == "None") {
     primer5 <- c()
   } else {
@@ -66,7 +66,7 @@ primerAnalysis <- function(primer5File, primer3File, primerDirectories, primerOu
             primPlot <- plotDist(
               lapply(files, read.csv, skip = 1),
               sampleNames,
-              paste(paste0("IGV Abundance of indelled", primerNames[j]," (", canonicalizeTitle(category[c]), ") in "), combinedNames),
+              paste(paste0("IGV Abundance of indelled ", primerNames[j]," (", canonicalizeTitle(category[c]), ") in "), combinedNames),
               vertical,
               subs = subtitle
             )
