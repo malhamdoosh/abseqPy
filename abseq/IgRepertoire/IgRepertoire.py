@@ -283,7 +283,7 @@ class IgRepertoire:
         if self.readFile is None:
             self.mergePairedReads()
 
-        writeSummary(self._summaryFile, "RawReads", countSeqs(self.readFile))
+        writeSummary(self._summaryFile, "RawReads", countSeqs(self.readFile1))
 
         if exists(cloneAnnotFile):
             if self.task == "annotate":

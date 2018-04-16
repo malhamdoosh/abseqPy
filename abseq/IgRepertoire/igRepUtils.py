@@ -775,19 +775,16 @@ def writeSummary(filename, key, value):
 
 
 def countSeqs(filename):
+    # don't use line.startswith(">|@") here because
+    # the quality score of FASTQ can start with @ too!
     _, ext = os.path.splitext(os.path.normpath(filename))
     ext = ext.lstrip(".")
     if ext in {"fasta", "fa"}:
-        lines = 0
         with safeOpen(filename) as fp:
-            for i, l in enumerate(fp):
-                lines += l.startswith(">")
-        return lines
+            return sum([1 for _ in SeqIO.parse(fp, "fasta")])
     elif ext in {"fastq", "fq"}:
-        lines = 0
         with safeOpen(filename) as fp:
-            for i, l in enumerate(fp):
-                lines += l.startswith("@")
+            return sum([1 for _ in SeqIO.parse(fp, "fastq")])
     else:
         raise ValueError("Unrecognized format {}, expected FASTA or FASTQ".format(ext))
 
