@@ -779,13 +779,13 @@ def countSeqs(filename):
     ext = ext.lstrip(".")
     if ext in {"fasta", "fa"}:
         lines = 0
-        with open(filename) as fp:
+        with safeOpen(filename) as fp:
             for i, l in enumerate(fp):
                 lines += l.startswith(">")
         return lines
     elif ext in {"fastq", "fq"}:
         lines = 0
-        with open(filename) as fp:
+        with safeOpen(filename) as fp:
             for i, l in enumerate(fp):
                 lines += l.startswith("@")
     else:
