@@ -777,7 +777,7 @@ def writeSummary(filename, key, value):
 def countSeqs(filename):
     # don't use line.startswith(">|@") here because
     # the quality score of FASTQ can start with @ too!
-    _, ext = os.path.splitext(os.path.normpath(filename))
+    _, ext = os.path.splitext(os.path.normpath(filename).replace(".gz", ""))
     ext = ext.lstrip(".")
     if ext in {"fasta", "fa"}:
         with safeOpen(filename) as fp:
