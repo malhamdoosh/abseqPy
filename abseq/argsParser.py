@@ -253,8 +253,8 @@ def parseCommandLineArguments(arguments=None):
                                                    "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
                                                    " to see your default database used by AbSeq",
                           default=None)
-    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes) [default=8]",
-                          type=int, default=8)
+    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes) [default=1]",
+                          type=int, default=1)
     optional.add_argument('-y', '--yaml', help="path to yaml file.", required=False, default=None)
     optional.add_argument('-r', '--report-interim', help="specify this flag to generate report."
                                                          " Not implemented yet [default= no report]",
