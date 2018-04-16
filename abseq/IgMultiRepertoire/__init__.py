@@ -1,5 +1,5 @@
 __all__ = [
-    'GeneralWorker',
+    'AbSeqWorker',
     'IgMultiRepertoire',
     'PlotManager'
 ]

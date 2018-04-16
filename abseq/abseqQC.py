@@ -39,45 +39,11 @@ def main():
     try:
         with PriorityPath():
             argsVals = parseArgs()
+
             with IgMultiRepertoire(argsVals) as igRepertoire:
-
                 # show a pretty banner before beginning analysis
-                print(formattedTitle(argsVals.task))
-
-                if argsVals.task == 'all':
-                    igRepertoire.runFastqc()
-                    igRepertoire.annotateClones()
-                    igRepertoire.analyzeAbundance()
-                    igRepertoire.analyzeProductivity()
-                    igRepertoire.analyzeDiversity()
-                if argsVals.task == 'fastqc':
-                    igRepertoire.runFastqc()
-                elif argsVals.task == 'annotate':
-                    igRepertoire.annotateClones()
-                elif argsVals.task == 'abundance':
-                    igRepertoire.analyzeAbundance()  # estimateIGVDist()
-                elif argsVals.task == 'productivity':
-                    igRepertoire.analyzeProductivity()
-                elif argsVals.task == 'diversity':
-                    igRepertoire.analyzeDiversity()
-                elif argsVals.task == 'secretion':
-                    # analyze the sequences upstream of the IGV genes
-                    igRepertoire.analyzeSecretionSignal()
-                elif argsVals.task == '5utr':
-                    igRepertoire.analyze5UTR()
-                elif argsVals.task == 'rsasimple':
-                    igRepertoire.analyzeRestrictionSitesSimple()
-                elif argsVals.task == 'rsa':
-                    igRepertoire.analyzeRestrictionSites()
-                elif argsVals.task == 'primer':
-                    igRepertoire.analyzePrimerSpecificity()
-                elif argsVals.task == 'seqlen':
-                    # calculate the distribution of sequence lengths of a sample
-                    igRepertoire.analyzeSeqLen()
-                elif argsVals.task == 'seqlenclass':
-                    # calculate the distribution of sequences in different IGV families
-                    # input file must be a file of IGV genes
-                    igRepertoire.analyzeSeqLen(klass=True)
+                print(formattedTitle(argsVals.task, argsVals.yaml is not None))
+                igRepertoire.rockNRoll()
 
             print("The analysis started at " + startTimeStr)
             print("The analysis took {}".format(timedelta(seconds=int(round(time.time() - startTime)))))

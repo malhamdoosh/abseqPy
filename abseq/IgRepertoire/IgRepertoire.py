@@ -20,12 +20,13 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
+from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
 from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
     writeCountsCategoriesToFile, findUpstreamMotifs
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
-from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER
+from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen
+    writeListToFile, writeParams, compressSeqGeneLevel, compressSeqFamilyLevel, createIfNot, safeOpen, detectFileFormat
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -55,12 +56,12 @@ class IgRepertoire:
     """
     creates an AbSeq.IgRepertoire object with QC methods
     """
-    def __init__(self, f1, f2=None, name=None, fmt='fastq', chain='hv', seqtype='dna', domainSystem='imgt',
-                 merger='leehom', outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
-                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=100, actualqstart=-1, trim5=0, trim3=0,
+    def __init__(self, f1, f2=None, name=None, fmt=None, chain='hv', seqtype='dna', domainSystem='imgt',
+                 merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
+                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, actualqstart=-1, trim5=0, trim3=0,
                  fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
-                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=None, log=None,
-                 rscripts=None):
+                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=DEFAULT_TASK, log=None,
+                 yaml=None):
         """
 
         :param f1: string
@@ -153,7 +154,7 @@ class IgRepertoire:
                                 is responsible for the "banner" printed in the log file.
         :param log: string
                                 path to logger file
-        :param rscripts: string
+        :param yaml: string
                                 dummy variable. Used in commandline mode
         """
         fargs, _, _, values = inspect.getargvalues(inspect.currentframe())
@@ -162,13 +163,12 @@ class IgRepertoire:
         # sanitizeArgs(self.args)
 
         self.task = task.lower().strip()
-        self.format = fmt
         self.chain = chain
         self.name = name
         self.fr4cut = fr4cut
         self.reportInterim = report_interim
 
-        # diretory creation
+        # directory creation
         outputDir = os.path.abspath(outdir)
         self.auxDir = os.path.join(outputDir, AUX_FOLDER, self.name) + os.path.sep
         self.resultDir = os.path.join(outputDir, RESULT_FOLDER, self.name) + os.path.sep
@@ -206,6 +206,7 @@ class IgRepertoire:
 
         self.readFile1 = f1
         self.readFile2 = f2
+        self.format = fmt if fmt is not None else detectFileFormat(self.readFile1)
         self.merger = merger
         self.merge = 'no' if self.merger is None else 'yes'
 
@@ -222,6 +223,8 @@ class IgRepertoire:
 
         setupLogger(self.name, self.task, log)
         writeParams(self.args, self.resultDir)
+        self._tasks = []
+        self._setupTasks()
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
@@ -510,7 +513,8 @@ class IgRepertoire:
         printto(logger, "Clonotypes are being generated ... ")
         clonoTypes = annotateClonotypes(self.cloneSeqs, removeNone=True)
 
-        generateDiversityReport(spectraTypes, clonoTypes, self.name, outResDir, self.clonelimit, stream=logger)
+        generateDiversityReport(spectraTypes, clonoTypes, self.name, outResDir, self.clonelimit,
+                                threads=self.threads, stream=logger)
 
         # todo: remove this for now - it's unoptimized and extremely slow
         # writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outResDir, stream=logger)
@@ -736,7 +740,8 @@ class IgRepertoire:
             printto(logger, "\tAnalyzing intact secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
                 findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir,
-                                   [expectLength, expectLength], level=level, startCodon=True, stream=logger)
+                                   [expectLength, expectLength], level=level, startCodon=True,
+                                   threads=self.threads, stream=logger)
 
             # ----------------------------------------------------------------
             #                 analyze trimmed secretion signals
@@ -744,7 +749,7 @@ class IgRepertoire:
             printto(logger, "\tAnalyzing trimmed secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
                 findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [1, expectLength - 1], level=level,
-                                   startCodon=True, stream=logger)
+                                   startCodon=True, threads=self.threads, stream=logger)
 
         paramFile = writeParams(self.args, outResDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
@@ -791,7 +796,8 @@ class IgRepertoire:
             #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
             for level in ['variant', 'gene', 'family']:
                 findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [expectLength, expectLength],
-                                   level=level, startCodon=True, type='5utr', clusterMotifs=True, stream=logger)
+                                   level=level, startCodon=True, type='5utr', clusterMotifs=True,
+                                   threads=self.threads, stream=logger)
 
         paramFile = writeParams(self.args, outResDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
@@ -926,6 +932,63 @@ class IgRepertoire:
         )
         return selectedRows
 
+    def _minimize(self):
+        # XXX: cloneAnnot and cloneSeqs are the largest objects in a IgReportoire object,
+        # we remove them so that we can pickle them into the queue again.
+        # When needed, these files will be loaded automatically later on anyway
+        self.cloneAnnot = None
+        self.cloneSeqs = None
+
+    def _nextTask(self):
+        if len(self._tasks) > 0:
+            pack = self._tasks.pop()
+            if type(pack) == str:
+                return pack, [], {}
+            else:
+                # type(pack) = tuple: (str, dict) - see SeqLenClass
+                return pack[0], [], pack[1]
+        else:
+            return None, [], {}
+
+    def _setupTasks(self):
+        logger = logging.getLogger(self.name)
+        if self.task == 'all':
+            self._tasks = [AbSeqWorker.FASTQC, AbSeqWorker.ANNOT, AbSeqWorker.ABUN, AbSeqWorker.PROD, AbSeqWorker.DIVER]
+        elif self.task == 'fastqc':
+            self._tasks = [AbSeqWorker.FASTQC]
+        elif self.task == 'annotate':
+            self._tasks = [AbSeqWorker.ANNOT]
+        elif self.task == 'abundance':
+            self._tasks = [AbSeqWorker.ABUN]
+        elif self.task == 'productivity':
+            self._tasks = [AbSeqWorker.PROD]
+        elif self.task == 'diversity':
+            self._tasks = [AbSeqWorker.DIVER]
+        elif self.task == 'secretion':
+            self._tasks = [AbSeqWorker.SECR]
+        elif self.task == '5utr':
+            self._tasks = [AbSeqWorker.UTR5]
+        elif self.task == 'rsasimple':
+            self._tasks = [AbSeqWorker.RSAS]
+        elif self.task == 'rsa':
+            self._tasks = [AbSeqWorker.RSA]
+        elif self.task == 'primer':
+            self._tasks = [AbSeqWorker.PRIM]
+        elif self.task == 'seqlen':
+            self._tasks = [AbSeqWorker.SEQLEN]
+        elif self.task == 'seqlenclass':
+            self._tasks = [(AbSeqWorker.SEQLEN, {'klass': True})]
+        else:
+            raise ValueError("Unknown task requested: {}".format(self.task))
+
+        # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
+        # (duh)
+        if self.task != 'primer' and (self.end3 or self.end5):
+            printto(logger, "Primer file detected, conducting primer specificity analysis ... ", LEVEL.INFO)
+            self._tasks.append(AbSeqWorker.PRIM)
+
+        # easier to pop
+        self._tasks = self._tasks[::-1]
 
 #     def extractProductiveRNAs(self):
 # #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'

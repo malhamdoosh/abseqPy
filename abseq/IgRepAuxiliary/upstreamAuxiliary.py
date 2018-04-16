@@ -328,7 +328,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
 
 
 def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLength, level,
-                       startCodon=True, type='secsig', clusterMotifs=False, stream=None):
+                       startCodon=True, type='secsig', clusterMotifs=False, threads=2, stream=None):
     """
     finds and visualizes motifs from the sequences provided in upstreamFile
 
@@ -360,6 +360,9 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
 
     :param clusterMotifs: bool
                     whether or not to cluster sequences using TAMO
+
+    :param threads: int
+                    number of threads to use
 
     :param stream: stream
                     logging stream
@@ -410,6 +413,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                    align=(expectLength[0] < expectLength[1]),
                    outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
                    clusterMotifs=clusterMotifs,
+                   threads=threads,
                    stream=stream)
 
     if EXACT_LENGTH and type == 'secsig':
@@ -420,6 +424,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
+                       threads=threads,
                        stream=stream)
         noStartCodonSeq = compressor(noStartCodonSeq)
         generateMotifs(noStartCodonSeq,
@@ -429,12 +434,14 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
+                       threads=threads,
                        stream=stream)
         generateMotifs(ighvSignals,
                        align=False,
                        outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=True,
                        clusterMotifs=clusterMotifs,
+                       threads=threads,
                        stream=stream)
 
 

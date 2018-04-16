@@ -19,12 +19,12 @@ from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, \
 from abseq.logger import LEVEL, printto
 
 
-def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, stream=None):
+def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, stream=None):
     generateSpectraTypePlots(spectraTypes,  name, outDir, stream=stream)
     flattened = flattenClonoTypeCountsDict(clonoTypes)
 
     writeClonoTypesToFiles(flattened, name, outDir, topClonotypes, stream=stream)
-    estimateDiversity(clonoTypes, flattened, name, outDir, stream=stream)
+    estimateDiversity(clonoTypes, flattened, name, outDir, threads=threads, stream=stream)
 #     generateCDRandFRLogos()
 
 
@@ -68,8 +68,8 @@ def generateSpectraTypePlots(spectraTypes, name, outDir, stream=None):
                            removeOutliers=True, stream=stream)
 
 
-def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, stream=None):
-    generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, "protein", stream=stream)
+def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, threads=2, stream=None):
+    generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, threads=threads, seqType="protein", stream=stream)
     generateRarefactionPlots(flatClonoTypes, name, outDir, stream=stream)
     printto(stream, "The diversity of the library is being estimated ... ")
     calcDiversity(flatClonoTypes, name, outDir)
@@ -177,7 +177,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                         'Percent Recapture of CDRs and V Domains', stream=stream)
 
 
-def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, seqType="protein", stream=None):
+def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, threads=2, seqType="protein", stream=None):
     """
     Create motif plots and composition logos for all FR and CDR regions
 
@@ -204,6 +204,9 @@ def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, seqType="pr
 
     :param outDir: string
                     output directory
+
+    :param threads: int
+                    number of threads to use
 
     :param seqType: string
                     dna or protein
@@ -260,13 +263,13 @@ def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, seqType="pr
         filename = os.path.join(motifsFolder, name + ("_{}_motif_logo.png".format(region)))
         alphabet = createAlphabet(align=False, protein=True, extendAlphabet=True)
         m = generateMotif(seqs, region, alphabet, filename,  align=False,
-                          protein=True, weights=weights, outDir=outDir, stream=stream)
+                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
         # generate  logos after alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_aligned_logo.png".format(region)))
         alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
         m = generateMotif(seqs, region, alphabet, filename,  align=True,
-                          protein=True, weights=weights, outDir=outDir, stream=stream)
+                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
 
 def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir, stream=None):

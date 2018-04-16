@@ -8,25 +8,25 @@ from __future__ import print_function
 import os
 import sys
 import argparse
+import yaml
 
 from numpy import Inf
 from Bio import SeqIO
 from os.path import abspath
 
 from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
-from abseq.IgMultiRepertoire.PlotManager import PlotManager
-from abseq.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, RSCRIPT_PAIRING_SEPARATOR,\
-    RSCRIPT_SAMPLE_SEPARATOR
+from abseq.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, DEFAULT_TASK
 
 
-def parseArgs():
+def parseArgs(arguments=None):
     """
     Parses sys.argv's arguments and sanitize them. Checks the logic of arguments so calling program does not have
     to do any logic checking after this call.
+    :param arguments: custom arguments or sys.argv (default)
     :return: argparse namespace object, using dot notation to retrieve value: args.value
     """
 
-    parser, args = parseCommandLineArguments()
+    parser, args = parseCommandLineArguments(arguments)
 
     # --------------------------------------------------------------------------------------------------------
     #                                       Canonicalize all values
@@ -39,8 +39,13 @@ def parseArgs():
     # --------------------------------------------------------------------------------------------------------
     #                              Check for -f1, -f2 file existence and expand path
     # --------------------------------------------------------------------------------------------------------
-    if not os.path.exists(args.f1):
-        parser.error("-f1 file not found!")
+    # we CANNOT allow f1 to be missing if arguments is not None (i.e. it's parsing from a YAML file)
+    # otherwise, it could be missing if -y/--yaml was provided
+    if args.f1 is None or not os.path.exists(args.f1):
+        if arguments is not None:
+            parser.error("-f1 file not found!")
+        elif args.yaml is None:
+            parser.error("Either one of -f1/--file1 or -y/--yaml must be specified!")
     else:
         args.f1 = abspath(args.f1)
     if args.f2 is not None and not os.path.exists(args.f2):
@@ -49,7 +54,7 @@ def parseArgs():
         args.f2 = abspath(args.f2)
 
     # parse arguments if args.f1 is a file, if it's a directory, allow IgMultiRepertoire to handle file pairings
-    if os.path.isfile(args.f1):
+    if args.f1 is not None and os.path.isfile(args.f1):
         # detect file format (either fastq or fasta); both should be the same type
         fmt = detectFileFormat(args.f1)
         if args.f2 is not None and detectFileFormat(args.f2) != fmt:
@@ -57,7 +62,7 @@ def parseArgs():
                          " Both should be either FASTA or FASTQ.")
         args.fmt = fmt
 
-        # check logic between f1, f2 and merger, setting default merger to flash
+        # check logic between f1, f2 and merger, setting default merger
         if args.merger is not None and args.f2 is None:
             parser.error("The merger requires two sequence files (use both -f1 and -f2 option)")
         if args.merger is None and args.f2 is not None:
@@ -66,11 +71,6 @@ def parseArgs():
         # automatically infer sample name from F1
         if args.name is None:
             args.name = inferSampleName(args.f1, args.merger, args.task.lower() == 'fastqc')
-
-        # make sure -rs / --rscript option doesn't have arguments, there's nothing to pair if -f1 is a file
-        if PlotManager.rscriptsHasArgs(args.rscripts) and not PlotManager.rscriptsOff(args.rscripts):
-            parser.error("-rs / --rscripts argument is either empty or "
-                         "'off' when -f1 is not a directory - there is nothing to pair with!")
 
     # --------------------------------------------------------------------------------------------------------
     #                                    Parse clone limit option
@@ -159,84 +159,33 @@ def parseArgs():
 
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
-    # --------------------------------------------------------------------------------------------------------
-    #                                   -rs / --rscripts sanity check!
-    # --------------------------------------------------------------------------------------------------------
-
-    # -rs / --rscripts: if it was a conf file, make sure it exists!
-    if PlotManager.rscriptsIsConf(args.rscripts) and not os.path.exists(args.rscripts):
-        parser.error("Provided --rscripts {} file not found!".format(args.rscripts))
-    # if the argument to -rs isn't valid, throw parser error
-    # Allowed arguments are:
-    #   1) -rs / --rscripts <blank>
-    #   2) -rs / --rscripts off
-    #   3) -rs / --rscripts "off"
-    #   4) -rs / --rscripts "sample_1.fastq, sample_2.fasta, ..."
-    #   5) -rs / --rscripts "config-pairing-file.txt"
-    #   6) -rs / --rscripts config-pairing-file.txt
-    #           (note the name doesn't have to be config-pairing-file, it just has to exist)
-    if not (PlotManager.rscriptsHasNoArgs(args.rscripts) or  # (1)
-                PlotManager.rscriptsOff(args.rscripts) or  # (2)
-                PlotManager.rscriptsIsPairedStrings(args.rscripts) or  # (4)
-                PlotManager.rscriptsIsConf(args.rscripts)):  # (5)
-        # if none of the above applies, we've exhausted all possible valid arguments!
-        parser.error("Unrecognized input to -rs/--rscripts: {}".format(args.rscripts))
-
-    if PlotManager.rscriptsIsConf(args.rscripts):
-        args.rscripts = parseRscriptsFile(args.rscripts)
-        if _hasDumbInput(args.rscripts):
-            parser.error("Incorrect -rs argument detected. You might have a trailing {}"
-                         .format(RSCRIPT_SAMPLE_SEPARATOR))
-    elif PlotManager.rscriptsIsPairedStrings(args.rscripts):
-        args.rscripts = parseRscriptsStringPair(args.rscripts)
-        if _hasDumbInput(args.rscripts):
-            parser.error("Incorrect -rs argument detected. You might have a trailing {}"
-                         .format(RSCRIPT_SAMPLE_SEPARATOR))
-
     # done
     return args
 
 
-def _hasDumbInput(pairings):
-    """
-    -rs "PCR1 | "
-    or
-    $ cat pair.cfg
-    PCR1 |
-
-    yeah, go figure. (-f1 PCR1)
-    :param pairings: parsed rscript arugment
-    :return: True if user provided a less than useful argument.
-    """
-    for pairing in pairings:
-        if '' in pairing:
-            return True
-    return False
-
-
-def parseCommandLineArguments():
+def parseCommandLineArguments(arguments=None):
     """
     parses commandline arguments for AbSeq
-    :param argv: sys.argv
+    :param arguments: sys.argv by default. Pass a list of strings otherwise
     :return: parser object, can be indexed for flag values
     """
     parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
                                      prog="AbSeq", add_help=False)
-    required = parser.add_argument_group('required arguments')
+    # required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    required.add_argument('-f1', '--file1', dest="f1", required=True, help="path to sequence file 1. "
-                                                                           "Alternatively, specify path to directory "
-                                                                           "if there are multiple samples to analyze")
+    optional.add_argument('-f1', '--file1', dest="f1", help="path to sequence file 1. "
+                                                            "Can only be omitted if -y/--yaml is specified",
+                          default=None)
     optional.add_argument('-f2', '--file2', dest="f2", help="path to sequence file 2,"
                                                             " omit this option if sequences are not paired end or if"
                                                             " -f1 is a path to directory of samples",
                           default=None)
     optional.add_argument('-c', '--chain', default="hv", help="chain type [default=hv]",
                           choices=['hv', 'lv', 'kv'])
-    optional.add_argument('-t', '--task', default="abundance", help="analysis task, supported tasks: \
+    optional.add_argument('-t', '--task', default=DEFAULT_TASK, help="analysis task, supported tasks: \
                                                     all, annotate, abundance, \
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \
-                                                    seqlen, secretion, seqlenclass [default=abundance]",
+                                                    seqlen, secretion, seqlenclass [default={}]".format(DEFAULT_TASK),
                           choices=["all", "annotate", "abundance", "diversity",
                                    "fastqc", "productivity", "primer", "5utr", "rsasimple",
                                    "rsa", "seqlen", "secretion", "seqlenclass"])
@@ -306,21 +255,7 @@ def parseCommandLineArguments():
                           default=None)
     optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes) [default=8]",
                           type=int, default=8)
-
-    optional.add_argument('-rs', '--rscripts', nargs='?',
-                          help="reporting engine and sample pairing flag. -rs <arg> where arg = 'off' to switch R "
-                               "plotting off (only plots in python). When arg = \"sample_1 {0} sample_2 {0} sample_3"
-                               " {1} ".format(RSCRIPT_SAMPLE_SEPARATOR, RSCRIPT_PAIRING_SEPARATOR) +
-                               "sample_1 {0} sample_2\", AbSeq will generate explicit comparisons for "
-                               "sample 1, 2 and 3, ".format(RSCRIPT_SAMPLE_SEPARATOR) +
-                               "then samples 1 and 2 respectively. When arg = <filename>, it expects filename to have "
-                               "pairings separated by newlines instead of '" + RSCRIPT_PAIRING_SEPARATOR + "'. This is"
-                               " particularly useful if pairings are long and complicated. Note that these pairing "
-                               "options are only available when -f1 is supplied with a directory."
-                               " Specifying -rs without any arguments is similar to not specifying -rs at all."
-                               " The default behaviour is to plot in R (and python plots off) with no"
-                               " explicit sample comparisons (if -f1 is a directory). [default=Rplot] ",
-                               default=None)
+    optional.add_argument('-y', '--yaml', help="path to yaml file.", required=False, default=None)
     optional.add_argument('-r', '--report-interim', help="specify this flag to generate report."
                                                          " Not implemented yet [default= no report]",
                           dest="report_interim", action='store_true')
@@ -329,13 +264,15 @@ def parseCommandLineArguments():
                                                       " trimmed to --trim3 argument if provided. "
                                                       " [default = sequence (FR4 end) ends where J germline ends]",
                           dest='fr4cut', action='store_false')
-    optional.add_argument('-st', '--sites', help="path to restriction sites file, required if"
-                                                 " --task rsa or --task rsasimple is specified", default=None)
+    optional.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
+                                                 " --task rsa or --task rsasimple is specified."
+                                                 " The expected table format is: Enzyme <white space> Recognition"
+                                                 "Sequence ", default=None)
     optional.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
     optional.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
-    return parser, parser.parse_args()
+    return parser, parser.parse_args() if arguments is None else parser.parse_args(arguments)
 
 
 def extractRanges(strRanges, expNoRanges=2):
@@ -381,28 +318,26 @@ def printUsage(parser, additional_msg=None):
     sys.exit(0)
 
 
-def parseRscriptsFile(fname):
+def parseYAML(yamlFile, check=True):
     """
-    parses rscripts' config file that tells AbSeq the pairings of samples when -f1 is a directory.
-    returns results in [(sample1, sample2, ..., sample-n), ... (tuple-n) ] format, where
-    the tuples in the list represent a "pair"
-    :param fname: rscripts' config file
-    :return: list of tuples, tuples representing pairings
+    parses each document within the yaml file and returns either a converted list of list of strings (in tokens) or
+    an iterable of yaml dictionary
+    :param yamlFile: string. Path to YAML
+    :param check: bool. Check for funky arguments (check for recursive yaml key:value)
+    :return: list of list of tokens / iterable of dictionaries and a bool indicating if there's a comparison key value
     """
-    with safeOpen(fname, "r") as fp:
-        # filter blank lines from array of lines, then deconstruct pairs by splitting via commas (and stripping white-
-        # space) before reconstructing it back into a tuple
-        return map(lambda x: tuple(map(lambda y: y.strip(), x.split(RSCRIPT_SAMPLE_SEPARATOR))),
-                   filter(None, [line.strip() for line in fp.readlines()]))
-
-
-def parseRscriptsStringPair(string):
-    """
-    analogous to parseRscriptsFile, except that it's a string. The newlines that separate the pairings in
-    parseRscriptsFile is substituted with RSCRIPT_PAIRING_SEPERATOR here. The output is identical in format
-    :param string: string with pairings separated by RSCRIPT_PAIRING_SEPARATOR, (internally separated by
-                   RSCRIPT_SAMPLE_SEPARATOR)
-    :return: list of tuples, tuples representing pairings
-    """
-    return map(lambda x: tuple(x.split(RSCRIPT_SAMPLE_SEPARATOR)),
-               map(lambda y: y.strip(), string.split(RSCRIPT_PAIRING_SEPARATOR)))
+    with open(yamlFile) as fp:
+        contents = fp.read()
+    output = []
+    compare = False
+    for doc in yaml.load_all(contents):
+        docList = []
+        for key, value in doc.items():
+            if str(key) == 'yaml' and check:
+                raise ValueError("yaml keyword (with value {}) detected in YAML file, not allowed.".format(value))
+            docList.append("--" + str(key))
+            docList.append(str(value))
+            if str(key) == 'compare':
+                compare = True
+        output.append(docList)
+    return output, compare

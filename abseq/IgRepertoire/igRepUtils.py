@@ -497,7 +497,7 @@ def compressCountsFamilyLevel(countsDict):
 '''
 
 
-def alignListOfSeqs(signals, outDir, stream=None):
+def alignListOfSeqs(signals, outDir, threads, stream=None):
     L = map(len, signals)
     printto(stream,
             "\t\t{} sequences are being aligned using CLUSTAL-OMEGA (L in [{}, {}])... ".format(len(L), min(L), max(L)))
