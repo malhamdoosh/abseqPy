@@ -293,6 +293,9 @@ class IgRepertoire:
                 printto(logger, "\tClones annotation file found and being loaded ... " +
                         os.path.basename(cloneAnnotFile))
                 self.cloneAnnot = read_hdf(cloneAnnotFile, "cloneAnnot")
+            # write (update) number of annotated reads - this is possible because we always
+            # save the unfiltered cloneannot dataframe, and re-filter after reloading
+            writeSummary(self._summaryFile, "AnnotatedReads", self.cloneAnnot.shape[0])
         else:
             if not exists(self.readFile):
                 raise Exception(self.readFile + " does not exist!")
