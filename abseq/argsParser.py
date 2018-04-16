@@ -264,8 +264,10 @@ def parseCommandLineArguments(arguments=None):
                                                       " trimmed to --trim3 argument if provided. "
                                                       " [default = sequence (FR4 end) ends where J germline ends]",
                           dest='fr4cut', action='store_false')
-    optional.add_argument('-st', '--sites', help="path to restriction sites file, required if"
-                                                 " --task rsa or --task rsasimple is specified", default=None)
+    optional.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
+                                                 " --task rsa or --task rsasimple is specified."
+                                                 " The expected table format is: Enzyme <white space> Recognition"
+                                                 "Sequence ", default=None)
     optional.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
     optional.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
