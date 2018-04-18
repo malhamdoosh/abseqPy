@@ -85,6 +85,9 @@ class PlotManager:
         with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')
 
+            for sample in sampleNames:
+                fp.write(sample + '\n')
+
             if hasComparisons:
                 if pairings[-1][0] != '--compare':
                     # this will NEVER happen.
@@ -95,7 +98,4 @@ class PlotManager:
                         if s not in sampleNames:
                             raise ValueError("Unknown sample name {}, not one of {}".format(s, sampleNames))
                     fp.write(','.join(userSamples) + '\n')
-
-            for sample in sampleNames:
-                fp.write(sample + '\n')
 
