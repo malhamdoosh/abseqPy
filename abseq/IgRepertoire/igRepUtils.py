@@ -8,7 +8,7 @@ import argparse
 import gzip
 import shutil
 import glob
-import sys
+import re
 import os
 
 from os.path import exists
@@ -757,6 +757,36 @@ def writeParams(args, outDir):
         for key, val in args.items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     return os.path.basename(filename)
+
+
+def writeSummary(filename, key, value):
+    if os.path.exists(filename):
+        with open(filename) as fp:
+            string = fp.read()
+    else:
+        string = ""
+
+    with open(filename, 'w') as fp:
+        if re.search("^" + key + ":.*$", string, re.MULTILINE):
+            string = re.sub("^" + key + ":.*$", "{}:{}".format(key, value), string, flags=re.MULTILINE)
+        else:
+            string += "{}:{}\n".format(key, value)
+        fp.write(string)
+
+
+def countSeqs(filename):
+    # don't use line.startswith(">|@") here because
+    # the quality score of FASTQ can start with @ too!
+    _, ext = os.path.splitext(os.path.normpath(filename).replace(".gz", ""))
+    ext = ext.lstrip(".")
+    if ext in {"fasta", "fa"}:
+        with safeOpen(filename) as fp:
+            return sum([1 for _ in SeqIO.parse(fp, "fasta")])
+    elif ext in {"fastq", "fq"}:
+        with safeOpen(filename) as fp:
+            return sum([1 for _ in SeqIO.parse(fp, "fastq")])
+    else:
+        raise ValueError("Unrecognized format {}, expected FASTA or FASTQ".format(ext))
 
 
 def createIfNot(directory):
