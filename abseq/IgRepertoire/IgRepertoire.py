@@ -26,8 +26,9 @@ from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractU
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
+    writeListToFile, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
     createIfNot, safeOpen, detectFileFormat, countSeqs
+from abseq.versionManager import writeParams
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
