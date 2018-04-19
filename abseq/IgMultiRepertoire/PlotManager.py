@@ -82,8 +82,14 @@ class PlotManager:
             fp.write(name + '\n')
 
     def processComparisons(self, pairings, sampleNames, hasComparisons, outdir):
+        written = set()
         with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')
+
+            for sample in sampleNames:
+                if sample not in written:
+                    fp.write(sample + '\n')
+                    written.add(sample)
 
             if hasComparisons:
                 if pairings[-1][0] != '--compare':
@@ -94,8 +100,8 @@ class PlotManager:
                     for s in userSamples:
                         if s not in sampleNames:
                             raise ValueError("Unknown sample name {}, not one of {}".format(s, sampleNames))
-                    fp.write(','.join(userSamples) + '\n')
-
-            for sample in sampleNames:
-                fp.write(sample + '\n')
+                    samples = ','.join(userSamples)
+                    if samples not in written:
+                        fp.write(samples + '\n')
+                        written.add(samples)
 

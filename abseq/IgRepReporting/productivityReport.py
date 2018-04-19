@@ -55,20 +55,20 @@ def writeProdStats(cloneAnnot, sampleName, outdir):
 
     # percentage calculated from total sample size
     total_size = len(cloneAnnot)
+    if total_size:
+        res = {
+            'Productivity': ["Productive", "Unproductive", "Unproductive",  "Unproductive"],
+            'Reason': ["-", "Stopcodon", "Out-of-Frame", "Both"],
+            'Percentage': [100*float(prod_reads)/total_size,
+                           100*float(stopcod_inframe)/total_size,
+                           100*float(outframe_nostop)/total_size,
+                           100*float(both)/total_size
+                           ],
+            'Count': [prod_reads, stopcod_inframe, outframe_nostop, both]
+        }
 
-    res = {
-        'Productivity': ["Productive", "Unproductive", "Unproductive",  "Unproductive"],
-        'Reason': ["-", "Stopcodon", "Out-of-Frame", "Both"],
-        'Percentage': [100*float(prod_reads)/total_size,
-                       100*float(stopcod_inframe)/total_size,
-                       100*float(outframe_nostop)/total_size,
-                       100*float(both)/total_size
-                       ],
-        'Count': [prod_reads, stopcod_inframe, outframe_nostop, both]
-    }
-
-    df = pd.DataFrame.from_dict(res)
-    df.to_csv(os.path.join(outdir, sampleName + "_productivity.csv"))
+        df = pd.DataFrame.from_dict(res)
+        df.to_csv(os.path.join(outdir, sampleName + "_productivity.csv"))
 
 
 def writeGeneStats(cloneAnnot, name, chain, outputDir, suffix, stream=None):
