@@ -3,6 +3,7 @@ import os
 import numpy
 import pandas
 import Bio
+import datetime
 
 from subprocess import check_output, CalledProcessError
 
@@ -33,15 +34,16 @@ def writeParams(args, outDir):
 
     with open(filename, 'w') as out:
         out.write("AbSeq version: " + VERSION + "\n")
-        out.write("IgBLAST version: " + _get_software_version('igblast') + "\n")
-        out.write("FastQC version: " + _get_software_version('fastqc') + "\n")
-        out.write("Clustalo version: " + _get_software_version('clustalo') + "\n")
+        out.write("IMGT version - Database last modified time : " + _get_imgt_mod_date(args['database']) + "\n")
         merger = args.get("merger", None)
         if merger:
             out.write("{} version: ".format(merger) + _get_software_version(merger) + "\n")
+        out.write("IgBLAST version: " + _get_software_version('igblast') + "\n")
         out.write("pandas version: " + str(pandas.__version__) + "\n")
         out.write("numpy version: " + str(numpy.__version__) + "\n")
         out.write("biopy version: " + str(Bio.__version__) + "\n")
+        out.write("FastQC version: " + _get_software_version('fastqc') + "\n")
+        out.write("Clustalo version: " + _get_software_version('clustalo') + "\n")
         out.write("Executed AbSeq with the following parameters:\n")
         for key, val in args.items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
@@ -72,3 +74,10 @@ def _get_software_version(prog):
             return (retval.split("\n")[0]).split()[-1].lstrip("v")
     except (CalledProcessError, OSError):
         return "Not found"
+
+
+def _get_imgt_mod_date(fname):
+    fname = os.path.abspath(os.path.expandvars(fname))
+    if os.path.exists(fname):
+        return str(datetime.datetime.fromtimestamp(os.path.getmtime(fname)))
+    return "-"
