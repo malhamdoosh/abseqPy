@@ -372,7 +372,9 @@ def parseYAML(yamlFile):
                 if longArg == 'yaml':
                     raise Exception("YAMLception not allowed! Offending line: {}:{}".format(longArg, val))
                 argsList.append('--' + str(longArg))
-                argsList.append(str(val))
+                # some key has no value (e.g. -nfr4c is a 'boolean' flag)
+                if val is not None:
+                    argsList.append(str(val))
             outputArgs.append(argsList)
 
     if comparisonArg is not None:
