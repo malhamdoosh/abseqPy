@@ -420,7 +420,7 @@ class IgRepertoire:
         refinedCloneAnnotFile = os.path.join(outAuxDir, self.name + "_refined_clones_annot.h5")
         cloneSeqFile = os.path.join(outAuxDir, self.name + "_clones_seq.h5")
 
-        if not exists(refinedCloneAnnotFile):
+        if not exists(refinedCloneAnnotFile) or not exists(cloneSeqFile):
             if self.cloneAnnot is None:
                 self.annotateClones(outAuxDir)
             #             if self.trimmed:
@@ -449,6 +449,9 @@ class IgRepertoire:
 
             paramFile = writeParams(self.args, outResDir)
             printto(logger, "The analysis parameters have been written to " + paramFile)
+            # although self.cloneAnnot is already filtered,
+            # reapply filtering because vqstart might've changed post refinement
+            printto(logger, "Applying filtering criteria to refined datafames")
         else:
             printto(logger, "The refined clone annotation files were found and being loaded ... " +
                     os.path.basename(refinedCloneAnnotFile))
@@ -461,12 +464,13 @@ class IgRepertoire:
 
             # since we loaded it from the saved (old) HDF5 dataframes, we need to re-apply all filtering criteria
             printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
-            before = self.cloneAnnot.shape[0]
-            selectedRows = self._filterCloneAnnot(logger)
-            self.cloneAnnot = self.cloneAnnot[selectedRows]
-            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
-            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
-                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
+
+        before = self.cloneAnnot.shape[0]
+        selectedRows = self._filterCloneAnnot(logger)
+        self.cloneAnnot = self.cloneAnnot[selectedRows]
+        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
         # display statistics
         printto(logger, "Productivity report is being generated ... ")
