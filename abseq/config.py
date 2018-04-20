@@ -14,7 +14,7 @@ import platform
 #           ABSEQ's VERSION
 # ==========================================
 ABSEQROOT = os.path.abspath(os.path.dirname(__file__))
-VERSION = '1.1.13'
+VERSION = '1.1.14'
 
 # ====================================================================================
 #           ABSEQ's EXTERNAL DEPENDENCIES
