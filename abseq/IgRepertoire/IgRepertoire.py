@@ -268,7 +268,15 @@ class IgRepertoire:
                                      self.threads, self.merger, self.auxDir, stream=logger)
             self.readFile = mergedFastq
 
-    def annotateClones(self, outDirFilter=None):
+    def annotateClones(self, filterOutDir=None):
+        """
+        annotate clones from self.read using IgBLAST. self.cloneAnnot will be a dataframe
+        with annotated clones
+        :param filterOutDir: string.
+                filtered clones will be placed in this directory under the
+                name /filterOutDir/<self.name>_filtered_out_clones.txt
+        :return: None
+        """
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.resultDir, "annot")
@@ -336,14 +344,14 @@ class IgRepertoire:
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
-        outDirFilter = outAuxDir if outDirFilter is None else outDirFilter
+        filterOutDir = outAuxDir if filterOutDir is None else filterOutDir
         # Filter clones based on bitscore, alignLen, qStart, and sStart
         selectedRows = self._filterCloneAnnot(logger)
         filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
 
         if len(filteredIDs) > 0:
             filteredIDs = filteredIDs[['vgene', 'vstart', 'vqstart', 'bitscore', 'alignlen']]
-            filteredIDs.to_csv(os.path.join(outDirFilter, self.name + "_filtered_out_clones.txt"),
+            filteredIDs.to_csv(os.path.join(filterOutDir, self.name + "_filtered_out_clones.txt"),
                                sep="\t", header=True, index=True)
 
         retained = int(self.cloneAnnot.shape[0]) - len(filteredIDs)
