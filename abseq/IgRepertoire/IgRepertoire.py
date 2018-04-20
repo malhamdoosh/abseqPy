@@ -24,10 +24,11 @@ from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
 from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
     writeCountsCategoriesToFile, findUpstreamMotifs
 from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
-from abseq.config import FASTQC, RESULT_FOLDER, AUX_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
+from abseq.config import FASTQC, AUX_FOLDER, HDF_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeParams, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
+    writeListToFile, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
     createIfNot, safeOpen, detectFileFormat, countSeqs
+from abseq.versionManager import writeParams
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
 from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
@@ -171,13 +172,13 @@ class IgRepertoire:
 
         # directory creation
         outputDir = os.path.abspath(outdir)
+        self.hdfDir = os.path.join(outputDir, HDF_FOLDER, self.name) + os.path.sep
         self.auxDir = os.path.join(outputDir, AUX_FOLDER, self.name) + os.path.sep
-        self.resultDir = os.path.join(outputDir, RESULT_FOLDER, self.name) + os.path.sep
 
+        if not os.path.exists(self.hdfDir):
+            os.makedirs(self.hdfDir)
         if not os.path.exists(self.auxDir):
             os.makedirs(self.auxDir)
-        if not os.path.exists(self.resultDir):
-            os.makedirs(self.resultDir)
 
         self.threads = threads
         self.primer = primer
@@ -218,15 +219,15 @@ class IgRepertoire:
         # True of any of the following directories are already created. We need to distinguish this
         # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
         # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
-        self.warnOldDir = any(map(lambda x: exists(os.path.join(self.auxDir, x)),
+        self.warnOldDir = any(map(lambda x: exists(os.path.join(self.hdfDir, x)),
                                   ["abundance", "productivity", "diversity", "restriction_sites",
                                    "primer_specificity", 'utr5', 'secretion']))
 
         setupLogger(self.name, self.task, log)
-        writeParams(self.args, self.resultDir)
+        writeParams(self.args, self.auxDir)
         self._tasks = []
         self._setupTasks()
-        self._summaryFile = os.path.join(self.resultDir, "summary.txt")
+        self._summaryFile = os.path.join(self.auxDir, "summary.txt")
 
     def runFastqc(self):
         logger = logging.getLogger(self.name)
@@ -235,7 +236,7 @@ class IgRepertoire:
             printto(logger, "Fasta file extension detected, will not perform fastqc", LEVEL.WARN)
             return
 
-        outDir = os.path.join(self.resultDir, "fastqc")
+        outDir = os.path.join(self.auxDir, "fastqc")
 
         if not os.path.isdir(outDir):
             os.makedirs(outDir)
@@ -264,14 +265,22 @@ class IgRepertoire:
             self.readFile = self.readFile1
         else:
             mergedFastq = mergeReads(self.readFile1, self.readFile2,
-                                     self.threads, self.merger, self.auxDir, stream=logger)
+                                     self.threads, self.merger, self.hdfDir, stream=logger)
             self.readFile = mergedFastq
 
-    def annotateClones(self, outDirFilter=None):
+    def annotateClones(self, filterOutDir=None):
+        """
+        annotate clones from self.read using IgBLAST. self.cloneAnnot will be a dataframe
+        with annotated clones
+        :param filterOutDir: string.
+                filtered clones will be placed in this directory under the
+                name /filterOutDir/<self.name>_filtered_out_clones.txt
+        :return: None
+        """
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, "annot")
-        outAuxDir = os.path.join(self.auxDir, "annot")
+        outResDir = os.path.join(self.auxDir, "annot")
+        outAuxDir = os.path.join(self.hdfDir, "annot")
 
         if not os.path.isdir(outResDir):
             os.makedirs(outResDir)
@@ -302,7 +311,7 @@ class IgRepertoire:
 
             # Convert FASTQ file into FASTA format
             if self.format == 'fastq':
-                readFasta = fastq2fasta(self.readFile, self.auxDir, stream=logger)
+                readFasta = fastq2fasta(self.readFile, self.hdfDir, stream=logger)
             elif self.format == 'fasta':
                 # unzip the fasta file if need be
                 readFasta = gunzip(self.readFile)
@@ -335,14 +344,14 @@ class IgRepertoire:
         printto(logger, "Number of clones that are annotated is {0:,}".format(
                 int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
-        outDirFilter = outAuxDir if outDirFilter is None else outDirFilter
+        filterOutDir = outAuxDir if filterOutDir is None else filterOutDir
         # Filter clones based on bitscore, alignLen, qStart, and sStart
         selectedRows = self._filterCloneAnnot(logger)
         filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
 
         if len(filteredIDs) > 0:
             filteredIDs = filteredIDs[['vgene', 'vstart', 'vqstart', 'bitscore', 'alignlen']]
-            filteredIDs.to_csv(os.path.join(outDirFilter, self.name + "_filtered_out_clones.txt"),
+            filteredIDs.to_csv(os.path.join(filterOutDir, self.name + "_filtered_out_clones.txt"),
                                sep="\t", header=True, index=True)
 
         retained = int(self.cloneAnnot.shape[0]) - len(filteredIDs)
@@ -376,8 +385,8 @@ class IgRepertoire:
         # Estimate the IGV family abundance for each library
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, "abundance")
-        outAuxDir = os.path.join(self.auxDir, "abundance")
+        outResDir = os.path.join(self.auxDir, "abundance")
+        outAuxDir = os.path.join(self.hdfDir, "abundance")
 
         createIfNot(outResDir)
         createIfNot(outAuxDir)
@@ -405,8 +414,8 @@ class IgRepertoire:
         """
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, "productivity")
-        outAuxDir = os.path.join(self.auxDir, "productivity")
+        outResDir = os.path.join(self.auxDir, "productivity")
+        outAuxDir = os.path.join(self.hdfDir, "productivity")
 
         createIfNot(outResDir)
 
@@ -419,7 +428,7 @@ class IgRepertoire:
         refinedCloneAnnotFile = os.path.join(outAuxDir, self.name + "_refined_clones_annot.h5")
         cloneSeqFile = os.path.join(outAuxDir, self.name + "_clones_seq.h5")
 
-        if not exists(refinedCloneAnnotFile):
+        if not exists(refinedCloneAnnotFile) or not exists(cloneSeqFile):
             if self.cloneAnnot is None:
                 self.annotateClones(outAuxDir)
             #             if self.trimmed:
@@ -448,6 +457,9 @@ class IgRepertoire:
 
             paramFile = writeParams(self.args, outResDir)
             printto(logger, "The analysis parameters have been written to " + paramFile)
+            # although self.cloneAnnot is already filtered,
+            # reapply filtering because vqstart might've changed post refinement
+            printto(logger, "Applying filtering criteria to refined datafames")
         else:
             printto(logger, "The refined clone annotation files were found and being loaded ... " +
                     os.path.basename(refinedCloneAnnotFile))
@@ -460,12 +472,13 @@ class IgRepertoire:
 
             # since we loaded it from the saved (old) HDF5 dataframes, we need to re-apply all filtering criteria
             printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
-            before = self.cloneAnnot.shape[0]
-            selectedRows = self._filterCloneAnnot(logger)
-            self.cloneAnnot = self.cloneAnnot[selectedRows]
-            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
-            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
-                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
+
+        before = self.cloneAnnot.shape[0]
+        selectedRows = self._filterCloneAnnot(logger)
+        self.cloneAnnot = self.cloneAnnot[selectedRows]
+        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+        printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
         # display statistics
         printto(logger, "Productivity report is being generated ... ")
@@ -497,8 +510,8 @@ class IgRepertoire:
     def analyzeDiversity(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir,  "diversity")
-        outAuxDir = os.path.join(self.auxDir,  "diversity")
+        outResDir = os.path.join(self.auxDir, "diversity")
+        outAuxDir = os.path.join(self.hdfDir, "diversity")
 
         if self.cloneAnnot is None or self.cloneSeqs is None:
             # we analyze productive clones ONLY
@@ -541,8 +554,8 @@ class IgRepertoire:
         # TODO: parallelize this function to run faster
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, "restriction_sites")
-        outAuxDir = os.path.join(self.auxDir, "restriction_sites")
+        outResDir = os.path.join(self.auxDir, "restriction_sites")
+        outAuxDir = os.path.join(self.hdfDir, "restriction_sites")
 
         if not os.path.isdir(outResDir):
             os.makedirs(outResDir)
@@ -591,8 +604,8 @@ class IgRepertoire:
         raise NotImplementedError
         # logger = logging.getLogger(self.name)
         #
-        # outResDir = os.path.join(self.resultDir, "restriction_sites")
-        # outAuxDir = os.path.join(self.auxDir, "restriction_sites")
+        # outResDir = os.path.join(self.auxDir, "restriction_sites")
+        # outAuxDir = os.path.join(self.hdfDir, "restriction_sites")
         #
         # if not os.path.isdir(outResDir):
         #     os.makedirs(outResDir)
@@ -712,8 +725,8 @@ class IgRepertoire:
     def analyzeSecretionSignal(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, 'secretion')
-        outAuxDir = os.path.join(self.auxDir, 'secretion')
+        outResDir = os.path.join(self.auxDir, 'secretion')
+        outAuxDir = os.path.join(self.hdfDir, 'secretion')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
@@ -772,8 +785,8 @@ class IgRepertoire:
     def analyze5UTR(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, 'utr5')
-        outAuxDir = os.path.join(self.auxDir, 'utr5')
+        outResDir = os.path.join(self.auxDir, 'utr5')
+        outAuxDir = os.path.join(self.hdfDir, 'utr5')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
@@ -820,8 +833,8 @@ class IgRepertoire:
     def analyzePrimerSpecificity(self):
         logger = logging.getLogger(self.name)
 
-        outResDir = os.path.join(self.resultDir, 'primer_specificity')
-        outAuxDir = os.path.join(self.auxDir, 'primer_specificity')
+        outResDir = os.path.join(self.auxDir, 'primer_specificity')
+        outAuxDir = os.path.join(self.hdfDir, 'primer_specificity')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
@@ -872,7 +885,7 @@ class IgRepertoire:
     def analyzeSeqLen(self, klass=False):
         logger = logging.getLogger(self.name)
 
-        outResdir = os.path.join(self.resultDir, 'annot')
+        outResdir = os.path.join(self.auxDir, 'annot')
 
         printto(logger, "Sequence {}length distribution is being calculated ... ".format('class ' if klass else ''))
 

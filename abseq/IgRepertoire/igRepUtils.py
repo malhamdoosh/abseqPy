@@ -4,7 +4,6 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
-import argparse
 import gzip
 import shutil
 import glob
@@ -23,7 +22,7 @@ from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 
-from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, VERSION, LEEHOM
+from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, LEEHOM
 from abseq.logger import printto, LEVEL
 
 
@@ -728,35 +727,6 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
             records = map(lambda x: recordsAll[x], ids)
             out = os.path.join(filesDir, prefix + 'part' + str(i + 1) + ext)
             SeqIO.write(records, out, 'fasta')
-
-
-def writeParams(args, outDir):
-    """
-    Writes the parameters used for analysis into analysis.params
-
-    :param args: argparse.Namespace or dict type
-            argparse namespace object, or a dict
-
-    :param outDir: string
-            output directory where analysis.params reside
-
-    :return: string
-            the filename that was produced in outDir
-    """
-    if isinstance(args, argparse.Namespace):
-        args = vars(args)
-    elif isinstance(args, dict):
-        pass
-    else:
-        raise Exception("Unsupported parameter type {}, expecting argparse.Namespace or dict".format(type(args)))
-
-    filename = os.path.join(outDir, "analysis.params")
-    with open(filename, 'w') as out:
-        out.write("AbSeq VERSION: " + VERSION + "\n")
-        out.write("Executed AbSeq with the following parameters:\n")
-        for key, val in args.items():
-            out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
-    return os.path.basename(filename)
 
 
 def writeSummary(filename, key, value):

@@ -2,7 +2,7 @@ import os
 
 from multiprocessing import Queue
 
-from abseq.config import RESULT_FOLDER
+from abseq.config import AUX_FOLDER
 from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
@@ -22,7 +22,7 @@ class IgMultiRepertoire:
                 arg = parseArgs(yamlArg)
                 arg.outdir = os.path.abspath(arg.outdir) + os.path.sep
                 outdirs.add(arg.outdir)
-                arg.log = os.path.join(arg.outdir, RESULT_FOLDER, arg.name, arg.name + ".log")
+                arg.log = os.path.join(arg.outdir, AUX_FOLDER, arg.name, arg.name + ".log")
                 sampleNames.append(arg.name)
                 self.buffer.append(IgRepertoire(**vars(arg)))
             if len(outdirs) == 1:
@@ -33,7 +33,7 @@ class IgMultiRepertoire:
         else:
             outdir = args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
-            args.log = os.path.join(args.outdir, RESULT_FOLDER, args.name, "{}.log".format(args.name))
+            args.log = os.path.join(args.outdir, AUX_FOLDER, args.name, "{}.log".format(args.name))
             self.buffer.append(IgRepertoire(**vars(args)))
             self.plotManager.processSingleInput(args.name, outdir)
         self.sampleCount = len(self.buffer)
