@@ -121,8 +121,8 @@ FR4_CONSENSUS_DNA = {
 GB = (1024.**3)
 
 # directory naming
-RESULT_FOLDER = 'report'
 AUX_FOLDER = 'auxiliary'
+HDF_FOLDER = 'hdfs'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
 if sys.platform == 'darwin' or platform.system() == "Windows":
