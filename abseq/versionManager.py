@@ -34,7 +34,8 @@ def writeParams(args, outDir):
 
     with open(filename, 'w') as out:
         out.write("AbSeq version: " + VERSION + "\n")
-        out.write("IMGT version - Database last modified time : " + _get_imgt_mod_date(args['database']) + "\n")
+        out.write("IMGT version - IMGT database directory last modified time : "
+                  + _get_imgt_mod_date(args['database']) + "\n")
         merger = args.get("merger", None)
         if merger:
             out.write("{} version: ".format(merger) + _get_software_version(merger) + "\n")

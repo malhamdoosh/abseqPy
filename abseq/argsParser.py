@@ -174,6 +174,8 @@ def parseCommandLineArguments(arguments=None):
                                      prog="AbSeq", add_help=False)
     # required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
+    filtering = parser.add_argument_group('filtering criteria', 'Reads that do not satisfy the following criteria'
+                                                                ' will be filtered out for the rest of the analysis.')
     optional.add_argument('-f1', '--file1', dest="f1", help="path to sequence file 1. "
                                                             "Can only be omitted if -y/--yaml is specified",
                           default=None)
@@ -209,25 +211,25 @@ def parseCommandLineArguments(arguments=None):
                                                       " a number or inf to retain all clones [default=100]",
                           default=None)
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
-    optional.add_argument('-b', '--bitscore', help="filtering criterion (V gene bitscore):"
+    filtering.add_argument('-b', '--bitscore', help="filtering criterion (V gene bitscore):"
                                                    " Bitscore range (inclusive) to apply on V gene."
                                                    " V genes with bitscores that do not fall within this range"
                                                    " will be filtered out."
                                                    " Accepted format: num1-num2 [default=[0, inf)]", default=None)
-    optional.add_argument('-ss', '--sstart', help="filtering criterion (Subject V gene start index):"
-                                                  " Filters out sequences with subject start index (of the V gene)"
-                                                  " that do not fall within this start range (inclusive)."
-                                                  " Accepted format: num1-num2 [default=[1, inf)]",
-                          default=None)
-    optional.add_argument('-qs', '--qstart', help="filtering criterion (Query V gene start index):"
-                                                  " Filters out sequences with query start index (of the V gene)"
-                                                  " that do not fall within this start range (inclusive)."
-                                                  " Accepted format: num1-num2 [default=[1, inf)]",
-                          default=None)
-    optional.add_argument('-al', '--alignlen', help="filtering criterion (Sequence alignment length):"
-                                                    " Sequences that do not fall within this alignment length range"
-                                                    " (inclusive) are filtered."
-                                                    " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+    filtering.add_argument('-ss', '--sstart', help="filtering criterion (Subject V gene start index):"
+                                                   " Filters out sequences with subject start index (of the V gene)"
+                                                   " that do not fall within this start range (inclusive)."
+                                                   " Accepted format: num1-num2 [default=[1, inf)]",
+                           default=None)
+    filtering.add_argument('-qs', '--qstart', help="filtering criterion (Query V gene start index):"
+                                                   " Filters out sequences with query start index (of the V gene)"
+                                                   " that do not fall within this start range (inclusive)."
+                                                   " Accepted format: num1-num2 [default=[1, inf)]",
+                           default=None)
+    filtering.add_argument('-al', '--alignlen', help="filtering criterion (Sequence alignment length):"
+                                                     " Sequences that do not fall within this alignment length range"
+                                                     " (inclusive) are filtered."
+                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
     optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="query sequence's starting index (1-based indexing). Subsequence before specified "
                                "index is ignored during analysis. By default, each individual sequence's "
