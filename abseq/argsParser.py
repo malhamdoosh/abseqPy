@@ -174,7 +174,8 @@ def parseCommandLineArguments(arguments=None):
                                      prog="AbSeq", add_help=False)
     # required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    filtering = parser.add_argument_group('filtering criteria')
+    filtering = parser.add_argument_group('filtering criteria', 'Reads that do not satisfy the following criteria'
+                                                                ' will be filtered out for the rest of the analysis.')
     optional.add_argument('-f1', '--file1', dest="f1", help="path to sequence file 1. "
                                                             "Can only be omitted if -y/--yaml is specified",
                           default=None)
