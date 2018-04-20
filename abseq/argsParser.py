@@ -13,6 +13,7 @@ import yaml
 from numpy import Inf
 from Bio import SeqIO
 from os.path import abspath
+from copy import deepcopy
 
 from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
 from abseq.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, DEFAULT_TASK
@@ -43,7 +44,7 @@ def parseArgs(arguments=None):
     # otherwise, it could be missing if -y/--yaml was provided
     if args.f1 is None or not os.path.exists(args.f1):
         if arguments is not None:
-            parser.error("-f1 file not found!")
+            parser.error("-f1 {} not found!".format(args.f1))
         elif args.yaml is None:
             parser.error("Either one of -f1/--file1 or -y/--yaml must be specified!")
     else:
@@ -318,26 +319,63 @@ def printUsage(parser, additional_msg=None):
     sys.exit(0)
 
 
-def parseYAML(yamlFile, check=True):
+def parseYAML(yamlFile):
     """
-    parses each document within the yaml file and returns either a converted list of list of strings (in tokens) or
-    an iterable of yaml dictionary
-    :param yamlFile: string. Path to YAML
-    :param check: bool. Check for funky arguments (check for recursive yaml key:value)
-    :return: list of list of tokens / iterable of dictionaries and a bool indicating if there's a comparison key value
+    returns a tuple. The list of lists is guaranteed to have the 'compare' document last if it exists within that list.
+    Use the second value of the tuple to check if 'compare' has been specified.
+
+    :param yamlFile: string
+                path to yaml file
+    :return: tuple (a,b)
+                a is a list of lists, each nested list is an individual sample's args based off the YAML config file
+                b is a boolean informing whether or not the 'compare' key was found in the YAML file. i.e., if the user
+                wants to compare samples.
     """
+    DEFAULTS_KEY = 'defaults'
+    COMPARE_KEY = 'compare'
     with open(yamlFile) as fp:
         contents = fp.read()
-    output = []
-    compare = False
+    # this will contain lists that have long args followed by their values, eg:
+    # [ ['--file1', '/path/to/f1', '--merger', 'leehom', ...], ['--file1', 'path/', ...], ...]
+    outputArgs = []
+    comparisonArg = None
+
+    defaults = {}
     for doc in yaml.load_all(contents):
-        docList = []
-        for key, value in doc.items():
-            if str(key) == 'yaml' and check:
-                raise ValueError("yaml keyword (with value {}) detected in YAML file, not allowed.".format(value))
-            docList.append("--" + str(key))
-            docList.append(str(value))
-            if str(key) == 'compare':
-                compare = True
-        output.append(docList)
-    return output, compare
+        if DEFAULTS_KEY in doc:
+            # make sure the only key in the 'defaults' document is 'defaults'
+            if len(doc) != 1:
+                raise Exception("Default args document expects one key:value pair, got {} instead".format(len(doc)))
+            defaults = doc[DEFAULTS_KEY]
+
+    for doc in yaml.load_all(contents):
+        # if this doc was a comparison doc, record it and store it away for later use
+        if COMPARE_KEY in doc:
+            # make sure there's only one key:value for 'compare' key
+            if len(doc) != 1:
+                raise Exception("Compare document expects one key:value pair, got {} instead".format(len(doc)))
+            comparisonArg = ['--compare', str(doc[COMPARE_KEY])]
+        # by the way, don't worry about arg documents having the DEFAULTS_KEY within them because the for loop
+        # that's been constructing the defaults dict would've raised an exception
+        elif DEFAULTS_KEY not in doc:
+            # create a fresh copy of "defaults" filled in with, wait for it - default arg values.
+            args = deepcopy(defaults)
+            # doc is something like:
+            # {'file2': 'fastq/IgGR2_BNJYK_TAAGGCGA-CTCGTA_L001_R2.fastq.gz',
+            #  'file1': 'fastq/IgGR2_BNJYK_TAAGGCGA-CTCGTA_L001_R1.fastq.gz',
+            #  'name': 'IgGR2'}
+            for longArg, val in doc.items():
+                # by doing this, we override what's in args (from 'defaults', if present)
+                args[longArg] = val
+            argsList = []
+            for longArg, val in args.items():
+                if longArg == 'yaml':
+                    raise Exception("YAMLception not allowed! Offending line: {}:{}".format(longArg, val))
+                argsList.append('--' + str(longArg))
+                argsList.append(str(val))
+            outputArgs.append(argsList)
+
+    if comparisonArg is not None:
+        outputArgs.append(comparisonArg)
+        return outputArgs, True
+    return outputArgs, False
