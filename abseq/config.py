@@ -122,7 +122,7 @@ GB = (1024.**3)
 
 # directory naming
 AUX_FOLDER = 'auxiliary'
-HDF_FOLDER = 'hdfs'
+HDF_FOLDER = 'hdf'
 
 # sorry darwin people, you need psutil because sysconf can't locate 'sc_phys_pages'
 if sys.platform == 'darwin' or platform.system() == "Windows":
