@@ -39,9 +39,9 @@ def annotateClonotypes(cloneSeqs, removeNone=True):
         for region in _REGIONS:
             regionAA = getattr(row, region)
             variableAA += regionAA
-            if regionAA == 'None':
+            if regionAA == 'None' or regionAA == '':
                 badAA = True
-            if not (removeNone and regionAA == "None"):
+            if not (removeNone and (regionAA == "None" or regionAA == "")):
                 clonoTypes[geneName][region][regionAA] += 1
         if not (badAA and removeNone):
             clonoTypes[geneName]['v'][variableAA] += 1
