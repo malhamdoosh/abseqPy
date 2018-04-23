@@ -153,10 +153,10 @@ def parseArgs(arguments=None):
     #                      Ranges for query, subject start / bitscore / align len filters
     # --------------------------------------------------------------------------------------------------------
     # setting default value of ranges if not provided, else extract the string ranges provided
-    args.sstart = [1, Inf] if args.sstart is None else extractRanges(args.sstart)[0]
+    args.sstart = [1, 3] if args.sstart is None else extractRanges(args.sstart)[0]
     args.qstart = [1, Inf] if args.qstart is None else extractRanges(args.qstart)[0]
-    args.alignlen = [0, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
-    args.bitscore = [0, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
+    args.alignlen = [250, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
+    args.bitscore = [300, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
 
     args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
@@ -215,21 +215,21 @@ def parseCommandLineArguments(arguments=None):
                                                    " Bitscore range (inclusive) to apply on V gene."
                                                    " V genes with bitscores that do not fall within this range"
                                                    " will be filtered out."
-                                                   " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+                                                   " Accepted format: num1-num2 [default=300-inf]", default=None)
     filtering.add_argument('-ss', '--sstart', help="filtering criterion (Subject V gene start index):"
                                                    " Filters out sequences with subject start index (of the V gene)"
                                                    " that do not fall within this start range (inclusive)."
-                                                   " Accepted format: num1-num2 [default=[1, inf)]",
+                                                   " Accepted format: num1-num2 [default=1-3]",
                            default=None)
     filtering.add_argument('-qs', '--qstart', help="filtering criterion (Query V gene start index):"
                                                    " Filters out sequences with query start index (of the V gene)"
                                                    " that do not fall within this start range (inclusive)."
-                                                   " Accepted format: num1-num2 [default=[1, inf)]",
+                                                   " Accepted format: num1-num2 [default=1-inf]",
                            default=None)
     filtering.add_argument('-al', '--alignlen', help="filtering criterion (Sequence alignment length):"
                                                      " Sequences that do not fall within this alignment length range"
                                                      " (inclusive) are filtered."
-                                                     " Accepted format: num1-num2 [default=[0, inf)]", default=None)
+                                                     " Accepted format: num1-num2 [default=250-inf]", default=None)
     optional.add_argument('-qo', '--qoffset', dest="actualqstart",
                           help="query sequence's starting index (1-based indexing). Subsequence before specified "
                                "index is ignored during analysis. By default, each individual sequence's "
