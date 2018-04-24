@@ -521,14 +521,8 @@ class IgRepertoire:
                             " skipping diversity analysis.".format(self.name), LEVEL.WARN)
             return
 
-        if not os.path.isdir(outResDir):
-            os.makedirs(outResDir)
-
-        if not os.path.isdir(outAuxDir):
-            os.makedirs(outAuxDir)
-        elif self.warnOldDir:
-            printto(logger, "WARNING: remove the 'diversity' directory if you changed the filtering criteria.",
-                    LEVEL.WARN)
+        createIfNot(outResDir)
+        createIfNot(outAuxDir)
 
         gc.collect()
 
