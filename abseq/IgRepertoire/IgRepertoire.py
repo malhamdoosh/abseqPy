@@ -476,6 +476,9 @@ class IgRepertoire:
         printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
                 .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
+        # update number of filtered reads "POST REFINEMENT"
+        writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
+
         # display statistics
         printto(logger, "Productivity report is being generated ... ")
         generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outResDir, stream=logger)
