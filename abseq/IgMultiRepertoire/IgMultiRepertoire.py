@@ -1,9 +1,9 @@
 import os
 
-from multiprocessing import Queue
+from multiprocessing import Queue, Lock
 
 from abseq.config import AUX_FOLDER
-from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException
+from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool
 from abseq.IgMultiRepertoire.PlotManager import PlotManager
 from abseq.IgRepertoire.IgRepertoire import IgRepertoire
 from abseq.argsParser import parseYAML, parseArgs
@@ -61,8 +61,11 @@ class IgMultiRepertoire:
 
     def rockNRoll(self):
 
+        # resource pool - initially all consumed by repertoire objects
+        resourcePool = ResourcePool(0)
+
         # initialize workers
-        workers = [AbSeqWorker(rep, self.result) for rep in self.buffer]
+        workers = [AbSeqWorker(rep, self.result, resourcePool) for rep in self.buffer]
 
         try:
             # start workers
