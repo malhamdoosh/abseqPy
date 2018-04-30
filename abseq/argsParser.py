@@ -210,6 +210,10 @@ def parseCommandLineArguments(arguments=None):
                                                       "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
                                                       " a number or inf to retain all clones [default=100]",
                           default=None)
+    optional.add_argument('-dc', '--detailedComposition', help="segregate each composition logo plot by IGV gene name."
+                                                               " This shows a composition logo for each IGV gene"
+                                                               " individually. Otherwise, composition logos will"
+                                                               " be a collection of all IGV genes", action='store_true')
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     filtering.add_argument('-b', '--bitscore', help="filtering criterion (V gene bitscore):"
                                                    " Bitscore range (inclusive) to apply on V gene."
