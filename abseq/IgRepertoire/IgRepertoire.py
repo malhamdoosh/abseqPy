@@ -60,7 +60,8 @@ class IgRepertoire:
     """
     def __init__(self, f1, f2=None, name=None, fmt=None, chain='hv', seqtype='dna', domainSystem='imgt',
                  merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
-                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, actualqstart=-1, trim5=0, trim3=0,
+                 sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, detailedComposition=False,
+                 actualqstart=-1, trim5=0, trim3=0,
                  fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
                  upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=DEFAULT_TASK, log=None,
                  yaml=None):
@@ -112,6 +113,8 @@ class IgRepertoire:
                                 diversity/<sample_name>_clonotypes_<clonelimit>_[over|under].csv.gz
                                 This csv file contains CDR3 AA sequences with their counts. Also accepts
                                 np.Inf to retain all clones
+        :param detailedComposition: bool
+                                should composition logos be plotted with IGV gene segregation?
         :param actualqstart: int
                                 number of nucleotides to ignore at the beginning of the sequence before
                                 V germline starts aligning. Leave this as -1 to let AbSeq automatically infer
@@ -196,6 +199,9 @@ class IgRepertoire:
 
         if task in ['rsa', 'rsasimple']:
             self.sitesFile = sites
+
+        if task in ['diversity', 'all']:
+            self.detailedComposition = detailedComposition
 
         self.actualQstart = actualqstart
 
@@ -535,7 +541,7 @@ class IgRepertoire:
         clonoTypes = annotateClonotypes(self.cloneSeqs, removeNone=True)
 
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outResDir, self.clonelimit,
-                                threads=self.threads, stream=logger)
+                                threads=self.threads, segregate=self.detailedComposition, stream=logger)
 
         # todo: remove this for now - it's unoptimized and extremely slow
         # writeClonotypeDiversityRegionAnalysis(self.cloneSeqs, self.name, outResDir, stream=logger)
