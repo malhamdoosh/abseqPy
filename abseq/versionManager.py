@@ -80,5 +80,5 @@ def _get_software_version(prog):
 def _get_imgt_mod_date(fname):
     fname = os.path.abspath(os.path.expandvars(fname))
     if os.path.exists(fname):
-        return str(datetime.datetime.fromtimestamp(os.path.getmtime(fname)))
+        return str(datetime.datetime.fromtimestamp(os.path.getmtime(fname)).replace(microsecond=0))
     return "-"
