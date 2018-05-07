@@ -41,6 +41,7 @@ from abseq.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
 from abseq.IgRepAuxiliary.restrictionAuxiliary import findHits, \
     findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
 from abseq.IgRepReporting.restrictionReport import generateOverlapFigures
+from abseq.utilities import hasLargeMem
 
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
@@ -371,7 +372,10 @@ class IgRepertoire:
 
         # generate plot of clone sequence length distribution
         seqLengths = defaultdict(int)
-        records = SeqIO.index(gunzip(self.readFile), self.format)
+        if hasLargeMem():
+            records = SeqIO.to_dict(SeqIO.parse(gunzip(self.readFile), self.format))
+        else:
+            records = SeqIO.index(gunzip(self.readFile), self.format)
         for id_ in self.cloneAnnot.index:
             seqLengths[len(records[id_])] += 1
         count = Counter(seqLengths)
@@ -649,7 +653,7 @@ class IgRepertoire:
         #     siteHitsSeqsIGV[site] = set()
         # germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
         # procSeqs = 0
-        # #         if (MEM_GB > 20):
+        # #         if hasLargeMem():
         # #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
         # #                   (use safeOpen from IgRepertoire.utils) if not sure
         # #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))

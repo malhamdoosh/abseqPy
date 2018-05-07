@@ -16,7 +16,8 @@ from datetime import timedelta
 
 from abseq.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
 from abseq.argsParser import parseArgs
-from abseq.config import VERSION, PriorityPath
+from abseq.config import VERSION
+from abseq.utilities import PriorityPath
 from abseq.logger import formattedTitle
 
 warnings.simplefilter(action="ignore", category=FutureWarning)

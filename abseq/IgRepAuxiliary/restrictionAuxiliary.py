@@ -14,7 +14,7 @@ from math import ceil
 from pandas.core.frame import DataFrame
 
 from abseq.IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
-from abseq.config import MEM_GB
+from abseq.utilities import hasLargeMem
 from abseq.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
 from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
 from abseq.logger import printto, LEVEL
@@ -88,7 +88,7 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
         procCounter = ProcCounter(noSeqs, desc="sequences", stream=stream)
         if threads > totalTasks:
             threads = totalTasks     
-        if MEM_GB < 16:
+        if not hasLargeMem():
             threads = 2  
         # Initialize workers
         for i in range(threads):

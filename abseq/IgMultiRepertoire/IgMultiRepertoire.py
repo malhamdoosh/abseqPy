@@ -1,6 +1,6 @@
 import os
 
-from multiprocessing import Queue, Lock
+from multiprocessing import Queue
 
 from abseq.config import AUX_FOLDER
 from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool

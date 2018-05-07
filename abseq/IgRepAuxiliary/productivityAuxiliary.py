@@ -19,8 +19,8 @@ from math import ceil
 from abseq.IgRepAuxiliary.RefineWorker import RefineWorker
 from abseq.IgRepertoire.igRepUtils import gunzip
 from abseq.IgRepAuxiliary.IgBlastWorker import getAnnotationFields
-from abseq.config import MEM_GB
 from abseq.logger import LEVEL, printto
+from abseq.utilities import hasLargeMem
 
 
 def loadRefineFlagInfo():
@@ -82,7 +82,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         procCounter = ProcCounter(noSeqs, stream=stream)
         if threads > totalTasks:
             threads = totalTasks
-        if MEM_GB < 16:
+        if not hasLargeMem():
             threads = 2
             # Initialize workers 
         workers = []
@@ -331,7 +331,7 @@ def _defaultCounter():
 #         vh = ''
 #         sys.stdout.flush()
 #         # process clones from the FASTA file
-#         if (MEM_GB > 20):
+#         if hasLargeMem():
 #             TODO: need to make sure igRep.readFile1 is unzipped (use safeOpen from igutils if not sure)
 #             records = SeqIO.to_dict(SeqIO.parse(igRep.readFile1, igRep.format))
 #         else:
