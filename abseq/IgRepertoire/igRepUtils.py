@@ -92,7 +92,10 @@ def gunzip(gzipFile):
     """
     Given a gzipped file, create a similar file that's uncompressed. If the file is not gzipped, do nothing.
     The naming scheme follows the original provided path to file, but with .gz suffix stripped
-    The original gzipped file stays as a zipped file
+    The original gzipped file stays as a zipped file.
+
+    NOTE: WILL NOT DECOMPRESS IF THE DECOMPRESSED FILE IS FOUND
+
     :param gzipFile: file(filename) to be unzipped
     :return: new filename of uncompressed file, or if file was originally not gzipped, return same name as argument
     """
@@ -101,8 +104,10 @@ def gunzip(gzipFile):
         return gzipFile
 
     newFileName = gzipFile.replace(".gz", "")
-    with gzip.open(gzipFile, 'rb') as f_in, open(newFileName, 'wb') as f_out:
-        shutil.copyfileobj(f_in, f_out)
+    # only decompress if the file is not found
+    if not os.path.exists(newFileName):
+        with gzip.open(gzipFile, 'rb') as f_in, open(newFileName, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
     return newFileName
 
 

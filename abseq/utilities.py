@@ -42,5 +42,5 @@ class PriorityPath:
             os.environ.update(self.old_env)
 
 
-def hasLargeMem():
-    return MEM_GB > 16
+def hasLargeMem(size=16):
+    return MEM_GB > size
