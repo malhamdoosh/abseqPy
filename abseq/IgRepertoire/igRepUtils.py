@@ -22,8 +22,9 @@ from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 
-from abseq.config import CLUSTALOMEGA, MEM_GB, IGBLASTN, IGBLASTP, LEEHOM
+from abseq.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM
 from abseq.logger import printto, LEVEL
+from abseq.utilities import hasLargeMem
 
 
 def detectFileFormat(fname, noRaise=False):
@@ -713,7 +714,7 @@ def splitFastaFile(fastaFile, totalFiles, seqsPerFile, filesDir,
         printto(stream, "\tThe clones are distributed into multiple workers .. ")
         if not os.path.isdir(filesDir):
             os.makedirs(filesDir)
-        if MEM_GB > 20:
+        if hasLargeMem():
             with safeOpen(fastaFile) as fp:
                 recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
             queryIds = recordsAll.keys()

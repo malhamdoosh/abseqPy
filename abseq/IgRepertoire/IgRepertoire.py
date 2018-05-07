@@ -649,7 +649,7 @@ class IgRepertoire:
         #     siteHitsSeqsIGV[site] = set()
         # germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
         # procSeqs = 0
-        # #         if (MEM_GB > 20):
+        # #         if hasLargeMem():
         # #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
         # #                   (use safeOpen from IgRepertoire.utils) if not sure
         # #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))

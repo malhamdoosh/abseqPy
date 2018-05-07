@@ -20,7 +20,7 @@ from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
 from abseq.IgRepReporting.igRepPlots import plotDist, plotVenn
 from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
 from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
-from abseq.config import MEM_GB
+from abseq.utilities import hasLargeMem
 from abseq.logger import printto, LEVEL
 
 
@@ -42,7 +42,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
         resultsQueue = Queue()
         procCounter = ProcCounter(noSeqs, stream=stream)
         threads = min(threads, totalTasks)
-        if MEM_GB < 16:
+        if not hasLargeMem():
             threads = 2
         for _ in range(threads):
             w = PrimerWorker(procCounter, fr4cut, trim5end, trim3end, actualQstart, end5,
