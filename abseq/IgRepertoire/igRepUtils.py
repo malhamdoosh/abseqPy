@@ -180,7 +180,7 @@ def runIgblastn(blastInput, chain, threads=8,
     command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem,
                                   blastInput, blastOutput, threads, protein=False, stream=stream)
     try:
-        check_output([command.split()[0]] + command.split()[1:])
+        check_output(command.split())
     except CalledProcessError as e:
         printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
                 LEVEL.CRIT)
@@ -208,7 +208,7 @@ def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA',
     command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, blastOutput,
                                   threads, protein=True, vOnly=True, stream=stream)
     try:
-        check_output([command.split()[0]] + command.split()[1:])
+        check_output(command.split())
     except CalledProcessError as e:
         printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
                 LEVEL.CRIT)
@@ -512,10 +512,10 @@ def alignListOfSeqs(signals, outDir, threads, stream=None):
     for i in range(len(signals)):
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
-    clustalw = ClustalwCommandline(CLUSTALOMEGA, infile=tempSeq,
-                                   outfile=tempAlign)
-    stdout, stderr = clustalw()
-
+    cmd = "{exe} -i {infile} -o {outfile} --threads={threads} --outfmt=clustal".format(
+        exe=CLUSTALOMEGA, infile=tempSeq, outfile=tempAlign, threads=threads
+    )
+    check_output(cmd.split())
     alignment = AlignIO.read(tempAlign, 'clustal')
     alignedSeq = []
     for rec in alignment:
