@@ -5,9 +5,9 @@
     Changes log: check git commits. 
 '''
 
-import sys
 import os
 import gzip
+import multiprocessing
 
 from collections import Counter, defaultdict
 
@@ -70,8 +70,9 @@ def generateSpectraTypePlots(spectraTypes, name, outDir, stream=None):
 
 
 def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, threads=2, segregate=False, stream=None):
-    generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, threads=threads, seqType="protein",
-                           segregate=segregate, stream=stream)
+    # create Germline gene level composition logos
+    compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=threads, detailed=segregate, stream=stream)
+    generateSeqMotifs(flatClonoTypes, name, outDir, threads=threads, stream=stream)
     generateRarefactionPlots(flatClonoTypes, name, outDir, stream=stream)
     printto(stream, "The diversity of the library is being estimated ... ")
     calcDiversity(flatClonoTypes, name, outDir)
@@ -79,11 +80,12 @@ def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, threads=2, segre
 
 # todo: diversity indices
 def calcDiversity(clonoTypes, name, outDir):
-    regions = clonoTypes.keys()
-    regions.sort()
-    rarenessCounts = {}
-    for region in regions:
-        rarenessCounts[region] = Counter(clonoTypes[region].values())
+    # regions = clonoTypes.keys()
+    # regions.sort()
+    # rarenessCounts = {}
+    # for region in regions:
+    #     rarenessCounts[region] = Counter(clonoTypes[region].values())
+    pass
 
 
 def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
@@ -179,22 +181,93 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                         'Percent Recapture of CDRs and V Domains', stream=stream)
 
 
-def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, threads=2,
-                           seqType="protein",
-                           segregate=False,
-                           stream=None):
+def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detailed=False, stream=None):
     """
-    Create motif plots and composition logos for all FR and CDR regions
+
+    :param name: string
+                sample name
 
     :param clonoTypes: dict
-                    dict with key for each V germline, each having keys of FR / CDR region,
-                    which in turn, each having a value of Counter() where the AA sequences are tallied
+    dict with key for each V germline, each having keys of FR / CDR region,
+    which in turn, each having a value of Counter() where the AA sequences are tallied
+    For example:
+    {
+        'IGHV3-3': { 'FR1': Counter({"FGWSG": 32, ...}),  'CDR1': Counter(...) },
+        'IGHV2-1': { ... }
+    }
+
+    :param flatClonoTypes: dict
+                    dict with keys of FR / CDR region, each having a value of Counter() where the
+                    AA sequences are tallied
                     For example:
                     {
-                        'IGHV3-3': { 'FR1': Counter({"FGWSG": 32, ...}),  'CDR1': Counter(...) },
-                        'IGHV2-1': { ... }
+                        'FR1': Counter({"FGWSG": 32, ...}),
+                        'CDR1': Counter(...)
                     }
 
+    :param outDir: string
+
+    :param threads: int
+
+    :param detailed: bool
+                    segregate composition logo plots based on IGV gene, FR and CDR (all genes combined) composition
+                    logos will still be plotted. (If set to false, only FR and CDR composition logos)
+
+    :param stream: stream object
+                    output stream
+    :return:
+    """
+
+    logosFolder = os.path.join(outDir, 'composition_logos')
+    createIfNot(logosFolder)
+    printto(stream, "Generating composition logos ...")
+    if detailed:
+        argBuffer = []
+        for vgerm in clonoTypes:
+            regions = clonoTypes[vgerm].keys()
+            regions.sort()
+            for region in regions:
+                if region == 'v':
+                    continue
+                printto(stream, "\tbuffering {} for {}".format(region, vgerm))
+                clonoType = clonoTypes[vgerm][region]
+                seqs = clonoType.keys()
+                weights = clonoType.values()
+
+                regionDirectory = os.path.join(logosFolder, region.upper())
+                createIfNot(regionDirectory)
+                filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.png"
+                                        .format(vgerm.replace(os.path.sep, '_')))
+                argBuffer.append((seqs, weights, region, filename))
+
+        printto(stream, "Asynchronously generating composition logos from buffer ...")
+        pool = multiprocessing.Pool(processes=threads)
+        # Generate cumulative sequence logos using Toby's approach
+        res = [pool.apply_async(generateCumulativeLogo, args=arg) for arg in argBuffer]
+        [p.get() for p in res]  # join processes
+        pool.close()
+        pool.join()
+        printto(stream, "Completed composition logos for IGV families")
+
+    # composition logo for a region(CDR,FR) as a combination of all IGV - i.e. not segregated
+    regions = flatClonoTypes.keys()     # combined AA counts(V family) of each region into one sum
+    regions.sort()
+    for region in regions:
+        if region == 'v':
+            continue
+        clonoType = flatClonoTypes[region]
+        seqs = clonoType.keys()
+        weights = clonoType.values()
+
+        regionDirectory = os.path.join(logosFolder, region.upper())
+        createIfNot(regionDirectory)
+        filename = os.path.join(regionDirectory, name + "_cumulative_logo.png")
+        generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
+
+
+def generateSeqMotifs(flatClonoTypes, name, outDir, threads=2, stream=None):
+    """
+    Create motif plots for FR and CDR regions
     :param flatClonoTypes: dict
                     dict with keys of FR / CDR region, each having a value of Counter() where the
                     AA sequences are tallied
@@ -213,73 +286,52 @@ def generateSeqLogosMotifs(clonoTypes, flatClonoTypes, name, outDir, threads=2,
     :param threads: int
                     number of threads to use
 
-    :param seqType: string
-                    dna or protein
-
-    :param segregate: bool
-                    segregate composition logo plots based on IGV gene, FR and CDR (all genes combined) composition
-                    logos will still be plotted. (If set to false, only FR and CDR composition logos)
-
     :param stream: stream object
                     output stream
     :return: None
     """
 
-    logosFolder = os.path.join(outDir, 'composition_logos')
-    createIfNot(logosFolder)
     motifsFolder = os.path.join(outDir, 'motifs')
     createIfNot(motifsFolder)
 
-    printto(stream, seqType + " sequence logos are being generated .... ")
+    printto(stream, "Generating motifs ...")
 
-    # create Germline gene level composition logos
-    if segregate:
-        for vgerm in clonoTypes:
-            regions = clonoTypes[vgerm].keys()
-            regions.sort()
-            for region in regions:
-                if region == 'v':
-                    continue
-                printto(stream, "\t" + region.upper() + " for " + vgerm.upper())
-                clonoType = clonoTypes[vgerm][region]
-                seqs = clonoType.keys()
-                weights = clonoType.values()
-
-                regionDirectory = os.path.join(logosFolder, region.upper())
-                createIfNot(regionDirectory)
-                filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.png"
-                                        .format(vgerm.replace(os.path.sep, '_')))
-                # Generate cumulative sequence logos using Toby's approach
-                generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
-
-    # create cumulative composition logos and motif logos
+    # create motif logos
     regions = flatClonoTypes.keys()
     regions.sort()
+    argBuffer = []
     for region in regions:
         if region == 'v':
             continue
+
+        printto(stream, "\tbuffering data for {} motif".format(region))
 
         clonoType = flatClonoTypes[region]
         seqs = clonoType.keys()
         weights = clonoType.values()
 
-        regionDirectory = os.path.join(logosFolder, region.upper())
-        createIfNot(regionDirectory)
-        filename = os.path.join(regionDirectory, name + "_cumulative_logo.png")
-        generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
-
         # Generate sequence motif logos using weblogo
         # generate logos without alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_logo.png".format(region)))
         alphabet = createAlphabet(align=False, protein=True, extendAlphabet=True)
-        m = generateMotif(seqs, region, alphabet, filename,  align=False,
-                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        argBuffer.append((seqs, region, alphabet, filename, False, False, True, weights, outDir, threads))
+        # m = generateMotif(seqs, region, alphabet, filename,  align=False,
+        #                   protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
         # generate  logos after alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_aligned_logo.png".format(region)))
         alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
-        m = generateMotif(seqs, region, alphabet, filename,  align=True,
-                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        argBuffer.append((seqs, region, alphabet, filename, True, False, True, weights, outDir, threads))
+        # m = generateMotif(seqs, region, alphabet, filename,  align=True,
+        #                   protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+
+    printto(stream, "Asynchronously generating motifs from buffer ...")
+    pool = multiprocessing.Pool(processes=threads)
+    res = [pool.apply_async(generateMotif, args=arg) for arg in argBuffer]
+    [p.get() for p in res]
+    pool.close()
+    pool.join()
+    printto(stream, "CDR/FR Motif analysis complete")
 
 
 def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir, stream=None):
@@ -473,3 +525,5 @@ def flattenClonoTypeCountsDict(clonoTypes):
 #                              ighvs,
 #                              'Duplication of V Domain Sequences Per Family', True)
 #             gc.collect()
+
+

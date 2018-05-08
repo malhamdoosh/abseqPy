@@ -6,6 +6,7 @@
 '''
 from __future__ import print_function
 import matplotlib
+
 matplotlib.use('agg')
 import gc
 import sys
@@ -22,9 +23,10 @@ from Bio.Alphabet.IUPAC import IUPACProtein
 from Bio import SeqIO, motifs, Phylo
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
+from subprocess import check_output
 
+from abseq.IgRepertoire.igRepUtils import alignListOfSeqs
 from abseq.config import WEBLOGO
-import abseq.IgRepertoire
 from abseq.logger import printto, LEVEL
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
@@ -84,20 +86,38 @@ def generateMotif(sequences, name, alphabet, filename,
 
     :param name: string
                     sample name
-    :param alphabet:
-    :param filename:
-    :param align:
-    :param transSeq:
-    :param protein:
-    :param weights:
-    :param outDir:
-    :param threads:
-    :param stream:
-    :return:
+
+    :param alphabet: Bio.Alphabet
+
+    :param filename: string
+                    output filename
+
+    :param align: bool
+                    use CLUSTAL OMEGA for sequence alignment?
+
+    :param transSeq: bool
+                    should sequences be translated to protein?
+
+    :param protein: bool
+
+    :param weights: list
+                    list of weights for provided sequences
+
+    :param outDir: string
+                    path to output directory
+
+    :param threads: int
+                    number of threads to use
+
+    :param stream: logger
+                    calls printto stream object
+
+    :return: BioPy.Motif object
     """
     if exists(filename):
         printto(stream, "\t" + name + " motif logo was found", LEVEL.WARN)
         return
+
     # check whether sequences should be translated                 
     if transSeq:
         seqs = []               
@@ -106,19 +126,19 @@ def generateMotif(sequences, name, alphabet, filename,
             seqs.append(str(seq))
     else:
         seqs = sequences
+
     # sample sequences if they are too many  
-    if (len(seqs) > 1*10**5 or 
-        (weights is not None and sum(weights) > 1*10**5)):
+    if (len(seqs) > 1*10**5 or
+            (weights is not None and sum(weights) > 1*10**5)):
         random.seed(1986)
-#         print(sum(weights))
-        seqs = weightedSample(seqs, weights, int(1*10**5)) 
+        seqs = weightedSample(seqs, weights, int(1*10**5))
         if align:
-            seqs = random.sample(seqs, 10000) 
+            seqs = random.sample(seqs, 10000)
+
     # perform multiple sequence alignment on a sample of 10000 sequences 
     if align and len(seqs) > 1:
-        alignedSeq = abseq.IgRepertoire.igRepUtils.alignListOfSeqs(seqs, outDir, threads=threads, stream=stream)
-#                 print(alignedSeq[:10])
-    else:                
+        alignedSeq = alignListOfSeqs(seqs, outDir, threads=threads, name=name, stream=stream)
+    else:
         # if alignment is not required, add "-" to short sequences
         L = map(len, seqs)
         if min(L) != max(L):
@@ -132,8 +152,9 @@ def generateMotif(sequences, name, alphabet, filename,
                     alignedSeq.append(s + '-'*(m-len(s)))
         else:
             alignedSeq = seqs
+
     # create the sequence motif and encode it into PFM
-    printto(stream, "\tMotif logo is being created for %s ..." % (name))
+    printto(stream, "\tMotif logo is being created for %s ..." % name)
     m = motifs.create(alignedSeq, alphabet)  # print(m.counts)
     # create sequence logo
     generateMotifLogo(m, filename, outDir, not transSeq and not protein)
@@ -303,18 +324,24 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     plt.close()
 
 
-def generateMotifLogo(m, filename, outdir='', dna=True):
+def generateMotifLogo(m, filename, outdir='.', dna=True):
     instances = m.instances
     records = []
+
     for i in range(len(instances)):
         records.append(SeqRecord(instances[i], id=str(i)))
-    tmpFile = os.path.join(outdir, 'temp_seq_logos.fasta')
+
+    # guarantees tha tmp file is unique (in the case where multiprocessing might override the file)
+    basename = os.path.splitext(os.path.basename(filename))[0]
+    tmpFile = os.path.join(outdir, 'temp_seq_logos_{}.fasta'.format(basename))
+
     SeqIO.write(records, tmpFile, 'fasta')
 
-    command = "%s -f %s  -o %s -A %s -F png -n 200 -D fasta -s medium "
-    command += "-c %s --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO"
-
-    os.system(command % (WEBLOGO, tmpFile, filename, "dna" if dna else "protein", "classic" if dna else "auto"))
+    command = "{exe} -f {inputFile}  -o {outputFile} -A {seqType} -F png -n 200 -D fasta -s medium "\
+              "-c {colourScheme} --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO"
+    check_output(command.format(exe=WEBLOGO, inputFile=tmpFile, outputFile=filename,
+                                seqType=("dna" if dna else "protein"),
+                                colourScheme=("classic" if dna else "auto")).split())
     os.remove(tmpFile)
         
 
