@@ -12,6 +12,7 @@ import math
 import numpy
 import random
 import itertools
+import multiprocessing
 
 from collections import Counter, defaultdict
 from os.path import exists
@@ -219,16 +220,40 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
         plt.close()
 
 
+def dedup(population, t):
+    # repeat 5 times for each sample size t
+    hs = [len(set(random.sample(population, t))) for _ in range(5)]
+    # Begin: Very slow
+    #             hs = [ len(set(np.random.choice(setSeqs, j, replace = True, p  = w)))
+    #                   for k in range(5) ]
+    # End: very slow
+    return t, hs
 '''
 In ecology, rarefaction is a technique to assess species richness from the results
- of sampling. Rarefaction allows the calculation of species richness for a given 
- number of individual samples, based on the construction of so-called rarefaction curves.
-  This curve is a plot of the number of species as a function of the number of samples.
-  Source: https://en.wikipedia.org/wiki/Rarefaction_(ecology )
+of sampling. Rarefaction allows the calculation of species richness for a given 
+number of individual samples, based on the construction of so-called rarefaction curves.
+This curve is a plot of the number of species as a function of the number of samples.
+Source: https://en.wikipedia.org/wiki/Rarefaction_(ecology )
 '''
 
 
-def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=None):
+def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', threads=2, stream=None):
+    """
+
+    :param seqs: list of lists
+                ith nested list should consist of sequences that correspond to ith element of label
+    :param labels: list of strings
+                ith item describes the region of the ith list in seqs parameter
+    :param filename: output filename
+    :param weights: list
+                sequence weights
+    :param title: string
+                plot title
+    :param threads: int
+    :param stream: output stream
+    :return: None
+    """
+
     if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
@@ -257,17 +282,12 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', stream=No
         # print(len(ticks))
         # capture-recapture analysis 
         # sample sequences and estimate diversity
-        pt = []
+        pool = multiprocessing.Pool(processes=threads)
         population = WeightedPopulation(setSeqs, w)
-        for j in ticks:
-            # repeat 5 times for each sample size
-            hs = [len(set(random.sample(population, j))) for k in range(5)]
-            # Begin: Very slow
-            #             hs = [ len(set(np.random.choice(setSeqs, j, replace = True, p  = w)))
-            #                   for k in range(5) ]
-            # End: very slow
-            pt.append((j, hs))
-        # pt.append((len(setSeqs), len(set(setSeqs))))
+        result = [pool.apply_async(dedup, args=(population, t)) for t in ticks]
+        pt = sorted([p.get() for p in result], key=lambda tup: tup[0])
+        pool.close()
+        pool.join()
         # calculate the mean across 5 samples
         csvData.extend([(x, y, l) for x, ys in pt for y in ys])
 

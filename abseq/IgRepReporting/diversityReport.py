@@ -73,7 +73,7 @@ def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, threads=2, segre
     # create Germline gene level composition logos
     compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=threads, detailed=segregate, stream=stream)
     generateSeqMotifs(flatClonoTypes, name, outDir, threads=threads, stream=stream)
-    generateRarefactionPlots(flatClonoTypes, name, outDir, stream=stream)
+    generateRarefactionPlots(flatClonoTypes, name, outDir, threads=threads, stream=stream)
     printto(stream, "The diversity of the library is being estimated ... ")
     calcDiversity(flatClonoTypes, name, outDir)
 
@@ -88,7 +88,7 @@ def calcDiversity(clonoTypes, name, outDir):
     pass
 
 
-def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
+def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
     regions = clonoTypes.keys()
     regions.sort()
     printto(stream, "Rarefaction plots are being generated .... ")
@@ -114,7 +114,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                        cdrRegions,
                        filename,
                        cdrWeights,
-                       'Rarefaction of CDR Sequences', stream=stream)
+                       'Rarefaction of CDR Sequences', threads=threads, stream=stream)
     printto(stream, " \tThe percent recapture plot is being generated for CDRs .... ")
     filename = os.path.join(outDir, name + "_cdr_recapture.png")
     plotSeqRecaptureNew(cdrSeqs,
@@ -143,7 +143,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                        frRegions,
                        filename,
                        frWeights,
-                       'Rarefaction of FR Sequences', stream=stream)
+                       'Rarefaction of FR Sequences', threads=threads, stream=stream)
     printto(stream, "\tThe percent recapture plot is being generated for FRs .... ")
     filename = os.path.join(outDir, name + "_fr_recapture.png")
     plotSeqRecaptureNew(frSeqs,
@@ -172,7 +172,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, stream=None):
                        cdrRegions,
                        filename,
                        cdrWeights,
-                       'Rarefaction of CDRs and V Domains', stream=stream)
+                       'Rarefaction of CDRs and V Domains', threads=threads, stream=stream)
     printto(stream, "\tThe percent recapture plot is being generated for CDRs and V domains .... ")
     filename = os.path.join(outDir, name + "_cdr_v_recapture.png")
     plotSeqRecaptureNew(cdrSeqs,
