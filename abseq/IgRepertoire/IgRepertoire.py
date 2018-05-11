@@ -31,7 +31,7 @@ from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq
 from abseq.versionManager import writeParams
 from abseq.logger import printto, setupLogger, LEVEL
 from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
-from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist
+from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist, eitherExists
 from abseq.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from abseq.IgRepReporting.abundanceReport import writeAbundanceToFiles
 from abseq.IgRepReporting.productivityReport import generateProductivityReport
@@ -371,24 +371,28 @@ class IgRepertoire:
         self.cloneAnnot = self.cloneAnnot[selectedRows]
 
         # generate plot of clone sequence length distribution
-        seqLengths = defaultdict(int)
-        if hasLargeMem():
-            records = SeqIO.to_dict(SeqIO.parse(gunzip(self.readFile), self.format))
-        else:
-            records = SeqIO.index(gunzip(self.readFile), self.format)
-        for id_ in self.cloneAnnot.index:
-            seqLengths[len(records[id_])] += 1
-        count = Counter(seqLengths)
         outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist.png')
-        plotSeqLenDist(count, self.name, outputFile, self.format,
-                       maxbins=40, histtype='bar', removeOutliers=False,
-                       normed=True, stream=logger)
-        # generate plot of clone sequence length distribution with outliers removed
-        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
-        plotSeqLenDist(count, self.name, outputFile, self.format,
-                       maxbins=40, histtype='bar', removeOutliers=True,
-                       normed=True, stream=logger)
-        # write number of filtered reads
+        noOutlierOutputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
+        seqLengths = defaultdict(int)
+        if not eitherExists(outputFile) or not eitherExists(noOutlierOutputFile):
+            if hasLargeMem():
+                records = SeqIO.to_dict(SeqIO.parse(gunzip(self.readFile), self.format))
+            else:
+                records = SeqIO.index(gunzip(self.readFile), self.format)
+            for id_ in self.cloneAnnot.index:
+                seqLengths[len(records[id_])] += 1
+
+            count = Counter(seqLengths)
+
+            plotSeqLenDist(count, self.name, outputFile, self.format,
+                           maxbins=40, histtype='bar', removeOutliers=False,
+                           normed=True, stream=logger)
+            # generate plot of clone sequence length distribution with outliers removed
+            plotSeqLenDist(count, self.name, noOutlierOutputFile, self.format,
+                           maxbins=40, histtype='bar', removeOutliers=True,
+                           normed=True, stream=logger)
+
+        # finally, write number of filtered reads
         writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
 
     def analyzeAbundance(self):
