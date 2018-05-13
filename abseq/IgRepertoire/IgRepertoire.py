@@ -391,6 +391,9 @@ class IgRepertoire:
             plotSeqLenDist(count, self.name, noOutlierOutputFile, self.format,
                            maxbins=40, histtype='bar', removeOutliers=True,
                            normed=True, stream=logger)
+        else:
+            printto(logger, "File found ... {}".format(outputFile), LEVEL.WARN)
+            printto(logger, "File found ... {}".format(noOutlierOutputFile), LEVEL.WARN)
 
         # finally, write number of filtered reads
         writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
