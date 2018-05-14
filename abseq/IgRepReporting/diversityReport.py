@@ -22,7 +22,7 @@ from abseq.logger import LEVEL, printto
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, segregate=False,
                             stream=None):
     generateSpectraTypePlots(spectraTypes,  name, outDir, stream=stream)
-    flattened = flattenClonoTypeCountsDict(clonoTypes)
+    flattened = flattenClonoTypeCountsDict(clonoTypes, stream=stream)
 
     writeClonoTypesToFiles(flattened, name, outDir, topClonotypes, stream=stream)
     estimateDiversity(clonoTypes, flattened, name, outDir, threads=threads, segregate=segregate, stream=stream)
@@ -380,7 +380,7 @@ def writeClonotypeDiversityRegionAnalysis(clonoTypes, sampleName, outDir, stream
         fp.write(writeBuffer)
 
 
-def flattenClonoTypeCountsDict(clonoTypes):
+def flattenClonoTypeCountsDict(clonoTypes, stream=None):
     """
     reduces something of this structure:
             'IGHV1-3': {
@@ -403,10 +403,12 @@ def flattenClonoTypeCountsDict(clonoTypes):
     :return: dict
             flattened dictionary
     """
+    printto(stream, "Compressing clonotype table ... discarding IGV information ...")
     flattened = defaultdict(Counter)
     for geneName in clonoTypes:
         for region, counts in clonoTypes[geneName].items():
             flattened[region] += Counter(counts)
+    printto(stream, "Finish compressing clonotype table")
     return flattened
 
 
