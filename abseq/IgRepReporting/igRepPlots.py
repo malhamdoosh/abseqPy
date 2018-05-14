@@ -381,12 +381,24 @@ def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None
         plt.close()
 
 
+def recapture(population, n, k=5):
+    hs = []
+    for _ in range(k):
+        s1 = set(np.random.choice(population, n))
+        s2 = set(np.random.choice(population, n))
+        intersection = s2.intersection(s1)
+        hs.append(len(intersection) * 100.0 / len(s2))
+    return n, hs
+
+
+
+
 '''
 Uses sampling without replacement and gives equal properties to all clones 
 '''
 
 
-def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
+def plotSeqRecaptureNew(seqs, labels, filename, title='', threads=2, stream=None):
     if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
@@ -402,19 +414,12 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
         ticks = np.linspace(100, total, 50).astype(int)
         # capture-recapture analysis 
         # sample sequences and estimate diversity
-        pt = []
-        for j in ticks:
-            # repeat 5 times for each sample size
-            hs = []
-            for k in range(5):
-                #                 print(len(setSeqs), total, j)
-                s1 = set(np.random.choice(setSeqs, j))
-                s2 = set(np.random.choice(setSeqs, j))
-                inter = s2.intersection(s1)
-                hs.append(len(inter) * 100.0 / len(s2))
-            pt.append((j, hs))
-        # pt.append((len(setSeqs), len(set(setSeqs))))
+        pool = multiprocessing.Pool(processes=threads)
         # calculate the mean across 5 samples
+        result = [pool.apply_async(recapture, args=(setSeqs, t)) for t in ticks]
+        pt = sorted([p.get() for p in result], key=lambda tup: tup[0])
+        pool.close()
+        pool.join()
         csvData.extend([(x, y, l) for x, ys in pt for y in ys])
 
         if PlotManager.pythonPlotOn():
@@ -422,7 +427,6 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', stream=None):
 
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks)
-    #     xticks.append(total)
     writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
              metadata=(str(xticks).strip('[]') + "\n"))
 

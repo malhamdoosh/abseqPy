@@ -120,7 +120,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
     plotSeqRecaptureNew(cdrSeqs,
                         cdrRegions,
                         filename,
-                        'Percent Recapture of CDR Sequences', stream=stream)
+                        'Percent Recapture of CDR Sequences', threads=threads, stream=stream)
     # select FR regions only
     frWeights = []
     frSeqs = []
@@ -149,7 +149,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
     plotSeqRecaptureNew(frSeqs,
                         frRegions,
                         filename,
-                        'Percent Recapture of FR Sequences', stream=stream)
+                        'Percent Recapture of FR Sequences', threads=threads, stream=stream)
     # select CDR and V domain 
     cdrWeights = []
     cdrSeqs = []
@@ -178,7 +178,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
     plotSeqRecaptureNew(cdrSeqs,
                         cdrRegions,
                         filename,
-                        'Percent Recapture of CDRs and V Domains', stream=stream)
+                        'Percent Recapture of CDRs and V Domains', threads=threads, stream=stream)
 
 
 def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detailed=False, stream=None):
