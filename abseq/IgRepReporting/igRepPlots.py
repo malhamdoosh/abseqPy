@@ -220,25 +220,34 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
         plt.close()
 
 
-def dedup(population, t):
+def dedup(population, n, k=5):
+    """
+    given a population and a sample size, randomly select n sequences and get the number of unique sequences from them.
+    This experiment is repeated k times and a list of length k is returned
+    :param population: collection of sequences
+    :param n: sample size to randomly pick sequences from
+    :param k: number of times to repeat the deduplication experiment
+    :return: tuple (a, b) where
+            a == n
+            b is a list of length k, each element is the number of deduplicated sequences after randomly picking n
+            from population (i.e. the number will be <= n)
+    """
     # repeat 5 times for each sample size t
-    hs = [len(set(random.sample(population, t))) for _ in range(5)]
+    hs = [len(set(random.sample(population, n))) for _ in range(k)]
     # Begin: Very slow
     #             hs = [ len(set(np.random.choice(setSeqs, j, replace = True, p  = w)))
     #                   for k in range(5) ]
     # End: very slow
-    return t, hs
-'''
-In ecology, rarefaction is a technique to assess species richness from the results
-of sampling. Rarefaction allows the calculation of species richness for a given 
-number of individual samples, based on the construction of so-called rarefaction curves.
-This curve is a plot of the number of species as a function of the number of samples.
-Source: https://en.wikipedia.org/wiki/Rarefaction_(ecology )
-'''
+    return n, hs
 
 
 def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', threads=2, stream=None):
     """
+    In ecology, rarefaction is a technique to assess species richness from the results
+    of sampling. Rarefaction allows the calculation of species richness for a given
+    number of individual samples, based on the construction of so-called rarefaction curves.
+    This curve is a plot of the number of species as a function of the number of samples.
+    Source: https://en.wikipedia.org/wiki/Rarefaction_(ecology )
 
     :param seqs: list of lists
                 ith nested list should consist of sequences that correspond to ith element of label
@@ -310,25 +319,32 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', threads=2
         plt.close()
 
 
-'''
+# XXX: Note to whoever is using this function - there will be NO R plot for this function
+#      because at the time of writing it, this function is NOT used anywhere in AbSeq.
+#      If you desire this plot to output the csv file for plotting in R, see plotSeqRecaptureNew's
+#      body. It should be trivially easy to translate the code here.
+def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
+    """
     Perform non-redundant capture-recapture analysis and plot the percent recapture
     Assumption 1: the population is assumed to be "closed".
-    Assumption 2:  The chance for each individual in the population to be caught 
+    Assumption 2:  The chance for each individual in the population to be caught
     are equal and constant for both the initial marking period and the recapture period.
     Assumption 3:  Sufficient time must be allowed between the initial marking period
      and the recapture period
-    Assumption 4: Animals do not lose their marks. 
-'''
+    Assumption 4: Animals do not lose their marks.
 
-"""
-XXX: Note to whoever is using this function - there will be NO R plot for this function
-     because at the time of writing it, this function is NOT used anywhere in AbSeq.
-     If you desire this plot to output the csv file for plotting in R, see plotSeqRecaptureNew's
-     body. It should be trivially easy to translate the code here.
-"""
-
-
-def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None):
+    :param seqs: list of lists
+                ith nested list should consist of sequences that correspond to ith element of label
+    :param labels: list of strings
+                ith item describes the region of the ith list in seqs parameter
+    :param filename: output filename
+    :param weights: list
+                sequence weights
+    :param title: string
+                plot title
+    :param stream: output stream
+    :return: None
+    """
     if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
@@ -382,6 +398,16 @@ def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None
 
 
 def recapture(population, n, k=5):
+    """
+    given a population, conducts recapture analysis for sample size = n.
+    This experiment is repeated k times, and a list of length k is returned with percent recapture rate.
+    :param population: collection of sequences
+    :param n: sample size to randomly pick
+    :param k: repeat recapture experiment k times
+    :return: tuple of (a, b) where
+            a == n
+            b is a list of length k and each value is the percentage of recapture
+    """
     hs = []
     for _ in range(k):
         s1 = set(np.random.choice(population, n))
@@ -391,14 +417,29 @@ def recapture(population, n, k=5):
     return n, hs
 
 
-
-
-'''
-Uses sampling without replacement and gives equal properties to all clones 
-'''
-
-
 def plotSeqRecaptureNew(seqs, labels, filename, title='', threads=2, stream=None):
+    """
+    Perform non-redundant capture-recapture analysis and plot the percent recapture.
+    Uses sampling without replacement and gives equal properties to all clones.
+
+    Assumption 1: the population is assumed to be "closed".
+    Assumption 2:  The chance for each individual in the population to be caught
+    are equal and constant for both the initial marking period and the recapture period.
+    Assumption 3:  Sufficient time must be allowed between the initial marking period
+     and the recapture period
+    Assumption 4: Animals do not lose their marks.
+
+    :param seqs: list of lists
+                ith nested list should consist of sequences that correspond to ith element of label
+    :param labels: list of strings
+                ith item describes the region of the ith list in seqs parameter
+    :param filename: output filename
+    :param title: string
+                plot title
+    :param threads: int
+    :param stream: output stream
+    :return: None
+    """
     if eitherExists(filename):
         printto(stream, '\tFile found ... ' + os.path.basename(filename), LEVEL.WARN)
         return
