@@ -17,6 +17,7 @@ from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \
     plotSeqRecapture, plotSeqRecaptureNew
 from abseq.logger import LEVEL, printto
+from abseq.utilities import hasLargeMem
 
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, segregate=False,
@@ -229,7 +230,6 @@ def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detail
             for region in regions:
                 if region == 'v':
                     continue
-                printto(stream, "\tbuffering {} for {}".format(region, vgerm))
                 clonoType = clonoTypes[vgerm][region]
                 seqs = clonoType.keys()
                 weights = clonoType.values()
@@ -238,15 +238,21 @@ def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detail
                 createIfNot(regionDirectory)
                 filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.png"
                                         .format(vgerm.replace(os.path.sep, '_')))
-                argBuffer.append((seqs, weights, region, filename))
+                if hasLargeMem():
+                    printto(stream, "\tbuffering {} for {}".format(region, vgerm))
+                    argBuffer.append((seqs, weights, region, filename))
+                else:
+                    printto(stream, "\tgenerating {} for {}".format(region, vgerm))
+                    generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
 
-        printto(stream, "Asynchronously generating composition logos from buffer ...")
-        pool = multiprocessing.Pool(processes=threads)
-        # Generate cumulative sequence logos using Toby's approach
-        res = [pool.apply_async(generateCumulativeLogo, args=arg) for arg in argBuffer]
-        [p.get() for p in res]  # join processes
-        pool.close()
-        pool.join()
+        if len(argBuffer):
+            printto(stream, "Asynchronously generating composition logos from buffer ...")
+            pool = multiprocessing.Pool(processes=threads)
+            # Generate cumulative sequence logos using Toby's approach
+            res = [pool.apply_async(generateCumulativeLogo, args=arg) for arg in argBuffer]
+            [p.get() for p in res]  # join processes
+            pool.close()
+            pool.join()
         printto(stream, "Completed composition logos for IGV families")
 
     # composition logo for a region(CDR,FR) as a combination of all IGV - i.e. not segregated
@@ -304,8 +310,6 @@ def generateSeqMotifs(flatClonoTypes, name, outDir, threads=2, stream=None):
         if region == 'v':
             continue
 
-        printto(stream, "\tbuffering data for {} motif".format(region))
-
         clonoType = flatClonoTypes[region]
         seqs = clonoType.keys()
         weights = clonoType.values()
@@ -314,23 +318,31 @@ def generateSeqMotifs(flatClonoTypes, name, outDir, threads=2, stream=None):
         # generate logos without alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_logo.png".format(region)))
         alphabet = createAlphabet(align=False, protein=True, extendAlphabet=True)
-        argBuffer.append((seqs, region, alphabet, filename, False, False, True, weights, outDir, threads))
-        # m = generateMotif(seqs, region, alphabet, filename,  align=False,
-        #                   protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        if hasLargeMem():
+            printto(stream, "\tbuffering data for {} motif".format(region))
+            argBuffer.append((seqs, region, alphabet, filename, False, False, True, weights, outDir, threads))
+        else:
+            printto(stream, "\tgenerating {} motif".format(region))
+            generateMotif(seqs, region, alphabet, filename,  align=False,
+                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
         # generate  logos after alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_aligned_logo.png".format(region)))
         alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
-        argBuffer.append((seqs, region, alphabet, filename, True, False, True, weights, outDir, threads))
-        # m = generateMotif(seqs, region, alphabet, filename,  align=True,
-        #                   protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        if hasLargeMem():
+            argBuffer.append((seqs, region, alphabet, filename, True, False, True, weights, outDir, threads))
+        else:
+            generateMotif(seqs, region, alphabet, filename,  align=True,
+                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
-    printto(stream, "Asynchronously generating motifs from buffer ...")
-    pool = multiprocessing.Pool(processes=threads)
-    res = [pool.apply_async(generateMotif, args=arg) for arg in argBuffer]
-    [p.get() for p in res]
-    pool.close()
-    pool.join()
+    if len(argBuffer):
+        printto(stream, "Asynchronously generating motifs from buffer ...")
+        pool = multiprocessing.Pool(processes=threads)
+        res = [pool.apply_async(generateMotif, args=arg) for arg in argBuffer]
+        [p.get() for p in res]
+        pool.close()
+        pool.join()
+
     printto(stream, "CDR/FR Motif analysis complete")
 
 
