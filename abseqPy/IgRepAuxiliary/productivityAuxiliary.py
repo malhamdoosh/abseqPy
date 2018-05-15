@@ -16,11 +16,11 @@ from numpy import random, isnan
 from multiprocessing import Queue, Value, Lock
 from math import ceil
 
-from abseq.IgRepAuxiliary.RefineWorker import RefineWorker
-from abseq.IgRepertoire.igRepUtils import gunzip
-from abseq.IgRepAuxiliary.IgBlastWorker import getAnnotationFields
-from abseq.logger import LEVEL, printto
-from abseq.utilities import hasLargeMem
+from abseqPy.IgRepAuxiliary.RefineWorker import RefineWorker
+from abseqPy.IgRepertoire.igRepUtils import gunzip
+from abseqPy.IgRepAuxiliary.IgBlastWorker import getAnnotationFields
+from abseqPy.logger import LEVEL, printto
+from abseqPy.utilities import hasLargeMem
 
 
 def loadRefineFlagInfo():

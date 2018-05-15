@@ -20,28 +20,28 @@ from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
 from numpy import Inf, random, isnan, logical_not
 
-from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
-from abseq.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
+from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
+from abseqPy.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
     writeCountsCategoriesToFile, findUpstreamMotifs
-from abseq.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
-from abseq.config import FASTQC, AUX_FOLDER, HDF_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
-from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
+from abseqPy.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
+from abseqPy.config import FASTQC, AUX_FOLDER, HDF_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
+from abseqPy.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
     writeListToFile, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
     createIfNot, safeOpen, detectFileFormat, countSeqs
-from abseq.versionManager import writeParams
-from abseq.logger import printto, setupLogger, LEVEL
-from abseq.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
-from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist, eitherExists
-from abseq.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
-from abseq.IgRepReporting.abundanceReport import writeAbundanceToFiles
-from abseq.IgRepReporting.productivityReport import generateProductivityReport
-from abseq.IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
-from abseq.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
+from abseqPy.versionManager import writeParams
+from abseqPy.logger import printto, setupLogger, LEVEL
+from abseqPy.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
+from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist, eitherExists
+from abseqPy.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
+from abseqPy.IgRepReporting.abundanceReport import writeAbundanceToFiles
+from abseqPy.IgRepReporting.productivityReport import generateProductivityReport
+from abseqPy.IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
+from abseqPy.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
     annotateClonotypes
-from abseq.IgRepAuxiliary.restrictionAuxiliary import findHits, \
+from abseqPy.IgRepAuxiliary.restrictionAuxiliary import findHits, \
     findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
-from abseq.IgRepReporting.restrictionReport import generateOverlapFigures
-from abseq.utilities import hasLargeMem
+from abseqPy.IgRepReporting.restrictionReport import generateOverlapFigures
+from abseqPy.utilities import hasLargeMem
 
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list

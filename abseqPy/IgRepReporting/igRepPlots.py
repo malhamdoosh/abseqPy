@@ -19,10 +19,10 @@ from os.path import exists
 from Bio import SeqIO
 from numpy import Inf, mean, isnan
 
-import abseq.IgRepertoire.igRepUtils
-from abseq.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
-from abseq.IgMultiRepertoire.PlotManager import PlotManager
-from abseq.logger import printto, LEVEL
+import abseqPy.IgRepertoire.igRepUtils
+from abseqPy.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
+from abseqPy.IgMultiRepertoire.PlotManager import PlotManager
+from abseqPy.logger import printto, LEVEL
 
 import matplotlib as mpl
 mpl.use('Agg')  # Agg
@@ -39,7 +39,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     printto(stream, "\tThe sequence length distribution of each gene family is being calculated ...")
     ighvDist = {}
     ighvSizes = {}
-    with abseq.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
+    with abseqPy.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
             if len(rec) <= maxLen:
                 if rec.id.split('|') > 1:
@@ -85,7 +85,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
     if type(counts) == str:
-        with abseq.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
+        with abseqPy.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         if len(sizes) == 0:
             return

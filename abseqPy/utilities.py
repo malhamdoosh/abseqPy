@@ -1,7 +1,7 @@
 import os
 
-from abseq.config import ABSEQROOT, EXTERNAL_DEP_DIR
-from abseq.config import MEM_GB
+from abseqPy.config import ABSEQROOT, EXTERNAL_DEP_DIR
+from abseqPy.config import MEM_GB
 
 
 # temporarily overrides PATH variable with EXTERNAL_DEP_DIR/bin, IGBLASTDB and IGDATA (if they exist)

@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os
 import sys
-import pip
 import shutil
 import glob
 import tarfile
@@ -34,6 +33,13 @@ versions = {
     'fastqc': ['0.11.6', '0.11.7'],
     'gs': ['9.22']
 }
+
+# although setup() has this, it's installed locally in abseq's installation dir.
+# By pip.installing here, it's going to be available globally
+setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
+for pack in setup_requires:
+    # pip.main(['install', pack]) no longer supported in pip >= 10
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
 
 
 class FTPBlast:
@@ -165,7 +171,7 @@ def _syml(src, dest):
 
 
 def setup_dir(root):
-    from abseq.config import EXTERNAL_DEP_DIR
+    from abseqPy.config import EXTERNAL_DEP_DIR
     output = os.path.join(root, EXTERNAL_DEP_DIR)
     if os.path.exists(output):
         _error("{} already exists! Remove the directory and try again".format(EXTERNAL_DEP_DIR))
@@ -419,13 +425,8 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
 
 class ExternalDependencyInstaller(install):
     def run(self):
-        # although setup() has this, it's installed locally in abseq's installation dir.
-        # By pip.installing here, it's going to be available globally
-        setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
-        for pack in setup_requires:
-            pip.main(['install', pack])
         # create external deps dir
-        d = setup_dir("abseq")
+        d = setup_dir("abseqPy")
         d_bin = os.path.join(d, 'bin')
         plat, _ = _get_sys_info()
 
@@ -509,8 +510,8 @@ class ExternalDependencyInstaller(install):
             print("Found IGBLASTDB in ENV, skipping download")
 
         # replace install.run(self)
-        # install.run(self)
-        self.do_egg_install()
+        install.run(self)
+        # self.do_egg_install()
 
 
 def readme():
@@ -518,7 +519,7 @@ def readme():
         return f.read()
 
 
-setup(name="AbSeq",
+setup(name="abseqPy",
       version="1.1.15",
       description="Quality control pipeline for antibody libraries",
       license="placeholder",
@@ -529,19 +530,20 @@ setup(name="AbSeq",
       maintainer_email="placeholder",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
-      setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'six'],
+      setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
+                      'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       packages=find_packages(),
       # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
       # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
       package_data={
-          'abseq': ['rscripts', '3rd_party']
+          'abseqPy': ['3rd_party']
       },
       include_package_data=True,
       cmdclass={
           'install': ExternalDependencyInstaller,
       },
       entry_points={
-          'console_scripts': ['abseq=abseq.abseqQC:main'],
+          'console_scripts': ['abseq=abseqPy.abseqQC:main'],
       })

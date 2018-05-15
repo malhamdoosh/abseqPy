@@ -12,11 +12,10 @@ import yaml
 
 from numpy import Inf
 from Bio import SeqIO
-from os.path import abspath
 from copy import deepcopy
 
-from abseq.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
-from abseq.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, DEFAULT_TASK
+from abseqPy.IgRepertoire.igRepUtils import inferSampleName, detectFileFormat, safeOpen
+from abseqPy.config import VERSION, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE, DEFAULT_TASK
 
 
 def parseArgs(arguments=None):
@@ -48,11 +47,11 @@ def parseArgs(arguments=None):
         elif args.yaml is None:
             parser.error("Either one of -f1/--file1 or -y/--yaml must be specified!")
     else:
-        args.f1 = abspath(args.f1)
+        args.f1 = os.path.abspath(args.f1)
     if args.f2 is not None and not os.path.exists(args.f2):
         parser.error("-f2 file not found!")
     elif args.f2 is not None:
-        args.f2 = abspath(args.f2)
+        args.f2 = os.path.abspath(args.f2)
 
     # parse arguments if args.f1 is a file, if it's a directory, allow IgMultiRepertoire to handle file pairings
     if args.f1 is not None and os.path.isfile(args.f1):
@@ -92,7 +91,7 @@ def parseArgs(arguments=None):
     if args.task in ['rsa', 'rsasimple']:
         if args.sites is None:
             parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
-        args.sites = abspath(args.sites)
+        args.sites = os.path.abspath(args.sites)
 
     if args.actualqstart is not None:
         if args.actualqstart >= 1:
@@ -142,8 +141,8 @@ def parseArgs(arguments=None):
     if args.task == 'primer':
         if args.primer3end is None and args.primer5end is None:
             parser.error("At least ond primer file (-p5 or -p3) must be specified for -t primer")
-    args.primer5end = abspath(args.primer5end) if args.primer5end is not None else None
-    args.primer3end = abspath(args.primer3end) if args.primer3end is not None else None
+    args.primer5end = os.path.abspath(args.primer5end) if args.primer5end is not None else None
+    args.primer3end = os.path.abspath(args.primer3end) if args.primer3end is not None else None
     if args.primer5end and not os.path.exists(args.primer5end):
         parser.error("{} file not found!".format(args.primer5end))
     if args.primer3end and not os.path.exists(args.primer3end):
@@ -158,7 +157,7 @@ def parseArgs(arguments=None):
     args.alignlen = [250, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.bitscore = [300, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
 
-    args.database = abspath(args.database) if args.database is not None else "$IGBLASTDB"
+    args.database = os.path.abspath(args.database) if args.database is not None else "$IGBLASTDB"
 
     # done
     return args

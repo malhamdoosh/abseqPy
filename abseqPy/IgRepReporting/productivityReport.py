@@ -12,8 +12,8 @@ import os
 from collections import Counter, OrderedDict
 from numpy import nan
 
-from abseq.IgRepReporting.igRepPlots import plotDist
-from abseq.IgRepertoire.igRepUtils import compressCountsFamilyLevel
+from abseqPy.IgRepReporting.igRepPlots import plotDist
+from abseqPy.IgRepertoire.igRepUtils import compressCountsFamilyLevel
 
 
 def generateProductivityReport(cloneAnnot, cloneSeqs, name, chain, outputDir, stream=None):

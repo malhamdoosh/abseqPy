@@ -2,11 +2,11 @@ import os
 
 from multiprocessing import Queue
 
-from abseq.config import AUX_FOLDER
-from abseq.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool
-from abseq.IgMultiRepertoire.PlotManager import PlotManager
-from abseq.IgRepertoire.IgRepertoire import IgRepertoire
-from abseq.argsParser import parseYAML, parseArgs
+from abseqPy.config import AUX_FOLDER
+from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool
+from abseqPy.IgMultiRepertoire.PlotManager import PlotManager
+from abseqPy.IgRepertoire.IgRepertoire import IgRepertoire
+from abseqPy.argsParser import parseYAML, parseArgs
 
 
 class IgMultiRepertoire:

@@ -6,8 +6,8 @@ from multiprocessing import Process
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 
-from abseq.IgRepertoire.igRepUtils import findBestMatchedPattern, calMaxIUPACAlignScores
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepertoire.igRepUtils import findBestMatchedPattern, calMaxIUPACAlignScores
+from abseqPy.logger import printto, LEVEL
 
 
 class PrimerWorker(Process):

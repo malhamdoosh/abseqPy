@@ -25,9 +25,9 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
 from subprocess import check_output
 
-from abseq.IgRepertoire.igRepUtils import alignListOfSeqs
-from abseq.config import WEBLOGO
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs
+from abseqPy.config import WEBLOGO
+from abseqPy.logger import printto, LEVEL
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies

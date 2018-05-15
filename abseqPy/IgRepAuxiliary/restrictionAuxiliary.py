@@ -13,11 +13,11 @@ from multiprocessing import Queue, Manager
 from math import ceil
 from pandas.core.frame import DataFrame
 
-from abseq.IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
-from abseq.utilities import hasLargeMem
-from abseq.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
-from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
+from abseqPy.utilities import hasLargeMem
+from abseqPy.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
+from abseqPy.IgRepAuxiliary.productivityAuxiliary import ProcCounter
+from abseqPy.logger import printto, LEVEL
 
 
 def initSimpleRSAStats(sites):

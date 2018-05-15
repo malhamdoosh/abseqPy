@@ -12,10 +12,10 @@ from numpy import Inf, random
 from Bio import SeqIO
 from collections import defaultdict
 
-from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotDist
-from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsFamilyLevel, \
+from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotDist
+from abseqPy.IgRepertoire.igRepUtils import gunzip, compressCountsFamilyLevel, \
     compressCountsGeneLevel, safeOpen, compressSeqGeneLevel, compressSeqFamilyLevel
-from abseq.logger import LEVEL, printto
+from abseqPy.logger import LEVEL, printto
 
 _UPSTREAM_SEQ_FILE_SEP = '|'
 _VALID_SEQ_FASTA_TEMPLATE = "{}_{}_{:.0f}_{:.0f}_valid_seqs.fasta"
@@ -368,7 +368,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                     logging stream
     :return: None
     """
-    from abseq.IgRepAuxiliary.SeqUtils import generateMotifs
+    from abseqPy.IgRepAuxiliary.SeqUtils import generateMotifs
 
     if level == 'variant':
         # single argument identity function
