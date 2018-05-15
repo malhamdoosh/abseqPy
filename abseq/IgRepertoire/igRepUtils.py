@@ -16,7 +16,6 @@ from subprocess import check_output, CalledProcessError
 from pandas.core.frame import DataFrame
 from numpy import isnan, nan
 from Bio.SeqRecord import SeqRecord
-from Bio.Align.Applications._Clustalw import ClustalwCommandline
 from Bio.Seq import Seq
 from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
@@ -502,13 +501,16 @@ def compressCountsFamilyLevel(countsDict):
 '''
 
 
-def alignListOfSeqs(signals, outDir, threads, stream=None):
+def alignListOfSeqs(signals, outDir, threads, name, stream=None):
     L = map(len, signals)
+
     printto(stream,
             "\t\t{} sequences are being aligned using CLUSTAL-OMEGA (L in [{}, {}])... ".format(len(L), min(L), max(L)))
-    tempSeq = os.path.join(outDir, "csl_temp_seq.fasta")
+    tempSeq = os.path.join(outDir, "csl_temp_seq_" + name + ".fasta")
     tempAlign = tempSeq.replace('.fasta', '.aln')
+
     seqs = []
+
     for i in range(len(signals)):
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
