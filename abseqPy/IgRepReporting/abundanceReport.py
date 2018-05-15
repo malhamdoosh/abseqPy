@@ -8,10 +8,10 @@
 import os
 from collections import Counter, defaultdict
 
-from abseq.IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
-from abseq.IgRepertoire.igRepUtils import compressCountsGeneLevel, \
+from abseqPy.IgRepReporting.igRepPlots import plotDist, generateStatsHeatmap, writeCSV
+from abseqPy.IgRepertoire.igRepUtils import compressCountsGeneLevel, \
     compressCountsFamilyLevel
-from abseq.logger import printto, LEVEL
+from abseqPy.logger import printto, LEVEL
 
 
 def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):

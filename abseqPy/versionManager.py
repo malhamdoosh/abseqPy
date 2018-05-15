@@ -7,7 +7,7 @@ import datetime
 
 from subprocess import check_output, CalledProcessError
 
-from abseq.config import VERSION
+from abseqPy.config import VERSION
 
 
 def writeParams(args, outDir):
@@ -33,7 +33,7 @@ def writeParams(args, outDir):
     filename = os.path.join(outDir, "analysis.params")
 
     with open(filename, 'w') as out:
-        out.write("AbSeq version: " + VERSION + "\n")
+        out.write("AbSeqPy version: " + VERSION + "\n")
         out.write("IMGT version - IMGT database directory last modified time : "
                   + _get_imgt_mod_date(args['database']) + "\n")
         merger = args.get("merger", None)
@@ -45,7 +45,7 @@ def writeParams(args, outDir):
         out.write("biopy version: " + str(Bio.__version__) + "\n")
         out.write("FastQC version: " + _get_software_version('fastqc') + "\n")
         out.write("Clustalo version: " + _get_software_version('clustalo') + "\n")
-        out.write("Executed AbSeq with the following parameters:\n")
+        out.write("Executed AbSeqPy with the following parameters:\n")
         for key, val in args.items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     return os.path.basename(filename)

@@ -11,13 +11,13 @@ import multiprocessing
 
 from collections import Counter, defaultdict
 
-from abseq.IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
-from abseq.IgRepertoire.igRepUtils import writeClonoTypesToFile, createIfNot
-from abseq.IgRepReporting.igRepPlots import plotSeqLenDist, \
+from abseqPy.IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
+from abseqPy.IgRepertoire.igRepUtils import writeClonoTypesToFile, createIfNot
+from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \
     plotSeqRecapture, plotSeqRecaptureNew
-from abseq.logger import LEVEL, printto
-from abseq.utilities import hasLargeMem
+from abseqPy.logger import LEVEL, printto
+from abseqPy.utilities import hasLargeMem
 
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, segregate=False,

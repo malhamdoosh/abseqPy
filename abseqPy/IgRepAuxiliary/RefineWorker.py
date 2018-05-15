@@ -14,11 +14,11 @@ from Bio import SeqIO
 from collections import defaultdict
 from numpy import isnan, nan
 
-from abseq.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
-from abseq.IgRepertoire.igRepUtils import extractProteinFrag, \
+from abseqPy.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
+from abseqPy.IgRepertoire.igRepUtils import extractProteinFrag, \
     findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA, calMaxIUPACAlignScores, findBestMatchedPattern
-from abseq.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
-from abseq.logger import LEVEL, printto
+from abseqPy.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
+from abseqPy.logger import LEVEL, printto
 
 
 class RefineWorker(Process):

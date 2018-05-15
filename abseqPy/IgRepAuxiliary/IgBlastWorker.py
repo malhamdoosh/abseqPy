@@ -11,8 +11,8 @@ import numpy as np
 from multiprocessing import Process
 from pandas.core.frame import DataFrame
 
-from abseq.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
+from abseqPy.logger import printto, LEVEL
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
                      'identity', 'alignlen', 'bitscore',

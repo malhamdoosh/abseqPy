@@ -2,7 +2,7 @@ import os
 import ast
 import sys
 
-from abseq.config import ABSEQROOT
+from abseqPy.config import ABSEQROOT
 
 """
 XXX: IMPORTANT NOTE

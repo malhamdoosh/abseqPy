@@ -11,8 +11,8 @@ from multiprocessing import Process
 from numpy import isnan
 from Bio.Seq import Seq
 
-import abseq.IgRepAuxiliary.restrictionAuxiliary
-from abseq.logger import printto, LEVEL
+import abseqPy.IgRepAuxiliary.restrictionAuxiliary
+from abseqPy.logger import printto, LEVEL
 
 
 class RestrictionSitesScanner(Process):
@@ -55,7 +55,7 @@ class RestrictionSitesScanner(Process):
         return
     
     def runSimple(self, nextTask):
-        stats = abseq.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
+        stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
         stats['total'] = len(nextTask)      
         for id_ in nextTask:
             # record = raw sequence (taken from m.dict())
@@ -71,9 +71,9 @@ class RestrictionSitesScanner(Process):
             seqRC = str(Seq(seq).reverse_complement())            
             cut = False
             for site in stats["siteHitsCount"].keys():
-                hits = abseq.IgRepAuxiliary.restrictionAuxiliary.findHits(seq, self.sites[site])
+                hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seq, self.sites[site])
                 if len(hits) == 0:                    
-                    hits = abseq.IgRepAuxiliary.restrictionAuxiliary.findHits(seqRC, self.sites[site])
+                    hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seqRC, self.sites[site])
                 if len(hits) > 0:
                     stats["siteHitsCount"][site] += len(hits) 
                     stats["siteHitSeqsCount"][site] += 1                     

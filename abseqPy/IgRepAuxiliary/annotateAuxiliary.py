@@ -16,9 +16,9 @@ from Bio import SeqIO
 from pandas.core.frame import DataFrame
 from math import ceil
 
-from abseq.IgRepAuxiliary.IgBlastWorker import analyzeSmallFile, IgBlastWorker
-from abseq.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepAuxiliary.IgBlastWorker import analyzeSmallFile, IgBlastWorker
+from abseqPy.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
+from abseqPy.logger import printto, LEVEL
 
 
 def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='imgt', stream=None):

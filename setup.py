@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os
 import sys
-import pip
 import shutil
 import glob
 import tarfile
@@ -165,7 +164,7 @@ def _syml(src, dest):
 
 
 def setup_dir(root):
-    from abseq.config import EXTERNAL_DEP_DIR
+    from abseqPy.config import EXTERNAL_DEP_DIR
     output = os.path.join(root, EXTERNAL_DEP_DIR)
     if os.path.exists(output):
         _error("{} already exists! Remove the directory and try again".format(EXTERNAL_DEP_DIR))
@@ -423,7 +422,8 @@ class ExternalDependencyInstaller(install):
         # By pip.installing here, it's going to be available globally
         setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
         for pack in setup_requires:
-            pip.main(['install', pack])
+            # pip.main(['install', pack]) no longer supported in pip >= 10
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
         # create external deps dir
         d = setup_dir("abseq")
         d_bin = os.path.join(d, 'bin')
@@ -518,7 +518,7 @@ def readme():
         return f.read()
 
 
-setup(name="AbSeq",
+setup(name="abseqPy",
       version="1.1.15",
       description="Quality control pipeline for antibody libraries",
       license="placeholder",
@@ -536,12 +536,12 @@ setup(name="AbSeq",
       # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
       # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)
       package_data={
-          'abseq': ['rscripts', '3rd_party']
+          'abseqPy': ['3rd_party']
       },
       include_package_data=True,
       cmdclass={
           'install': ExternalDependencyInstaller,
       },
       entry_points={
-          'console_scripts': ['abseq=abseq.abseqQC:main'],
+          'console_scripts': ['abseq=abseqPy.abseqQC:main'],
       })

@@ -7,7 +7,7 @@
 
 from numpy import array
 
-from abseq.IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
+from abseqPy.IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
 
 
 def generateOverlapFigures(overlapResults, noSeqs, name, siteHitsFile, stream=None):

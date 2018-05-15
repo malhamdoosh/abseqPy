@@ -21,9 +21,9 @@ from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 
-from abseq.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM
-from abseq.logger import printto, LEVEL
-from abseq.utilities import hasLargeMem
+from abseqPy.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM
+from abseqPy.logger import printto, LEVEL
+from abseqPy.utilities import hasLargeMem
 
 
 def detectFileFormat(fname, noRaise=False):

@@ -16,12 +16,12 @@ from Bio import SeqIO
 from collections import Counter
 from pandas import DataFrame
 
-from abseq.IgRepAuxiliary.productivityAuxiliary import ProcCounter
-from abseq.IgRepReporting.igRepPlots import plotDist, plotVenn
-from abseq.IgRepAuxiliary.PrimerWorker import PrimerWorker
-from abseq.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
-from abseq.utilities import hasLargeMem
-from abseq.logger import printto, LEVEL
+from abseqPy.IgRepAuxiliary.productivityAuxiliary import ProcCounter
+from abseqPy.IgRepReporting.igRepPlots import plotDist, plotVenn
+from abseqPy.IgRepAuxiliary.PrimerWorker import PrimerWorker
+from abseqPy.IgRepertoire.igRepUtils import gunzip, compressCountsGeneLevel
+from abseqPy.utilities import hasLargeMem
+from abseqPy.logger import printto, LEVEL
 
 
 def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,

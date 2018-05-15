@@ -14,11 +14,11 @@ import warnings
 
 from datetime import timedelta
 
-from abseq.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
-from abseq.argsParser import parseArgs
-from abseq.config import VERSION
-from abseq.utilities import PriorityPath
-from abseq.logger import formattedTitle
+from abseqPy.IgMultiRepertoire.IgMultiRepertoire import IgMultiRepertoire
+from abseqPy.argsParser import parseArgs
+from abseqPy.config import VERSION
+from abseqPy.utilities import PriorityPath
+from abseqPy.logger import formattedTitle
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.simplefilter(action="ignore", category=DeprecationWarning)
@@ -48,7 +48,7 @@ def main():
 
             print("The analysis started at " + startTimeStr)
             print("The analysis took {}".format(timedelta(seconds=int(round(time.time() - startTime)))))
-            print("Abseq Version " + VERSION)
+            print("AbSeqPy version " + VERSION)
     except Exception as e:
         print("Unexpected error: " + str(e))
         print('-' * 60)
