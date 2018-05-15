@@ -34,6 +34,13 @@ versions = {
     'gs': ['9.22']
 }
 
+# although setup() has this, it's installed locally in abseq's installation dir.
+# By pip.installing here, it's going to be available globally
+setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
+for pack in setup_requires:
+    # pip.main(['install', pack]) no longer supported in pip >= 10
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
+
 
 class FTPBlast:
     def __init__(self, addr, version):
@@ -418,14 +425,8 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
 
 class ExternalDependencyInstaller(install):
     def run(self):
-        # although setup() has this, it's installed locally in abseq's installation dir.
-        # By pip.installing here, it's going to be available globally
-        setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
-        for pack in setup_requires:
-            # pip.main(['install', pack]) no longer supported in pip >= 10
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
         # create external deps dir
-        d = setup_dir("abseq")
+        d = setup_dir("abseqPy")
         d_bin = os.path.join(d, 'bin')
         plat, _ = _get_sys_info()
 
@@ -509,8 +510,8 @@ class ExternalDependencyInstaller(install):
             print("Found IGBLASTDB in ENV, skipping download")
 
         # replace install.run(self)
-        # install.run(self)
-        self.do_egg_install()
+        install.run(self)
+        # self.do_egg_install()
 
 
 def readme():
@@ -529,7 +530,8 @@ setup(name="abseqPy",
       maintainer_email="placeholder",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
-      setup_requires=['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'six'],
+      setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
+                      'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       packages=find_packages(),
