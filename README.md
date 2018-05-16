@@ -68,7 +68,7 @@ To download and install AbSeq:
 ```bash
 $ git clone <insert-abseq-repo-url>
 $ cd abseq
-$ pip install .
+$ python setup.py install
 ``` 
 
 depending on what your system already has _and your internet speed_, this may take awhile to install.
