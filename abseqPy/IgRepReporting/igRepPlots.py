@@ -623,9 +623,12 @@ def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=Non
     # plot as heatmap
 
     heatmap, xedges, yedges = np.histogram2d(x, y, bins=BINS)
-    #     print xedges
-    #     print yedges
     heatmap = heatmap / np.sum(heatmap) * 100
+    exportMatrix(heatmap.transpose(),
+                 centrizeBins(xedges),
+                 centrizeBins(yedges),
+                 filename.replace(".png", ".tsv"),
+                 metadata="total="+str(total))
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
     #     c = cmap_discretize('coolwarm', 5)
     title = 'Alignment Quality of Sample ' + sampleName
@@ -634,6 +637,20 @@ def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=Non
                 extent, xedges, yedges,
                 filename,
                 axlabels, title)
+
+
+def centrizeBins(bins):
+    return bins[:-1] + np.diff(bins) / 2
+
+
+def exportMatrix(matrix, xlabel, ylabel, filename, sep="\t", metadata=None):
+    assert len(xlabel) == matrix.shape[1]
+    assert len(ylabel) == matrix.shape[0]
+    with open(filename, "w") as fp:
+        if metadata:
+            fp.write(str(metadata) + "\n")
+        fp.write(sep.join(map(str, xlabel)) + "\n")
+        [fp.write(str(ylabel[i]) + sep + sep.join(map(str, row)) + "\n") for i, row in enumerate(matrix)]
 
 
 def plotHeatmap(hm, extent, xticks, yticks,
