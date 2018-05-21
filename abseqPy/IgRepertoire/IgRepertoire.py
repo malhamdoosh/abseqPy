@@ -391,6 +391,8 @@ class IgRepertoire:
             plotSeqLenDist(count, self.name, noOutlierOutputFile, self.format,
                            maxbins=40, histtype='bar', removeOutliers=True,
                            normed=True, stream=logger)
+            del records
+            gc.collect()
         else:
             printto(logger, "File found ... {}".format(os.path.basename(outputFile)), LEVEL.WARN)
             printto(logger, "File found ... {}".format(os.path.basename(noOutlierOutputFile)), LEVEL.WARN)
