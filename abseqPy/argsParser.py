@@ -76,7 +76,7 @@ def parseArgs(arguments=None):
     #                                    Parse clone limit option
     # --------------------------------------------------------------------------------------------------------
     if args.clonelimit is None:
-        args.clonelimit = DEFAULT_TOP_CLONE_VALUE
+        args.clonelimit = float(DEFAULT_TOP_CLONE_VALUE)
     elif args.clonelimit.lower() == 'inf':
         args.clonelimit = float('inf')
     else:
@@ -207,7 +207,8 @@ def parseCommandLineArguments(arguments=None):
     optional.add_argument('-cl', '--clonelimit', help="outputs an intermediate file (top N overly expressed clones, "
                                                       "top N under expressed clones) in "
                                                       "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
-                                                      " a number or inf to retain all clones [default=100]",
+                                                      " a number or inf to retain all clones [default={}]"
+                          .format(DEFAULT_TOP_CLONE_VALUE),
                           default=None)
     optional.add_argument('-dc', '--detailedComposition', help="segregate each composition logo plot by IGV gene name."
                                                                " This shows a composition logo for each IGV gene"
