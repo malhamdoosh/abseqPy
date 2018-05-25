@@ -530,7 +530,7 @@ else:
 print()
 print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent")
 print()
-print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.abspath(sys.argv[1])))
+print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "bin")))
 if igblastdb_downloaded:
     print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "databases")))
 if igdata_downloaded:
