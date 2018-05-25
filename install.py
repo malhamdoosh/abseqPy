@@ -423,6 +423,8 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
             _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'prot', '-in', clean_fasta_prot])
         print(f + ' has been processed.')
 
+igdata_downloaded = False
+igblastdb_downloaded = False
 
 # create external deps dir
 if len(sys.argv) != 2:
@@ -491,6 +493,7 @@ if 'IGDATA' not in os.environ:
             os.makedirs(igdata_dir)
         blast.download_internal_data(igdata_dir)
         blast.download_optional_file(igdata_dir)
+    igdata_downloaded = True
 else:
     print("Found IGDATA in ENV, skipping download")
 
@@ -520,11 +523,18 @@ if 'IGBLASTDB' not in os.environ:
                    os.path.join(d, 'databases'))
     igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
                    os.path.join(d, 'imgt_mouse'), os.path.join(d, 'databases'))
+    igblastdb_downloaded = True
 else:
     print("Found IGBLASTDB in ENV, skipping download")
 
 print()
-print("Installation complete, remember to add the following line to your ~/.bashrc or equivalent")
-print("export PATH=\"${{PATH}}:{}\"".format(os.path.abspath(sys.argv[1])))
+print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent")
+print()
+print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.abspath(sys.argv[1])))
+if igblastdb_downloaded:
+    print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "databases")))
+if igdata_downloaded:
+    print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "igdata")))
+
 print()
 
