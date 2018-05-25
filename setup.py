@@ -36,7 +36,7 @@ versions = {
 
 # although setup() has this, it's installed locally in abseq's installation dir.
 # By pip.installing here, it's going to be available globally
-setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'six']
+setup_requires = ['numpy>=1.11.3', 'pytz', 'python-dateutil', 'psutil', 'biopython>=1.66', 'requests']
 for pack in setup_requires:
     # pip.main(['install', pack]) no longer supported in pip >= 10
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
@@ -112,6 +112,26 @@ def _get_sys_info():
     return platform.system(), 8 * struct.calcsize("P")
 
 
+def _save_as(url, fname, chmod=True):
+    import requests
+    r = requests.get(url)
+    attempts = 0
+
+    # keep trying until we get it
+    while r.status_code != 200 and attempts < 10:
+        r = requests.get(url)
+        attempts += 1
+
+    if r.status_code != 200:
+        raise Exception("Cannot download {}, fatal error".format(url))
+
+    with open(fname, 'wb') as fp:
+        for c in r:
+            fp.write(c)
+    if chmod:
+        os.chmod(fname, 0o777)
+
+
 def _get_software_version(prog):
     try:
         if prog == 'igblast':
@@ -181,7 +201,6 @@ def setup_dir(root):
 def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]):
     # can't use versions yet, pre-compiled binaries are a little out of sync
 
-    from six.moves.urllib import request
     plat, bit = _get_sys_info()
     # clustalo needs to create a dir
     clustalo_installation_dir = os.path.join(installation_dir, 'clustal-omega')
@@ -191,9 +210,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
     binary = os.path.join(clustalo_installation_dir, 'clustalo')
     if plat == MAC:
         addr = 'http://www.clustal.org/omega/clustal-omega-1.2.3-macosx'
-        request.urlretrieve(addr, binary)
-        # add execution bit
-        os.chmod(binary, 0o777)
+        _save_as(addr, binary)
     elif plat == LIN:
         if bit == 64:
             addr = 'http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64'
@@ -202,13 +219,11 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
         else:
             _error('Unknown architecture. Detected a non 32 or 64 bit system.')
         # noinspection PyUnboundLocalVariable
-        request.urlretrieve(addr, binary)
-        # add execution bit
-        os.chmod(binary, 0o777)
+        _save_as(addr, binary)
     elif plat == WIN:
         windows_bin = 'clustal-omega-1.2.2-win64.zip'
         addr = 'http://www.clustal.org/omega/' + windows_bin
-        request.urlretrieve(addr, windows_bin)
+        _save_as(addr, windows_bin, chmod=False)
         zip_ref = zipfile.ZipFile(windows_bin)
         zip_ref.extractall(clustalo_installation_dir)
         zip_ref.close()
@@ -223,11 +238,10 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
 
 
 def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
-    from six.moves.urllib import request
     plat, _ = _get_sys_info()
     addr = 'http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
-    request.urlretrieve(addr, zipname)
+    _save_as(addr, zipname, chmod=False)
     unzipped_name = 'FastQC'
     zip_ref = zipfile.ZipFile(zipname, 'r')
     zip_ref.extractall(installation_dir)
@@ -267,13 +281,12 @@ def install_leehom(installation_dir='.'):
 
 
 def install_flash(installation_dir='.'):
-    from six.moves.urllib import request
     addr = "http://ccb.jhu.edu/software/FLASH/FLASH-1.2.11-windows-bin.zip"
     flash_ins_dir = os.path.join(installation_dir, "flash")
     if not os.path.exists(flash_ins_dir):
         os.makedirs(flash_ins_dir)
     flash_zip = 'flash.zip'
-    request.urlretrieve(addr, flash_zip)
+    _save_as(addr, flash_zip, chmod=False)
     zip_ref = zipfile.ZipFile(flash_zip)
     zip_ref.extractall(flash_ins_dir)
     for f in os.listdir(flash_ins_dir):
@@ -281,7 +294,6 @@ def install_flash(installation_dir='.'):
 
 
 def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
-    from six.moves.urllib import request
     plat, bit = _get_sys_info()
     target_dir = os.path.abspath(installation_dir)
 
@@ -292,7 +304,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
         old_dir = os.path.abspath('.')
 
         os.chdir(installation_dir)
-        request.urlretrieve(addr, tarname)
+        _save_as(addr, tarname, chmod=False)
         _ = check_output(['tar', '-xvzf', tarname])
         ghs_dir = os.path.splitext(os.path.splitext(tarname)[0])[0]
         os.chdir(ghs_dir)
@@ -304,7 +316,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
         binary = "gs{}w64.exe".format(version.replace('.', ''))
         addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{0}/gs{0}w64.exe"\
             .format(version.replace('.', ''))
-        request.urlretrieve(addr, binary)
+        _save_as(addr, binary, chmod=False)
         os.rename(binary, os.path.join(target_dir, 'bin', 'gs'))
     # dont need to return binary directory, it's already in installation_dir/bin
 
@@ -341,7 +353,6 @@ def install_TAMO():
 
 
 def download_imgt(download_dir, species, species_layman):
-    from six.moves.urllib import request
     links = [
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGHV&species=",
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGHD&species=",
@@ -357,7 +368,7 @@ def download_imgt(download_dir, species, species_layman):
     for url in links:
         gene = url[url.find("+") + 1:url.find("&")].lower()
         output = "{}_{}.imgt.raw".format(os.path.join(path, species_layman), gene)
-        request.urlretrieve(url+species, output)
+        _save_as(url+species, output, chmod=False)
         with open(output[:output.rfind(".")], "w") as writer, \
                 open(output) as reader:
 

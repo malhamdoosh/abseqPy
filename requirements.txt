@@ -1,3 +1,4 @@
+requests
 PyYAML
 six
 numpy >= 1.11.3
