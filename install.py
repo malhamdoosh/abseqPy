@@ -435,7 +435,7 @@ if not os.path.exists('TAMO.tar.gz'):
 
 # although setup() has this, it's installed locally in abseq's installation dir.
 # By pip.installing here, it's going to be available globally
-setup_requires = ['requests']
+setup_requires = ['requests', "biopython>=1.66"]
 for pack in setup_requires:
     # pip.main(['install', pack]) no longer supported in pip >= 10
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
