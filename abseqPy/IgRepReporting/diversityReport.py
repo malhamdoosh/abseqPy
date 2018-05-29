@@ -23,7 +23,8 @@ from abseqPy.utilities import hasLargeMem
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, segregate=False,
                             stream=None):
     generateSpectraTypePlots(spectraTypes,  name, outDir, stream=stream)
-    flattened = flattenClonoTypeCountsDict(clonoTypes, stream=stream)
+
+    flattened = flattenClonoTypeCountsDict(clonoTypes, stream=stream) if segregate else clonoTypes
 
     writeClonoTypesToFiles(flattened, name, outDir, topClonotypes, stream=stream)
     estimateDiversity(clonoTypes, flattened, name, outDir, threads=threads, segregate=segregate, stream=stream)

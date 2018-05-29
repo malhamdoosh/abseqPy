@@ -551,7 +551,7 @@ class IgRepertoire:
 
         # Identify clonotypes 
         printto(logger, "Clonotypes are being generated ... ")
-        clonoTypes = annotateClonotypes(self.cloneSeqs, removeNone=True)
+        clonoTypes = annotateClonotypes(self.cloneSeqs, segregate=self.detailedComposition, removeNone=True)
 
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outResDir, self.clonelimit,
                                 threads=self.threads, segregate=self.detailedComposition, stream=logger)
