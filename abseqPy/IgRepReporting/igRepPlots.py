@@ -115,7 +115,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         #         binWidth = edges[1] - edges[0]
         #         ax.bar(edges[:-1], histcals * binWidth, binWidth)
         histcals, bins, patches = ax.hist(sizes, bins=bins, range=autoscale,
-                                          normed=normed, weights=weights,
+                                          density=normed, weights=weights,
                                           histtype=histtype)
         # write to intermediate csv file too
         writeCSV(outputFile.replace(".png", ".csv"), "length,count\n", "{},{}\n",
