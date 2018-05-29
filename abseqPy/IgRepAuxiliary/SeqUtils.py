@@ -122,7 +122,7 @@ def generateMotif(sequences, name, alphabet, filename,
     if transSeq:
         seqs = []               
         for rec in sequences:
-            seq = Seq(rec).translate(to_stop=False)                   
+            seq = Seq(rec[: len(rec) - (len(rec) % 3)]).translate(to_stop=False)
             seqs.append(str(seq))
     else:
         seqs = sequences

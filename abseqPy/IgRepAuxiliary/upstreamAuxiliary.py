@@ -239,7 +239,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
             if not startCodon or START_CODON in seq:
 
                 if type == 'secsig':
-                    seq = seq.translate(to_stop=False)[1:]
+                    seq = seq[: len(seq) - (len(seq) % 3)].translate(to_stop=False)[1:]
 
                 if 'X' in seq or '*' in seq:
                     faultyTrans[ighv].append(rec)
@@ -296,7 +296,10 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
                                         'Faulty Translations')
         printto(stream, "\tTotal faulty secretion signals is {} (excluded)".format(len(flattenRecs)), LEVEL.INFO)
         for i in random.choice(range(len(flattenRecs)), min(5, len(flattenRecs)), replace=False):
-            printto(stream, "\t{}\n\tTranslated:{}".format(flattenRecs[i].seq, flattenRecs[i].seq.translate()))
+            sequence = flattenRecs[i].seq
+            printto(stream,
+                    "\t{}\n\tTranslated:{}"
+                    .format(sequence, sequence[: len(sequence) - (len(sequence) % 3)].translate()))
 
     if sum(noStartCodonCounts.values()):
         flattenRecs = list(itertools.chain.from_iterable(ighvSignalsNoATG.values()))
@@ -400,18 +403,20 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                 "Sequences were already analyzed at {}, loading from files instead ... " + ' '.join(allFiles),
                 LEVEL.WARN)
 
-        ighvSignals, faultySeq, noStartCodonSeq = _loadIGVSeqsFromFasta(validSeqFile), \
-                                                  _loadIGVSeqsFromFasta(faultySeqFile), \
+        ighvSignals, faultySeq, noStartCodonSeq = _loadIGVSeqsFromFasta(validSeqFile),\
+                                                  _loadIGVSeqsFromFasta(faultySeqFile),\
                                                   _loadIGVSeqsFromFasta(noStartCodonFile)
     else:
         printto(stream, "Sequences are being analyzed ... ")
         ighvSignals, faultySeq, noStartCodonSeq = collectUpstreamSeqs(upstreamFile, sampleName, expectLength,
-                                                                      outResDir, outAuxDir, startCodon, type, stream=stream)
+                                                                      outResDir, outAuxDir, startCodon, type,
+                                                                      stream=stream)
 
     ighvSignals = compressor(ighvSignals)
     generateMotifs(ighvSignals,
                    align=(expectLength[0] < expectLength[1]),
-                   outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
+                   outputPrefix=os.path.join(outResDir,
+                                             ("{}_{}_{:.0f}_{:.0f}_dna_" + level).format(*OUTPUT_FILE_PACKET)),
                    clusterMotifs=clusterMotifs,
                    threads=threads,
                    stream=stream)
@@ -420,7 +425,8 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
         faultySeq = compressor(faultySeq)
         generateMotifs(faultySeq,
                        align=True,
-                       outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_faulty_" + level).format(*OUTPUT_FILE_PACKET)),
+                       outputPrefix=os.path.join(outResDir,
+                                                 ("{}_{}_{:.0f}_{:.0f}_faulty_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
@@ -430,7 +436,8 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
         generateMotifs(noStartCodonSeq,
                        align=True,
                        outputPrefix=os.path.join(outResDir,
-                                                 ("{}_{}_{:.0f}_{:.0f}_untranslated_" + level).format(*OUTPUT_FILE_PACKET)),
+                                                 ("{}_{}_{:.0f}_{:.0f}_untranslated_" + level).format(
+                                                     *OUTPUT_FILE_PACKET)),
                        transSeq=False,
                        extendAlphabet=True,
                        clusterMotifs=clusterMotifs,
@@ -438,7 +445,8 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                        stream=stream)
         generateMotifs(ighvSignals,
                        align=False,
-                       outputPrefix=os.path.join(outResDir, ("{}_{}_{:.0f}_{:.0f}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
+                       outputPrefix=os.path.join(outResDir,
+                                                 ("{}_{}_{:.0f}_{:.0f}_protein_" + level).format(*OUTPUT_FILE_PACKET)),
                        transSeq=True,
                        clusterMotifs=clusterMotifs,
                        threads=threads,
