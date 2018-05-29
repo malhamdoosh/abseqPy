@@ -544,7 +544,7 @@ setup(name="abseqPy",
       setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                       'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
+                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml', 'scipy>=0.19.0'],
       packages=find_packages(),
       # NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
       # IT IN config.py AND MANIFEST.in TOO! (just search for this comment and you'll find the exact location)

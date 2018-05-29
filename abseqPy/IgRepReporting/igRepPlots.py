@@ -12,6 +12,7 @@ import math
 import numpy
 import random
 import itertools
+import scipy.stats
 import multiprocessing
 
 from collections import Counter, defaultdict
@@ -27,7 +28,6 @@ from abseqPy.logger import printto, LEVEL
 import matplotlib as mpl
 mpl.use('Agg')  # Agg
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 import matplotlib.colors as mcolors
 from matplotlib import cm
 
@@ -123,7 +123,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
             if sigma != 0:
-                y = mlab.normpdf(bins, mu, sigma)
+                y = scipy.stats.norm.pdf(bins, mu, sigma)
                 ax.plot(bins, y, 'r--')
     else:
         if all([(x == 1) for x in weights]):
