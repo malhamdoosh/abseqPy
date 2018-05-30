@@ -84,7 +84,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
-    if type(counts) == str:
+    if isinstance(counts, str):
         with abseqPy.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         if len(sizes) == 0:
@@ -92,10 +92,10 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()
-    elif type(counts) == list:
+    elif isinstance(counts, list):
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
-    elif type(counts) == type(Counter()):
+    elif isinstance(counts, Counter):
         sizes = counts.keys()
         weights = map(lambda x: counts[x], sizes)
     if removeOutliers:
@@ -752,7 +752,7 @@ def cmap_discretize(cmap, N):
         imshow(x, cmap=djet)
     """
 
-    if type(cmap) == str:
+    if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
     colors_i = np.concatenate((np.linspace(0, 1., N), (0., 0., 0., 0.)))
     colors_rgba = cmap(colors_i)

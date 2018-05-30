@@ -954,7 +954,7 @@ class IgRepertoire:
     def _nextTask(self):
         if len(self._tasks) > 0:
             pack = self._tasks.pop()
-            if type(pack) == str:
+            if isinstance(pack, str):
                 return pack, [], {}
             else:
                 # type(pack) = tuple: (str, dict) - see SeqLenClass
