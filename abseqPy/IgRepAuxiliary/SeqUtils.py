@@ -23,6 +23,7 @@ from Bio.Alphabet.IUPAC import IUPACProtein
 from Bio import SeqIO, motifs, Phylo
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
+from Bio import Alphabet
 from subprocess import check_output
 
 from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs
@@ -163,13 +164,13 @@ def generateMotif(sequences, name, alphabet, filename,
     
 def createAlphabet(align=False, transSeq=False, extendAlphabet=False, protein=False):
     if not transSeq and not protein:
-        alphabet = Alphabet()
-        alphabet.letters = "ACGT" if not extendAlphabet else "ACGTN"            
+        alphabet = Alphabet.DNAAlphabet()
+        alphabet.letters = "ACGT" if not extendAlphabet else "ACGTN"
     else:
-        alphabet = IUPACProtein()
-        alphabet.letters += '*' if not extendAlphabet else '*X'         
+        alphabet = Alphabet.ProteinAlphabet()
+        alphabet.letters = IUPACProtein().letters + ('*' if not extendAlphabet else '*X')
     if align:
-        alphabet.letters += '-'  
+        alphabet.letters += '-'
     return alphabet
 
 
@@ -347,22 +348,6 @@ def generateMotifLogo(m, filename, outdir='.', dna=True):
 
 def maxlen(x):
     return max(map(len, x))
-
-
-# XXX: Author: JIAHONG FONG: @depreciated. - removing adefazio/sampler dependency
-# TODO: Look for faster and ACCURATE weighted sampling approach
-# def weightedSampleFast(population, weights, k):
-#    if (weights is not None):
-#        from fast_sampler import FastSampler
-#        from numpy import array
-#        weights = array(weights, dtype='d')
-#        h = FastSampler(len(population), max(weights), min(weights))
-#        for i in range(len(population)):
-#            h.add(i, weights[i])
-#        s = map(lambda x : population[h.sample()], range(k))
-#        return s
-#    else:
-#        return random.sample(population, k)
 
 
 def weightedSample(population, weights, k):
