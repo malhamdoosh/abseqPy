@@ -147,9 +147,9 @@ def _get_software_version(prog):
 def _needs_installation(prog):
     v = versions[prog]
     software_version = _get_software_version(prog)
-    if type(v) == bool or type(software_version) == bool:
+    if isinstance(v, bool) or isinstance(software_version, bool):
         return software_version != v
-    if type(v) == list:
+    if isinstance(v, list):
         if len(v) == 1:
             return LooseVersion(software_version) < LooseVersion(v[0])
         elif len(v) == 2:
