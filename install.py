@@ -181,14 +181,14 @@ def _syml(src, dest):
             os.symlink(link_src, link_dest)
 
 
-def setup_dir(root):
+def _setup_dir(root):
     root = os.path.abspath(root)
     if not os.path.exists(root):
         os.makedirs(root)
     return root
 
 
-def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]):
+def _install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]):
     # can't use versions yet, pre-compiled binaries are a little out of sync
 
     plat, bit = _get_sys_info()
@@ -227,7 +227,7 @@ def install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1]
     return binary
 
 
-def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
+def _install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     plat, _ = _get_sys_info()
     addr = 'http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
@@ -248,7 +248,7 @@ def install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     return binary
 
 
-def install_leehom(installation_dir='.'):
+def _install_leehom(installation_dir='.'):
     addr = 'https://github.com/grenaud/leeHom.git'
     old_dir = os.path.abspath(".")
 
@@ -270,7 +270,7 @@ def install_leehom(installation_dir='.'):
     return os.path.join(installation_dir, 'leeHom', 'src', 'leeHomMulti')
 
 
-def install_flash(installation_dir='.'):
+def _install_flash(installation_dir='.'):
     addr = "http://ccb.jhu.edu/software/FLASH/FLASH-1.2.11-windows-bin.zip"
     flash_ins_dir = os.path.join(installation_dir, "flash")
     if not os.path.exists(flash_ins_dir):
@@ -283,7 +283,7 @@ def install_flash(installation_dir='.'):
         shutil.move(os.path.join(flash_ins_dir, f), os.path.join(installation_dir, 'bin', f))
 
 
-def install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
+def _install_ghost_script(installation_dir='.', threads=2, version=versions['gs'][-1]):
     plat, bit = _get_sys_info()
     target_dir = os.path.abspath(installation_dir)
 
@@ -311,7 +311,7 @@ def install_ghost_script(installation_dir='.', threads=2, version=versions['gs']
     # dont need to return binary directory, it's already in installation_dir/bin
 
 
-def install_igblast(installation_dir='.', version=versions['igblast'][-1]):
+def _install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     plat, _ = _get_sys_info()
 
     with FTPBlast('ftp.ncbi.nih.gov', version) as blast:
@@ -329,7 +329,7 @@ def install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     return bins
 
 
-def install_TAMO():
+def _install_TAMO():
     # TAMO comes packed with AbSeq, just need to install it!
     tar = tarfile.open('TAMO.tar.gz', "r:gz")
     tar.extractall()
@@ -342,7 +342,7 @@ def install_TAMO():
     os.chdir(old_dir)
 
 
-def download_imgt(download_dir, species, species_layman):
+def _download_imgt(download_dir, species, species_layman):
     links = [
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGHV&species=",
         "http://www.imgt.org/genedb/GENElect?query=7.14+IGHD&species=",
@@ -380,7 +380,7 @@ def download_imgt(download_dir, species, species_layman):
             os.remove(output)
 
 
-def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
+def _igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
     from Bio import SeqIO
     for f in os.listdir(data_dir):
         clean_fasta = os.path.join(output_dir, 'imgt_' + f[:f.find(".")])
@@ -423,118 +423,130 @@ def igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
             _ = check_output([make_blast_bin, '-parse_seqids', '-dbtype', 'prot', '-in', clean_fasta_prot])
         print(f + ' has been processed.')
 
-igdata_downloaded = False
-igblastdb_downloaded = False
 
-# create external deps dir
-if len(sys.argv) != 2:
-    _error("ERROR: Usage: python {} install_path".format(sys.argv[0]))
+def install(directory):
+    igdata_downloaded = False
+    igblastdb_downloaded = False
 
-if not os.path.exists('TAMO.tar.gz'):
-    _error("ERROR: Please use this script in the directory where TAMO.tar.gz is in")
+    # create external deps dir
+    if len(sys.argv) != 2:
+        _error("ERROR: Usage: python {} install_path".format(sys.argv[0]))
 
-# although setup() has this, it's installed locally in abseq's installation dir.
-# By pip.installing here, it's going to be available globally
-setup_requires = ['requests', 'numpy>=1.11.3', 'biopython>=1.66']
-for pack in setup_requires:
-    # pip.main(['install', pack]) no longer supported in pip >= 10
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
+    if not os.path.exists('TAMO.tar.gz'):
+        _error("ERROR: Please use this script in the directory where TAMO.tar.gz is in")
 
-d = setup_dir(sys.argv[1])
+    # although setup() has this, it's installed locally in abseq's installation dir.
+    # By pip.installing here, it's going to be available globally
+    setup_requires = ['requests', 'numpy>=1.11.3', 'biopython>=1.66']
+    for pack in setup_requires:
+        # pip.main(['install', pack]) no longer supported in pip >= 10
+        subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
 
+    d = _setup_dir(directory)
 
-d_bin = os.path.join(d, 'bin')
-plat, _ = _get_sys_info()
+    d_bin = os.path.join(d, 'bin')
+    plat, _ = _get_sys_info()
 
-if _needs_installation('clustalo'):
-    b_clustal = install_clustal_omega(d)
-    _syml(b_clustal, d_bin)
-else:
-    print("Found clustalo, skipping installation")
-
-if _needs_installation('fastqc'):
-    b_fastqc = install_fastqc(d)
-    _syml(b_fastqc, d_bin)
-else:
-    print("Found fastqc, skipping installation")
-
-if plat == WIN:
-    if _needs_installation('flash'):
-        install_flash(d)
+    if _needs_installation('clustalo'):
+        b_clustal = _install_clustal_omega(d)
+        _syml(b_clustal, d_bin)
     else:
-        print("Found FLASh, skipping installation")
-else:
-    if _needs_installation('leehom'):
-        b_leehom = install_leehom(d)
-        _syml(b_leehom, d_bin)
+        print("Found clustalo, skipping installation")
+
+    if _needs_installation('fastqc'):
+        b_fastqc = _install_fastqc(d)
+        _syml(b_fastqc, d_bin)
     else:
-        print("Found leeHom, skipping installation")
+        print("Found fastqc, skipping installation")
 
-if _needs_installation('gs'):
-    install_ghost_script(d)
-else:
-    print("Found ghostscript, skipping installation")
+    if plat == WIN:
+        if _needs_installation('flash'):
+            _install_flash(d)
+        else:
+            print("Found FLASh, skipping installation")
+    else:
+        if _needs_installation('leehom'):
+            b_leehom = _install_leehom(d)
+            _syml(b_leehom, d_bin)
+        else:
+            print("Found leeHom, skipping installation")
 
-if _needs_installation('igblast'):
-    retvals = install_igblast(d)
-    for b in retvals:
-        _syml(b, d_bin)
-else:
-    print("Found igblast, skipping installation")
+    if _needs_installation('gs'):
+        _install_ghost_script(d)
+    else:
+        print("Found ghostscript, skipping installation")
 
-# install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
-install_TAMO()
-
-if 'IGDATA' not in os.environ:
-    with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-        blast.download_edit_imgt_pl(d)
-        igdata_dir = os.path.join(d, 'igdata')
-        if not os.path.exists(igdata_dir):
-            os.makedirs(igdata_dir)
-        blast.download_internal_data(igdata_dir)
-        blast.download_optional_file(igdata_dir)
-    igdata_downloaded = True
-else:
-    print("Found IGDATA in ENV, skipping download")
-
-if 'IGBLASTDB' not in os.environ:
-    # download human and mouse IMGT GeneDB
-    download_imgt(d, "Homo+sapiens", "human")
-    download_imgt(d, "Mus", "mouse")
-
-    # create IGBLASTDB's directory
-    database_dir = os.path.join(d, 'databases')
-    if not os.path.exists(database_dir):
-        os.makedirs(database_dir)
-
-    # if we don't have edit_imgt_file.pl script, download it!
-    if not os.path.exists(os.path.join(d, 'edit_imgt_file.pl')):
-        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-            blast.download_edit_imgt_pl(d)
-
-    # if we don't have makeblastdb, download it!
-    if not os.path.exists(os.path.join(d_bin, 'makeblastdb')):
-        retvals = install_igblast(d)
+    if _needs_installation('igblast'):
+        retvals = _install_igblast(d)
         for b in retvals:
             _syml(b, d_bin)
+    else:
+        print("Found igblast, skipping installation")
 
-    igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
-                   os.path.join(d, 'imgt_human'),
-                   os.path.join(d, 'databases'))
-    igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
-                   os.path.join(d, 'imgt_mouse'), os.path.join(d, 'databases'))
-    igblastdb_downloaded = True
-else:
-    print("Found IGBLASTDB in ENV, skipping download")
+    # install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
+    _install_TAMO()
 
-print()
-print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent")
-print()
-print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "bin")))
-if igblastdb_downloaded:
-    print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "databases")))
-if igdata_downloaded:
-    print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(sys.argv[1]), "igdata")))
+    if 'IGDATA' not in os.environ:
+        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+            blast.download_edit_imgt_pl(d)
+            igdata_dir = os.path.join(d, 'igdata')
+            if not os.path.exists(igdata_dir):
+                os.makedirs(igdata_dir)
+            blast.download_internal_data(igdata_dir)
+            blast.download_optional_file(igdata_dir)
+        igdata_downloaded = True
+    else:
+        print("Found IGDATA in ENV, skipping download")
 
-print()
+    if 'IGBLASTDB' not in os.environ:
+        # download human and mouse IMGT GeneDB
+        _download_imgt(d, "Homo+sapiens", "human")
+        _download_imgt(d, "Mus", "mouse")
 
+        # create IGBLASTDB's directory
+        database_dir = os.path.join(d, 'databases')
+        if not os.path.exists(database_dir):
+            os.makedirs(database_dir)
+
+        # if we don't have edit_imgt_file.pl script, download it!
+        if not os.path.exists(os.path.join(d, 'edit_imgt_file.pl')):
+            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+                blast.download_edit_imgt_pl(d)
+
+        # if we don't have makeblastdb, download it!
+        if not os.path.exists(os.path.join(d_bin, 'makeblastdb')):
+            retvals = _install_igblast(d)
+            for b in retvals:
+                _syml(b, d_bin)
+
+        _igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
+                        os.path.join(d, 'imgt_human'),
+                        os.path.join(d, 'databases'))
+        _igblast_compat(os.path.join(d, 'edit_imgt_file.pl'), os.path.join(d_bin, 'makeblastdb'),
+                        os.path.join(d, 'imgt_mouse'), os.path.join(d, 'databases'))
+        igblastdb_downloaded = True
+    else:
+        print("Found IGBLASTDB in ENV, skipping download")
+
+    return igblastdb_downloaded, igdata_downloaded
+
+
+def main():
+    directory = sys.argv[1]
+    igblastdb_downloaded, igdata_downloaded = install(directory)
+
+    print()
+    print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent")
+    print()
+    print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")))
+    if igblastdb_downloaded:
+        print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(directory), "databases")))
+    if igdata_downloaded:
+        print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")))
+    print()
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
