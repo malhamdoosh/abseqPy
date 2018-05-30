@@ -4,15 +4,18 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
+from __future__ import print_function
+
 import gzip
 import shutil
 import glob
 import re
 import os
+import sys
 
 from os.path import exists
 from Bio import SeqIO, AlignIO
-from subprocess import check_output, CalledProcessError
+from subprocess import CalledProcessError
 from pandas.core.frame import DataFrame
 from numpy import isnan, nan
 from Bio.SeqRecord import SeqRecord
@@ -21,9 +24,9 @@ from collections import Counter, defaultdict
 from Bio.pairwise2 import align, format_alignment
 from Bio.SubsMat import MatrixInfo as matlist
 
-from abseqPy.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM
+from abseqPy.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM, PEAR, FLASH
 from abseqPy.logger import printto, LEVEL
-from abseqPy.utilities import hasLargeMem
+from abseqPy.utilities import hasLargeMem, ShortOpts
 
 
 def detectFileFormat(fname, noRaise=False):
@@ -179,7 +182,7 @@ def runIgblastn(blastInput, chain, threads=8,
     command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem,
                                   blastInput, blastOutput, threads, protein=False, stream=stream)
     try:
-        check_output(command.split())
+        command(stderr=sys.stderr, stdout=sys.stdout)
     except CalledProcessError as e:
         printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
                 LEVEL.CRIT)
@@ -207,7 +210,7 @@ def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA',
     command = buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, blastOutput,
                                   threads, protein=True, vOnly=True, stream=stream)
     try:
-        check_output(command.split())
+        command(stderr=sys.stderr, stdout=sys.stdout)
     except CalledProcessError as e:
         printto(stream, "Command {} failed with error code {}.\nDUMP: {}".format(command, e.returncode, e.output),
                 LEVEL.CRIT)
@@ -228,7 +231,7 @@ def writeClonoTypesToFile(clonoTypes, filename, top=100, overRepresented=True, s
         dic['Count'].append(clonoTypes[k])
         dic['Percentage (%)'].append(clonoTypes[k] / total * 100)
         t += 1
-        if (t >= top):
+        if t >= top:
             break
 
     df = DataFrame(dic)
@@ -399,9 +402,9 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            command = "pear -f %s -r %s -o %s -j %d -v 15 -n 350"
-            os.system(command % (readFile1, readFile2, outputPrefix, threads))
-            # os.system("mv %s.* %s" % (outputPrefix, seqOut))
+            pear = ShortOpts(exe=PEAR, f=readFile1, r=readFile2, o=outputPrefix, j=threads, v=15, n=350)
+            printto(stream, "Executing: " + str(pear))
+            pear()
         else:
             printto(stream, "\tMerged reads file " + os.path.basename(mergedFastq) + ' was found!', LEVEL.WARN)
     elif merger == 'leehom':
@@ -409,23 +412,22 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            command = LEEHOM + " -fq1 %s -fq2 %s -fqo %s -t %d --ancientdna --verbose"
-            os.system(command % (readFile1, readFile2, outputPrefix, threads))
-
+            leehom = ShortOpts(exe=LEEHOM, fq1=readFile1, fq2=readFile2, fqo=outputPrefix, t=threads)\
+                .append("--ancientdna --verbose")
+            printto(stream, "Executing: " + str(leehom))
+            leehom()
             gunzip(mergedFastq + '.gz')
-            # os.system("mv %s.* %s" % (outputPrefix, seqOut))
-            # os.system("mv %s_r* %s" % (outputPrefix, seqOut))
         else:
             printto(stream, "\tMerged reads file " + os.path.basename(mergedFastq) + ' was found!', LEVEL.WARN)
     elif merger == 'flash':
         mergedFastq = outputPrefix + '.extendedFrags.fastq'
         outputPrefix = os.path.basename(outputPrefix)
-        if (not exists(mergedFastq)):
+        if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
-                                                                    , os.path.basename(readFile2), LEVEL.WARN))
-            # the merger params souldn't be hardcoded
-            command = "flash %s %s -t %d -o %s -r 300 -f 450 -s 50"
-            os.system(command % (readFile1, readFile2, threads, outputPrefix))
+                                                                    , os.path.basename(readFile2)))
+            flash = ShortOpts(FLASH, readFile1, readFile2, t=threads, o=outputPrefix, r=300, f=450, s=50)
+            printto(stream, "Executing: " + str(flash))
+            flash()
             for f in glob.glob("{}.*".format(outputPrefix)):
                 shutil.move(f, seqOut)
         else:
@@ -514,10 +516,14 @@ def alignListOfSeqs(signals, outDir, threads, name, stream=None):
     for i in range(len(signals)):
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
-    cmd = "{exe} -i {infile} -o {outfile} --threads={threads} --outfmt=clustal".format(
-        exe=CLUSTALOMEGA, infile=tempSeq, outfile=tempAlign, threads=threads
-    )
-    check_output(cmd.split())
+
+    clustal = ShortOpts(CLUSTALOMEGA, i=tempSeq, o=tempAlign)\
+        .append("--threads={} --outfmt=clustal".format(threads))
+
+    printto(stream, "Executing: " + str(clustal))
+    # throw away stderr and stdout
+    clustal(stdout=None, stderr=None)
+
     alignment = AlignIO.read(tempAlign, 'clustal')
     alignedSeq = []
     for rec in alignment:
@@ -779,27 +785,30 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, bl
     igdata = os.path.expandvars(igdata)
     db = os.path.expandvars(db)
     exe = IGBLASTP if protein else IGBLASTN
-    cmd = "{exe}"
     # construct arguments for germline database (VDJ)
     germs = "V" if vOnly else "VDJ"
 
+    cmd = {}
     for germ in germs:
         # c = first letter of chain except when chains are lv or kv, in that case, the D germline database still comes
         # from imgt_<species>_ighd
         c = 'h' if germ == 'D' and chain[0] != 'h' else chain[0]
-        cmd += ' -germline_db_{} '.format(germ) + \
-               os.path.join(db, 'imgt_{}_ig{}{}{}'.format(species, c, germ.lower(), '_p' if protein else ''))
-    # construct domain system
-    cmd += ' -domain_system ' + domainSystem
-    # construct input and organism type
-    cmd += ' -query {query}' + ' -organism {}'.format(species)
-    # add aux data
-    cmd += ' -auxiliary_data {}'.format(os.path.join(igdata, 'optional_file', '{}_gl.aux'.format(species)))
-    # formatting and output file
-    cmd += ' -show_translation -extend_align5end -outfmt 7 -num_threads {threads} -out {output}'
-    cmd = cmd.format(exe=exe, query=blastInput, output=blastOutput, threads=threads)
-    # printto(stream, "Executing {exe} command line: {cmd}".format(exe=exe, cmd=cmd))
-    return cmd
+        cmd['germline_db_' + germ] = os.path.join(db, 'imgt_{}_ig{}{}{}'.format(species,
+                                                                                c,
+                                                                                germ.lower(),
+                                                                                '_p' if protein else ''))
+    blast = ShortOpts(exe,
+                      show_translation="",
+                      extend_align5end="",
+                      domain_system=domainSystem,
+                      query=blastInput,
+                      organism=species,
+                      auxiliary_data=os.path.join(igdata, 'optional_file', '{}_gl.aux'.format(species)),
+                      outfmt=7,
+                      num_threads=threads,
+                      out=blastOutput, **cmd)
+    printto(stream, "Executing : " + str(blast))
+    return blast
 
 
 def ntIUPACEqual(sequence, iupac):

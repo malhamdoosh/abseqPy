@@ -41,7 +41,7 @@ from abseqPy.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
 from abseqPy.IgRepAuxiliary.restrictionAuxiliary import findHits, \
     findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
 from abseqPy.IgRepReporting.restrictionReport import generateOverlapFigures
-from abseqPy.utilities import hasLargeMem
+from abseqPy.utilities import hasLargeMem, ShortOpts
 
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
@@ -258,10 +258,10 @@ class IgRepertoire:
 
         printto(logger, "Fastqc is running ... ")
 
-        command = "%s -o %s -t %d %s"
-        # check for presence of file2 before concatenating str and None(None when self.readFile2 is empty/not provided)
-        os.system(command % (FASTQC, outDir, self.threads,
-                             self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else "")))
+        fastqc = ShortOpts(exe=FASTQC, o=outDir, t=self.threads)\
+            .append(self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else ""))
+        printto(logger, "Excecuting " + str(fastqc))
+        fastqc()
         paramFile = writeParams(self.args, outDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
         printto(logger, "Fastqc has completed.")
