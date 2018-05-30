@@ -26,8 +26,10 @@ EXTERNAL_DEP_DIR = '3rd_party'
 CLUSTALOMEGA = 'clustalo'
 # 2. FASTQC
 FASTQC = 'fastqc'
-# 3. leeHom
+# 3. mergers
 LEEHOM = 'leeHomMulti'
+FLASH = 'flash'
+PEAR = 'pear'
 # 4.a IgBlastn
 IGBLASTN = 'igblastn'
 # 4.b IgBlastp

@@ -7,6 +7,7 @@
 from __future__ import print_function
 import matplotlib
 
+
 matplotlib.use('agg')
 import gc
 import sys
@@ -29,6 +30,7 @@ from subprocess import check_output
 from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs
 from abseqPy.config import WEBLOGO
 from abseqPy.logger import printto, LEVEL
+from abseqPy.utilities import ShortOpts
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies
@@ -158,7 +160,7 @@ def generateMotif(sequences, name, alphabet, filename,
     printto(stream, "\tMotif logo is being created for %s ..." % name)
     m = motifs.create(alignedSeq, alphabet)  # print(m.counts)
     # create sequence logo
-    generateMotifLogo(m, filename, outDir, not transSeq and not protein)
+    generateMotifLogo(m, filename, outDir, not transSeq and not protein, stream=stream)
     return m
     
     
@@ -325,7 +327,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     plt.close()
 
 
-def generateMotifLogo(m, filename, outdir='.', dna=True):
+def generateMotifLogo(m, filename, outdir='.', dna=True, stream=None):
     instances = m.instances
     records = []
 
@@ -338,11 +340,12 @@ def generateMotifLogo(m, filename, outdir='.', dna=True):
 
     SeqIO.write(records, tmpFile, 'fasta')
 
-    command = "{exe} -f {inputFile}  -o {outputFile} -A {seqType} -F png -n 200 -D fasta -s medium "\
-              "-c {colourScheme} --errorbars NO --fineprint CSL --resolution 600 -X NO -Y NO"
-    check_output(command.format(exe=WEBLOGO, inputFile=tmpFile, outputFile=filename,
-                                seqType=("dna" if dna else "protein"),
-                                colourScheme=("classic" if dna else "auto")).split())
+    weblogo = ShortOpts(exe=WEBLOGO, f=tmpFile, o=filename, A=("dna" if dna else "protein"), F="png",
+                        n=200, D="fasta", s="medium", c=("classic" if dna else "auto"),
+                        X="NO", Y="NO")\
+        .append("--errorbars NO --fineprint CSL --resolution 600")
+    printto(stream, "Excecuting " + str(weblogo))
+    weblogo()
     os.remove(tmpFile)
         
 
