@@ -33,7 +33,7 @@ class RefineWorker(Process):
         self.actualQstart = actualQstart
         self.fr4cut = fr4cut
         self.trim5End = trim5End
-        self.trim3End = trim3End if type(trim3End) == int else _parse3EndSeqs(trim3End)
+        self.trim3End = trim3End if isinstance(trim3End, int) else _parse3EndSeqs(trim3End)
         self.refineFlagNames = refineFlagNames
         self.tasksQueue = None
         self.exitQueue = None
@@ -96,7 +96,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
 
         record = record[trim5End:]
         # if trim3End was a user provided int, use it to cut the sequence, or else it will be a list of seqs
-        if type(trim3End) == int:
+        if isinstance(trim3End, int):
             record = record[:(len(record) - trim3End)]
 
         # grab the beginning of the VH clone
@@ -166,7 +166,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
             # Check whether to cut the Ig sequence after FR4 or not
             if not fr4cut:
                 # if trim3End wasn't of type int, it was a file with seqs to match
-                if type(trim3End) != int:
+                if not isinstance(trim3End, int):
                     _, _, _, relativeFR4EndPosition, _ = \
                         findBestMatchedPattern(str(record.seq)[int(qsRec['cdr3.end']):], trim3End, extend5end=True)
                     if relativeFR4EndPosition == -1:
@@ -239,7 +239,7 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags, stream=None):
 
     # check the the v-jframe value is not NA
     if (qsRec['v-jframe'] == 'N/A' or
-            (type(qsRec['v-jframe']) != str and isnan(qsRec['v-jframe']))):
+            (not isinstance(qsRec['v-jframe'], str) and isnan(qsRec['v-jframe']))):
         flags['updatedInFrameNA'] += [record.id]
         inframe = False
 
@@ -352,7 +352,7 @@ def _predictFR4end(jGeneLengthMap, qsRec, flags, record):
     # why FR4end = num unmapped J nt + queryJend? - igblast would rather cut the J gene 3' end instead of allowing
     # mismatches => no "extend 3' end" option. So we add remaining unmapped j nt to jqueryend to get
     # end of FR4 (end of whole J gene)
-    if type(qsRec['jgene']) == str and qsRec['jgene'] != '' and qsRec['jgene'].strip() in jGeneLengthMap:
+    if isinstance(qsRec['jgene'], str) and qsRec['jgene'] != '' and qsRec['jgene'].strip() in jGeneLengthMap:
         # if jgene is not nan, we can assume that jstart(subject), jqend, jqstart are all defined
         predictedFR4End = qsRec['jqend'] + (jGeneLengthMap[qsRec['jgene'].strip()] - qsRec['jend'])
         if predictedFR4End < 0 or predictedFR4End < qsRec['jqend']:

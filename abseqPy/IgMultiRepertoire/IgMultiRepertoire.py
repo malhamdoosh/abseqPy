@@ -75,7 +75,7 @@ class IgMultiRepertoire:
             # wait for all workers to complete
             for i in range(self.sampleCount):
                 res = self.result.get()
-                if type(res) == tuple:
+                if isinstance(res, tuple):
                     # XXX: encountered an exception! - here, decide to raise it immediately.
                     # all accompanying processes will halt immediately due to this raise.
                     raise AbSeqWorkerException(*res)

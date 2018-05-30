@@ -31,7 +31,7 @@ _BANNER = {
     'primer': "Primer Specificity Analysis",
     'seqlen': "Sequence Length Distribution",
     'seqlenclass': "Class Sequence Length Distribution",
-    'default': "Conducting AbSeq on all sample(s)"
+    'default': "Running AbSeq on all sample(s)"
 }
 
 LEVEL = _Level()

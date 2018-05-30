@@ -29,7 +29,7 @@ setup(name="abseqPy",
       setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                       'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
-                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'],
+                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml', 'scipy>=0.19.0'],
       packages=find_packages(),
       include_package_data=True,
       entry_points={

@@ -239,17 +239,18 @@ def printRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, stream=Non
 
 
 def writeRefineFlags(flags, records, refineFlagNames, refineFlagMsgs, outDir, sampleName):
-    with open(os.path.join(outDir, sampleName + "_refinement_flagged.txt"), 'w') as out, \
-            open(os.path.join(outDir, sampleName + "_refinement_flagged.csv"), "w") as outCSV:
-        outCSV.write('refinementFlag,count\n')
+    # 8gb buffer size if system has large enough memory (-1 implies system buffer size)
+    with open(os.path.join(outDir, sampleName + "_refinement_flagged.txt"), 'w',
+              buffering=int(1 << 23) if hasLargeMem() else -1) as flaggedFp, \
+            open(os.path.join(outDir, sampleName + "_refinement_flagged_summary.txt"), "w") as summaryFp:
         for f in refineFlagNames:
             if len(flags[f]) > 0:
-                outCSV.write("{},{}\n".format(refineFlagMsgs[f].format(len(flags[f])), len(flags[f])))
-                out.write("# " + refineFlagMsgs[f].format(len(flags[f])) + "\n")
+                summaryFp.write(refineFlagMsgs[f].format(len(flags[f])) + "\n")
+                flaggedFp.write("# " + refineFlagMsgs[f].format(len(flags[f])) + "\n")
                 for i in range(len(flags[f])):
-                    out.write(">" + flags[f][i] + "\n")
-                    out.write(str(records[flags[f][i]].seq) + "\n")
-                out.write("\n")
+                    flaggedFp.write(">" + flags[f][i] + "\n")
+                    flaggedFp.write(str(records[flags[f][i]].seq) + "\n")
+                flaggedFp.write("\n")
 
 
 class ProcCounter(object):

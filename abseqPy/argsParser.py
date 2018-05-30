@@ -114,7 +114,7 @@ def parseArgs(arguments=None):
         # default, don't cut anything
         args.trim3 = 0
     else:
-        if type(args.trim3) == str:
+        if isinstance(args.trim3, str):
             args.fr4cut = False
             try:
                 # user provided int

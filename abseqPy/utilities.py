@@ -43,4 +43,9 @@ class PriorityPath:
 
 
 def hasLargeMem(size=16):
+    """
+    tells if system has memory strictly larger than specified size in GB
+    :param size: unit GB
+    :return: true if virtual_memory > size
+    """
     return MEM_GB > size
