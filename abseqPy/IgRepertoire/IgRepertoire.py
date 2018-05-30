@@ -375,12 +375,9 @@ class IgRepertoire:
         noOutlierOutputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
         seqLengths = defaultdict(int)
         if not eitherExists(outputFile) or not eitherExists(noOutlierOutputFile):
-            if hasLargeMem():
-                records = SeqIO.to_dict(SeqIO.parse(gunzip(self.readFile), self.format))
-            else:
-                records = SeqIO.index(gunzip(self.readFile), self.format)
-            for id_ in self.cloneAnnot.index:
-                seqLengths[len(records[id_])] += 1
+            for record in SeqIO.parse(gunzip(self.readFile), self.format):
+                if record.id in self.cloneAnnot.index:
+                    seqLengths[len(record)] += 1
 
             count = Counter(seqLengths)
 
@@ -391,8 +388,6 @@ class IgRepertoire:
             plotSeqLenDist(count, self.name, noOutlierOutputFile, self.format,
                            maxbins=40, histtype='bar', removeOutliers=True,
                            normed=True, stream=logger)
-            del records
-            gc.collect()
         else:
             printto(logger, "File found ... {}".format(os.path.basename(outputFile)), LEVEL.WARN)
             printto(logger, "File found ... {}".format(os.path.basename(noOutlierOutputFile)), LEVEL.WARN)
@@ -551,7 +546,7 @@ class IgRepertoire:
 
         # Identify clonotypes 
         printto(logger, "Clonotypes are being generated ... ")
-        clonoTypes = annotateClonotypes(self.cloneSeqs, removeNone=True)
+        clonoTypes = annotateClonotypes(self.cloneSeqs, segregate=self.detailedComposition, removeNone=True)
 
         generateDiversityReport(spectraTypes, clonoTypes, self.name, outResDir, self.clonelimit,
                                 threads=self.threads, segregate=self.detailedComposition, stream=logger)
@@ -959,7 +954,7 @@ class IgRepertoire:
     def _nextTask(self):
         if len(self._tasks) > 0:
             pack = self._tasks.pop()
-            if type(pack) == str:
+            if isinstance(pack, str):
                 return pack, [], {}
             else:
                 # type(pack) = tuple: (str, dict) - see SeqLenClass

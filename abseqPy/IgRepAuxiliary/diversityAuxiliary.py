@@ -5,7 +5,6 @@
     Changes log: check git commits. 
 '''
 from collections import Counter, defaultdict
-from numpy import logical_not
 
 _REGIONS = ['fr1', 'cdr1', 'fr2', 'cdr2', 'fr3', 'cdr3', 'fr4']
 
@@ -29,21 +28,52 @@ def annotateSpectratypes(cloneAnnot, amino=True):
 
 
 # clonotype is the histogram of clone counts by CDR/FR amino acid sequence, partitioned by V germline (gene level)
-def annotateClonotypes(cloneSeqs, removeNone=True):
-    clonoTypes = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+def annotateClonotypes(cloneSeqs, segregate=False, removeNone=True):
+    if segregate:
+        clonoTypes = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
 
-    for row in cloneSeqs.itertuples():
-        geneName = row.germline.split("*")[0]
-        variableAA = ""
-        badAA = False
+        for row in cloneSeqs.itertuples():
+            geneName = row.germline.split("*")[0]
+            variableAA = ""
+            badAA = False
+            for region in _REGIONS:
+                regionAA = getattr(row, region)
+                variableAA += regionAA
+                if regionAA == 'None' or regionAA == '':
+                    badAA = True
+                if not (removeNone and (regionAA == "None" or regionAA == "")):
+                    clonoTypes[geneName][region][regionAA] += 1
+            if not (badAA and removeNone):
+                clonoTypes[geneName]['v'][variableAA] += 1
+    else:
+        clonoTypes = {}
+
         for region in _REGIONS:
-            regionAA = getattr(row, region)
-            variableAA += regionAA
-            if regionAA == 'None' or regionAA == '':
-                badAA = True
-            if not (removeNone and (regionAA == "None" or regionAA == "")):
-                clonoTypes[geneName][region][regionAA] += 1
-        if not (badAA and removeNone):
-            clonoTypes[geneName]['v'][variableAA] += 1
+            seqs = cloneSeqs[region].tolist()
+            clonoTypes[region] = Counter(seqs)
+            if removeNone:
+                clonoTypes[region].pop("None", None)
+                clonoTypes[region].pop("", None)
+
+        def _join(frcdr):
+            if removeNone and ('None' in frcdr or '' in frcdr):
+                return "None"
+            return "".join(frcdr)
+
+        # V domain
+        seqs = map(_join, zip(cloneSeqs['fr1'].tolist(),
+                              cloneSeqs['cdr1'].tolist(),
+                              cloneSeqs['fr2'].tolist(),
+                              cloneSeqs['cdr2'].tolist(),
+                              cloneSeqs['fr3'].tolist(),
+                              cloneSeqs['cdr3'].tolist(),
+                              cloneSeqs['fr4'].tolist()
+                              )
+                   )
+        clonoTypes['v'] = Counter(seqs)
+        if removeNone:
+            clonoTypes['v'].pop("None", None)
+            clonoTypes['v'].pop("", None)
 
     return clonoTypes
+

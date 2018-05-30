@@ -12,6 +12,7 @@ import math
 import numpy
 import random
 import itertools
+import scipy.stats
 import multiprocessing
 
 from collections import Counter, defaultdict
@@ -27,7 +28,6 @@ from abseqPy.logger import printto, LEVEL
 import matplotlib as mpl
 mpl.use('Agg')  # Agg
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
 import matplotlib.colors as mcolors
 from matplotlib import cm
 
@@ -84,7 +84,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         return
     printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
 
-    if type(counts) == str:
+    if isinstance(counts, str):
         with abseqPy.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
             sizes = [len(rec) for rec in SeqIO.parse(fp, fileFormat) if len(rec) <= maxLen]
         if len(sizes) == 0:
@@ -92,10 +92,10 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         count = Counter(sizes)
         sizes = count.keys()
         weights = count.values()
-    elif type(counts) == list:
+    elif isinstance(counts, list):
         sizes = map(lambda x: int(x) if not isnan(x) else 0, counts)
         weights = [1] * len(sizes)
-    elif type(counts) == type(Counter()):
+    elif isinstance(counts, Counter):
         sizes = counts.keys()
         weights = map(lambda x: counts[x], sizes)
     if removeOutliers:
@@ -115,7 +115,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         #         binWidth = edges[1] - edges[0]
         #         ax.bar(edges[:-1], histcals * binWidth, binWidth)
         histcals, bins, patches = ax.hist(sizes, bins=bins, range=autoscale,
-                                          normed=normed, weights=weights,
+                                          density=normed, weights=weights,
                                           histtype=histtype)
         # write to intermediate csv file too
         writeCSV(outputFile.replace(".png", ".csv"), "length,count\n", "{},{}\n",
@@ -123,7 +123,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
             if sigma != 0:
-                y = mlab.normpdf(bins, mu, sigma)
+                y = scipy.stats.norm.pdf(bins, mu, sigma)
                 ax.plot(bins, y, 'r--')
     else:
         if all([(x == 1) for x in weights]):
@@ -752,7 +752,7 @@ def cmap_discretize(cmap, N):
         imshow(x, cmap=djet)
     """
 
-    if type(cmap) == str:
+    if isinstance(cmap, str):
         cmap = plt.get_cmap(cmap)
     colors_i = np.concatenate((np.linspace(0, 1., N), (0., 0., 0., 0.)))
     colors_rgba = cmap(colors_i)
