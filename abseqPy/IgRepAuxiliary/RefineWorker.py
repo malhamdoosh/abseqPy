@@ -5,30 +5,23 @@
     Changes log: check git commits. 
 '''
 
-import sys
-import os
-
 from multiprocessing import Process
 from Bio.SeqRecord import SeqRecord
-from Bio import SeqIO
 from collections import defaultdict
 from numpy import isnan, nan
 
 from abseqPy.config import FR4_CONSENSUS, FR4_CONSENSUS_DNA
 from abseqPy.IgRepertoire.igRepUtils import extractProteinFrag, \
-    findBestAlignment, extractCDRsandFRsProtein, extractCDRsandFRsDNA, calMaxIUPACAlignScores, findBestMatchedPattern
+    findBestAlignment, extractCDRsandFRsProtein, calMaxIUPACAlignScores, findBestMatchedPattern
 from abseqPy.IgRepAuxiliary.IgBlastWorker import convertCloneRecordToOrderedList
 from abseqPy.logger import LEVEL, printto
 
 
 class RefineWorker(Process):
-    def __init__(self, procCounter, igdb, chain, actualQstart,
+    def __init__(self, procCounter, chain, actualQstart,
                  fr4cut, trim5End, trim3End, refineFlagNames, stream=None):
         super(RefineWorker, self).__init__()
         self.procCounter = procCounter
-        # we could have done the J gene length map reading earlier, but this encapsulates it better.
-        # you'll only be reading N number of times where N = num.threads
-        # self.jGeneLengthMap = _generateJMap(igdb, chain)
         self.chain = chain
         self.actualQstart = actualQstart
         self.fr4cut = fr4cut
@@ -328,39 +321,3 @@ def _defaultdefaultInt():
     return defaultdict(_defaultInt)
 
 
-# deprecated function
-def _generateJMap(database, chain, species='human'):
-    lengthMap = {}
-    pathToDB = os.path.join(os.path.abspath(os.path.expandvars(database)), 'imgt_{}_ig{}j'.format(species, chain[0]))
-    for rec in SeqIO.parse(pathToDB, 'fasta'):
-        lengthMap[rec.id.strip()] = len(rec.seq.strip())
-    return lengthMap
-
-
-# deprecated function
-def _predictFR4end(jGeneLengthMap, qsRec, flags, record):
-    """
-    predict FR4end by extending J germline end index
-    :param jGeneLengthMap: map of J gene name to its length
-    :param qsRec: cloneAnnot row in type dict
-    :param flags: refinement flags
-    :param record: original sequence (raw)
-    :return: predicted FR4.end in nt position 1-based index, else np.nan if cannot predict.
-    """
-    # FR4end = num of remaining unmapped J nt + queryJEnd
-    #        = (JGeneLength - subjectJEnd) + queryJEnd
-    # why FR4end = num unmapped J nt + queryJend? - igblast would rather cut the J gene 3' end instead of allowing
-    # mismatches => no "extend 3' end" option. So we add remaining unmapped j nt to jqueryend to get
-    # end of FR4 (end of whole J gene)
-    if isinstance(qsRec['jgene'], str) and qsRec['jgene'] != '' and qsRec['jgene'].strip() in jGeneLengthMap:
-        # if jgene is not nan, we can assume that jstart(subject), jqend, jqstart are all defined
-        predictedFR4End = qsRec['jqend'] + (jGeneLengthMap[qsRec['jgene'].strip()] - qsRec['jend'])
-        if predictedFR4End < 0 or predictedFR4End < qsRec['jqend']:
-            # this usually doesn't happen, and should most definitely not happen
-            predictedFR4End = qsRec['jqend']
-            flags['FR4PredictedError'] += [record.id]
-        if predictedFR4End > len(record.seq):
-            # this will happen if your sequences end before J gene ends
-            flags['FR4AbruptEnd'] += [record.id]
-        return min(len(record.seq), predictedFR4End)
-    return nan

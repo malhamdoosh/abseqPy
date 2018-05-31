@@ -453,7 +453,7 @@ class IgRepertoire:
                                                                        self.format, self.actualQstart,
                                                                        self.chain, self.fr4cut,
                                                                        self.trim5End, self.trim3End,
-                                                                       self.seqsPerFile, self.threads, self.db,
+                                                                       self.seqsPerFile, self.threads,
                                                                        stream=logger)
             gc.collect()
             # if generateReport:

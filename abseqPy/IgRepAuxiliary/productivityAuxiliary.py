@@ -57,7 +57,7 @@ def loadRefineFlagInfo():
 def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, format,
                            actualQstart, chain, fr4cut,
                            trim5End, trim3End,
-                           seqsPerFile, threads, igdb, stream=None):
+                           seqsPerFile, threads, stream=None):
     printto(stream, "Clone annotation and in-frame prediction are being refined ...")
     seqsPerFile = 100
     cloneAnnot = cloneAnnotOriginal.copy()
@@ -87,8 +87,8 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
             # Initialize workers 
         workers = []
         for i in range(threads):
-            w = RefineWorker(procCounter, igdb, chain, actualQstart,
-                             fr4cut, trim5End, trim3End, refineFlagNames, stream=stream)
+            w = RefineWorker(procCounter, chain, actualQstart, fr4cut,
+                             trim5End, trim3End, refineFlagNames, stream=stream)
             w.tasksQueue = tasks
             w.exitQueue = exitQueue
             w.resultsQueue = resultsQueue
