@@ -425,7 +425,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            flash = ShortOpts(FLASH, readFile1, readFile2, t=threads, o=outputPrefix, r=300, f=450, s=50)
+            flash = ShortOpts(exe=FLASH, t=threads, o=outputPrefix, r=300, f=450, s=50)\
+                .append("{} {}".format(readFile1, readFile2))
             # printto(stream, "Executing: " + str(flash))
             flash()
             for f in glob.glob("{}.*".format(outputPrefix)):
