@@ -12,36 +12,31 @@ import sys
 import inspect
 
 from collections import Counter, defaultdict
-from os.path import exists
 from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from pandas.io.parsers import read_csv
 from pandas.io.pytables import read_hdf
-from numpy import Inf, random, isnan, logical_not
+from numpy import Inf, logical_not
 
 from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
 from abseqPy.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
-    writeCountsCategoriesToFile, findUpstreamMotifs
+     findUpstreamMotifs
 from abseqPy.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseqPy.config import FASTQC, AUX_FOLDER, HDF_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
-from abseqPy.IgRepertoire.igRepUtils import compressCountsGeneLevel, gunzip, fastq2fasta, mergeReads, \
-    writeListToFile, writeSummary, compressSeqGeneLevel, compressSeqFamilyLevel, \
-    createIfNot, safeOpen, detectFileFormat, countSeqs
+from abseqPy.IgRepertoire.igRepUtils import gunzip, fastq2fasta, mergeReads, \
+    writeListToFile, writeSummary, createIfNot, detectFileFormat, countSeqs
 from abseqPy.versionManager import writeParams
 from abseqPy.logger import printto, setupLogger, LEVEL
 from abseqPy.IgRepAuxiliary.productivityAuxiliary import refineClonesAnnotation
-from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, plotVenn, plotDist, eitherExists
+from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClasses, eitherExists
 from abseqPy.IgRepAuxiliary.annotateAuxiliary import annotateIGSeqRead
 from abseqPy.IgRepReporting.abundanceReport import writeAbundanceToFiles
 from abseqPy.IgRepReporting.productivityReport import generateProductivityReport
-from abseqPy.IgRepReporting.diversityReport import generateDiversityReport, writeClonotypeDiversityRegionAnalysis
+from abseqPy.IgRepReporting.diversityReport import generateDiversityReport
 from abseqPy.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
     annotateClonotypes
-from abseqPy.IgRepAuxiliary.restrictionAuxiliary import findHits, \
-    findHitsRegion, scanRestrictionSitesSimple, loadRestrictionSites
+from abseqPy.IgRepAuxiliary.restrictionAuxiliary import scanRestrictionSitesSimple
 from abseqPy.IgRepReporting.restrictionReport import generateOverlapFigures
-from abseqPy.utilities import hasLargeMem, ShortOpts
+from abseqPy.utilities import ShortOpts
 
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
@@ -226,7 +221,7 @@ class IgRepertoire:
         # True of any of the following directories are already created. We need to distinguish this
         # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
         # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
-        self.warnOldDir = any(map(lambda x: exists(os.path.join(self.hdfDir, x)),
+        self.warnOldDir = any(map(lambda x: os.path.exists(os.path.join(self.hdfDir, x)),
                                   ["abundance", "productivity", "diversity", "restriction_sites",
                                    "primer_specificity", 'utr5', 'secretion']))
 
@@ -301,7 +296,7 @@ class IgRepertoire:
 
         writeSummary(self._summaryFile, "RawReads", countSeqs(self.readFile1))
 
-        if exists(cloneAnnotFile):
+        if os.path.exists(cloneAnnotFile):
             if self.task == "annotate":
                 printto(logger, "\tClones annotation file found and no further work needed ... " +
                         os.path.basename(cloneAnnotFile))
@@ -313,7 +308,7 @@ class IgRepertoire:
             # save the unfiltered cloneannot dataframe, and re-filter after reloading
             writeSummary(self._summaryFile, "AnnotatedReads", self.cloneAnnot.shape[0])
         else:
-            if not exists(self.readFile):
+            if not os.path.exists(self.readFile):
                 raise Exception(self.readFile + " does not exist!")
 
             # Convert FASTQ file into FASTA format
@@ -437,7 +432,7 @@ class IgRepertoire:
         refinedCloneAnnotFile = os.path.join(outAuxDir, self.name + "_refined_clones_annot.h5")
         cloneSeqFile = os.path.join(outAuxDir, self.name + "_clones_seq.h5")
 
-        if not exists(refinedCloneAnnotFile) or not exists(cloneSeqFile):
+        if not os.path.exists(refinedCloneAnnotFile) or not os.path.exists(cloneSeqFile):
             if self.cloneAnnot is None:
                 self.annotateClones(outAuxDir)
             self._reloadAnnot()
@@ -577,11 +572,11 @@ class IgRepertoire:
                                     .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
         overlap2File = siteHitsFile.replace('.csv', '_overlap_order2.csv')
 
-        if exists(siteHitsFile):
+        if os.path.exists(siteHitsFile):
             printto(logger, "Restriction sites were already scanned at ... " +
                     os.path.basename(siteHitsFile), LEVEL.WARN)
             rsaResults = read_csv(siteHitsFile, header=0)
-            if exists(overlap2File):
+            if os.path.exists(overlap2File):
                 overlapResults = {}
                 overlapResults['order2'] = read_csv(overlap2File, header=0, index_col=0)
             else:
@@ -626,7 +621,7 @@ class IgRepertoire:
         # siteHitsFile = os.path.join(outResDir, self.name + "_{}.csv"
         #                             .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
         #
-        # if exists(siteHitsFile):
+        # if os.path.exists(siteHitsFile):
         #     print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
         #     return
         #
@@ -753,7 +748,7 @@ class IgRepertoire:
         upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"\
                                     .format(self.upstream[0], self.upstream[1]))
 
-        if not exists(upstreamFile):
+        if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
             printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
@@ -813,7 +808,7 @@ class IgRepertoire:
         upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"\
                                     .format(self.upstream[0], self.upstream[1]))
 
-        if not exists(upstreamFile):
+        if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
             printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
@@ -849,7 +844,7 @@ class IgRepertoire:
         primerAnnotFile = os.path.join(outAuxDir, self.name + "_primer_annot.h5")
 
         # if we can't find hdf file, create it, else read it
-        if not exists(primerAnnotFile):
+        if not os.path.exists(primerAnnotFile):
             # Load self.cloneAnnot for further analysis.
             # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
             if self.cloneAnnot is None:
@@ -1010,7 +1005,7 @@ class IgRepertoire:
         #                                header=0, index_col=0)
         # self.readFile1 = self.outputDir + self.name
         # self.readFile1 += '_productive_prot.fasta'
-        # if (not exists(self.readFile1)):
+        # if (not os.path.exists(self.readFile1)):
         #     print("Protein sequences are being prepared ...")
         #     records = []
         #     procSeqs = 0
@@ -1037,158 +1032,8 @@ class IgRepertoire:
         # self.bitScore = [0, Inf]
         # self.alignLen = [0, Inf]
         # self.sStart = [1, Inf]
-        # if exists(self.outputDir + "/abundance/"):
+        # if os.path.exists(self.outputDir + "/abundance/"):
         #     print("Protein sequences have been already analyzed ... ")
         # else:
         #     self.analyzeAbundance()
 
-
-#     def extractProductiveRNAs(self):
-# #         sampleName = self.readFile1.split('/')[-1].split("_")[0] + '_'
-# #         sampleName += self.readFile1.split('/')[-1].split("_")[-1].split('.')[0]
-#         # v-j rearrangement frame distribution
-#         vjframeDist = Counter(self.cloneAnnot['v-jframe'].tolist())
-#         if NaN in vjframeDist.keys():
-#             nanCounts = vjframeDist[NaN]
-#             vjframeDist = Counter({'In-frame': vjframeDist['In-frame'],
-#                                    'Out-of-frame': vjframeDist['Out-of-frame'] + nanCounts})
-#         plotDist(vjframeDist, self.name, self.outputDir + self.name +
-#                  '_vjframe_dist.png', title='V-D-J Rearrangement',
-#                  proportion=False, rotateLabels=False)
-#         print(vjframeDist)
-#         del vjframeDist
-#         if self.end5:
-#             print("5-end analysis of all clones ... ")
-#             self.write5EndPrimerStats(self.cloneAnnot, self.outputDir+self.name+
-#                                       '_all_5end_')
-#             invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
-#         if self.end3:
-#             valid3End = Counter(self.cloneAnnot['3end'].tolist())
-#             plotDist(valid3End, self.name, self.outputDir + self.name +
-#                  '_all_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence',
-#                  proportion=True, rotateLabels=False)
-#             invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
-#             print("Example of Indelled 3`-end:", invalid3Clones[1:10])
-#             try:
-#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-#                           self.outputDir + self.name +
-#                      '_all_invalid_primers.png')
-#                 del invalid5Clones, invalid3Clones
-#             except:
-#                 pass
-#             del valid3End
-#
-#         OutOfFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] != 'In-frame']
-#         OutOfFrameFamilyDist = compressCountsFamilyLevel(Counter(OutOfFrame['vgene'].tolist()))
-#         plotDist(OutOfFrameFamilyDist, self.name, self.outputDir + self.name +
-#                  '_notinframe_igv_dist.png',
-#                   title='IGV Abundance of Not In-frame Sequences',
-#                  proportion=True)
-#         del OutOfFrameFamilyDist
-#         OutOfFrame = OutOfFrame[OutOfFrame['v-jframe'] == 'Out-of-frame']
-#         cdrLength = (OutOfFrame['cdr1.end'] - OutOfFrame['cdr1.start'] + 1) / 3
-#         cdrLength = cdrLength.tolist()
-#         histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name +
-#                  '_outframe_cdr1_len_dist.png', dna=False,
-#                   seqName='CDR1', normed=True, maxbins=10)
-#         cdrGaps = Counter(OutOfFrame['cdr1.gaps'].tolist())
-#         plotDist(cdrGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_cdr1_gaps_dist.png', title='Gaps in CDR1',
-#                  proportion=False, rotateLabels=False)
-#         frGaps = Counter(OutOfFrame['fr1.gaps'].tolist())
-#         plotDist(frGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_fr1_gaps_dist.png', title='Gaps in FR1',
-#                  proportion=False, rotateLabels=False)
-#         del cdrLength, cdrGaps, frGaps
-#         cdrLength = (OutOfFrame['cdr2.end'] - OutOfFrame['cdr2.start'] + 1) / 3
-#         cdrLength = cdrLength.tolist()
-#         histcals = plotSeqLenDist(cdrLength, self.name, self.outputDir + self.name +
-#                  '_outframe_cdr2_len_dist.png', dna=False,
-#                   seqName='CDR2', normed=True, maxbins=10)
-#         cdrGaps = Counter(OutOfFrame['cdr2.gaps'].tolist())
-#         plotDist(cdrGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_cdr2_gaps_dist.png', title='Gaps in CDR2',
-#                  proportion=False, rotateLabels=False)
-#         frGaps = Counter(OutOfFrame['fr2.gaps'].tolist())
-#         plotDist(frGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_fr2_gaps_dist.png', title='Gaps in FR2',
-#                  proportion=False, rotateLabels=False)
-#         del cdrLength, cdrGaps, frGaps
-#         cdrGaps = Counter([x if not isnan(x) else 'NA' for x in OutOfFrame['cdr3g.gaps'] ])
-# #         print(len(cdrGaps))
-#         plotDist(cdrGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_cdr3_gaps_dist.png', title='Gaps in Germline CDR3',
-#                  proportion=False, rotateLabels=False)
-#         frGaps = Counter(OutOfFrame['fr3g.gaps'].tolist())
-#         plotDist(frGaps, self.name, self.outputDir + self.name +
-#                  '_outframe_fr3_gaps_dist.png', title='Gaps in FR3 (Germline)',
-#                  proportion=False, rotateLabels=False)
-#         del cdrGaps, frGaps
-#         if self.end5:
-#             print("5-end analysis of out-of-frame clones ... ")
-#             self.write5EndPrimerStats(OutOfFrame, self.outputDir+self.name+
-#                                       '_outframe_5end_', 'Out-of-frame')
-#             invalid5Clones = OutOfFrame.index[OutOfFrame['5end'] == 'Indelled'].tolist()
-#         if self.end3:
-#             valid3End = Counter(OutOfFrame['3end'].tolist())
-#             plotDist(valid3End, self.name, self.outputDir + self.name +
-#                  '_outframe_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Out-of-frame)',
-#                  proportion=True, rotateLabels=False)
-#             invalid3Clones = OutOfFrame.index[OutOfFrame['3end'] == 'Indelled'].tolist()
-#             print("Example of out-of-frame Indelled 3`-end:", invalid3Clones[1:10])
-#             print("Example of out-of-frame valid 3`-end:", OutOfFrame.index[OutOfFrame['3end'] != 'Indelled'].tolist()[1:10])
-#             try:
-#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-#                           self.outputDir + self.name +
-#                      '_outframe_invalid_primers.png')
-#                 del invalid5Clones, invalid3Clones
-#             except Exception as e:
-#                 raise e
-#             del valid3End
-#         del OutOfFrame
-#         # choose only In-frame RNA sequences
-#         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-#         # Stop Codon
-#         stopcodonInFrameDist = Counter(self.cloneAnnot['stopcodon'].tolist())
-#         plotDist(stopcodonInFrameDist, self.name, self.outputDir + self.name +
-#                  '_inframe_stopcodon_dist.png', title='In-frame Stop Codons',
-#                  proportion=False, rotateLabels=False)
-#         print(stopcodonInFrameDist)
-#         # stop codon family distribution
-#         stopcodFamily = Counter(self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'Yes']['vgene'].tolist())
-#         stopcodFamily = compressCountsFamilyLevel(stopcodFamily)
-#         plotDist(stopcodFamily, self.name, self.outputDir + self.name +
-#                  '_inframe_stopcodfam_dist.png',
-#                   title='IGV Abundance of In-frame Unproductive Sequences',
-#                  proportion=True)
-#         del stopcodonInFrameDist, stopcodFamily
-# #         print(stopcodFamily)
-#         # choose only productive RNA sequences
-#         self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['stopcodon'] == 'No']
-#         productiveFamilyDist = compressCountsFamilyLevel(Counter(self.cloneAnnot['vgene'].tolist()))
-#         plotDist(productiveFamilyDist, self.name, self.outputDir + self.name +
-#                  '_productive_igv_dist.png',
-#                   title='IGV Abundance of Productive Sequences',
-#                  proportion=True)
-#         del productiveFamilyDist
-#         if self.end5:
-#             valid5End = Counter(self.cloneAnnot['5end'].tolist())
-#             plotDist(valid5End, self.name, self.outputDir + self.name +
-#                  '_productive_5end_integrity_dist.png', title='Integrity of 5`-end Primer Sequence(Productive)',
-#                  proportion=True, rotateLabels=False)
-#             invalid5Clones = self.cloneAnnot.index[self.cloneAnnot['5end'] == 'Indelled'].tolist()
-#             print("Example of invalid 5`-end:", invalid5Clones[1:10])
-#         if self.end3:
-#             valid3End = Counter(self.cloneAnnot['3end'].tolist())
-#             plotDist(valid3End, self.name, self.outputDir + self.name +
-#                  '_productive_3end_integrity_dist.png', title='Integrity of 3`-end Primer Sequence(Productive)',
-#                  proportion=True, rotateLabels=False)
-#             invalid3Clones = self.cloneAnnot.index[self.cloneAnnot['3end'] == 'Indelled'].tolist()
-#             print("Example of invalid 3`-end:", invalid3Clones[1:10])
-#             try:
-#                 plotVenn({'5`-end':set(invalid5Clones), '3`-end':set(invalid3Clones)},
-#                           self.outputDir + self.name +
-#                      '_productive_invalid_primers.png')
-#             except Exception as e:
-#                 raise e
-#         gc.collect()

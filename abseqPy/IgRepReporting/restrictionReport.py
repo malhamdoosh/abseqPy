@@ -5,8 +5,6 @@
     Changes log: check git commits. 
 '''
 
-from numpy import array
-
 from abseqPy.IgRepReporting.igRepPlots import plotVenn, plotHeatmapFromDF
 
 
