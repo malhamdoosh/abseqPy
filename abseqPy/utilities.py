@@ -61,7 +61,6 @@ class CommandLine:
         self._kwargs = kwargs
         self._args = args
         self._ext = ""
-        self._cmd = str(self)
 
     def append(self, string):
         """
