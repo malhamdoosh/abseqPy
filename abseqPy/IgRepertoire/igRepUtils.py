@@ -403,7 +403,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
             pear = ShortOpts(exe=PEAR, f=readFile1, r=readFile2, o=outputPrefix, j=threads, v=15, n=350)
-            printto(stream, "Executing: " + str(pear))
+            # printto(stream, "Executing: " + str(pear))
             pear()
         else:
             printto(stream, "\tMerged reads file " + os.path.basename(mergedFastq) + ' was found!', LEVEL.WARN)
@@ -414,7 +414,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
                                                                     , os.path.basename(readFile2)))
             leehom = ShortOpts(exe=LEEHOM, fq1=readFile1, fq2=readFile2, fqo=outputPrefix, t=threads)\
                 .append("--ancientdna --verbose")
-            printto(stream, "Executing: " + str(leehom))
+            # printto(stream, "Executing: " + str(leehom))
             leehom()
             gunzip(mergedFastq + '.gz')
         else:
@@ -426,7 +426,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
             flash = ShortOpts(FLASH, readFile1, readFile2, t=threads, o=outputPrefix, r=300, f=450, s=50)
-            printto(stream, "Executing: " + str(flash))
+            # printto(stream, "Executing: " + str(flash))
             flash()
             for f in glob.glob("{}.*".format(outputPrefix)):
                 shutil.move(f, seqOut)
@@ -520,7 +520,7 @@ def alignListOfSeqs(signals, outDir, threads, name, stream=None):
     clustal = ShortOpts(CLUSTALOMEGA, i=tempSeq, o=tempAlign)\
         .append("--threads={} --outfmt=clustal".format(threads))
 
-    printto(stream, "Executing: " + str(clustal))
+    # printto(stream, "Executing: " + str(clustal))
     # throw away stderr and stdout
     clustal(stdout=None, stderr=None)
 
@@ -807,7 +807,7 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, bl
                       outfmt=7,
                       num_threads=threads,
                       out=blastOutput, **cmd)
-    printto(stream, "Executing : " + str(blast))
+    # printto(stream, "Executing : " + str(blast))
     return blast
 
 
