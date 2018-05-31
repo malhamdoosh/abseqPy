@@ -255,7 +255,7 @@ class IgRepertoire:
 
         fastqc = ShortOpts(exe=FASTQC, o=outDir, t=self.threads)\
             .append(self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else ""))
-        printto(logger, "Excecuting " + str(fastqc))
+        # printto(logger, "Executing " + str(fastqc))
         fastqc()
         paramFile = writeParams(self.args, outDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)

@@ -344,7 +344,7 @@ def generateMotifLogo(m, filename, outdir='.', dna=True, stream=None):
                         n=200, D="fasta", s="medium", c=("classic" if dna else "auto"),
                         X="NO", Y="NO")\
         .append("--errorbars NO --fineprint CSL --resolution 600")
-    printto(stream, "Excecuting " + str(weblogo))
+    # printto(stream, "Executing " + str(weblogo))
     weblogo()
     os.remove(tmpFile)
         
