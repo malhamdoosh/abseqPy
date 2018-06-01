@@ -5,9 +5,8 @@
     Changes log: check git commits. 
 '''
 from __future__ import print_function
+
 import matplotlib
-
-
 matplotlib.use('agg')
 import gc
 import sys
@@ -25,12 +24,11 @@ from Bio import SeqIO, motifs, Phylo
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
 from Bio import Alphabet
-from subprocess import check_output
 
 from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs
 from abseqPy.config import WEBLOGO
 from abseqPy.logger import printto, LEVEL
-from abseqPy.utilities import ShortOpts
+from abseqPy.utilities import ShortOpts, requires
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies
@@ -176,6 +174,7 @@ def createAlphabet(align=False, transSeq=False, extendAlphabet=False, protein=Fa
     return alphabet
 
 
+@requires("TAMO")
 def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
                         extendAlphabet=False, clusterMotifs=False, protein=False, threads=2, stream=None):
     from TAMO.MotifTools import Motif
@@ -234,8 +233,9 @@ def generateMotifs(seqGroups, align, outputPrefix, transSeq=False,
     printto(stream, "\tConsensus sequences are written to " + os.path.basename(outputPrefix + '_consensus.txt'))
     if clusterMotifs:
         findMotifClusters(ighvMotifs, outputPrefix, stream=stream)
-        
-        
+
+
+@requires("TAMO")
 def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
     from TAMO.Clustering.UPGMA import UPGMA
     from TAMO.Clustering.UPGMA import DFUNC

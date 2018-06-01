@@ -16,6 +16,7 @@ from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, plotSeqLenDistClas
 from abseqPy.IgRepertoire.igRepUtils import gunzip, compressCountsFamilyLevel, \
     compressCountsGeneLevel, safeOpen, compressSeqGeneLevel, compressSeqFamilyLevel
 from abseqPy.logger import LEVEL, printto
+from abseqPy.utilities import requires
 
 _UPSTREAM_SEQ_FILE_SEP = '|'
 _VALID_SEQ_FASTA_TEMPLATE = "{}_{}_{:.0f}_{:.0f}_valid_seqs.fasta"
@@ -330,6 +331,8 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
     return ighvSignals, faultyTrans, ighvSignalsNoATG
 
 
+# generateMotifs will be skipped silently without an exception if TAMO is not found
+@requires("TAMO", fatal=False)
 def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLength, level,
                        startCodon=True, type='secsig', clusterMotifs=False, threads=2, stream=None):
     """

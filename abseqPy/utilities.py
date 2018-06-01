@@ -1,7 +1,12 @@
+from __future__ import print_function
+
 import os
 import sys
 import subprocess
 import shlex
+import platform
+import functools
+import importlib
 
 from abseqPy.config import ABSEQROOT, EXTERNAL_DEP_DIR
 from abseqPy.config import MEM_GB
@@ -143,7 +148,7 @@ class CommandLine:
         """
         :return: repr
 
-        >>> ShortOpts("ls", "$HOME", l="").append("-a").append("-R")
+        >>> ShortOpts("ls", "$HOME", l="").append("-a -R")
         ls $HOME -l -a -R
         """
         return ' '.join([str(self._exe)] +
@@ -164,3 +169,156 @@ class ShortOpts(CommandLine):
     def _dash(self):
         return "-"
 
+
+def disableFor(operatingSys):
+    """
+    a decorator that raises a NotImplementedError if this function was called on a non-supported operating system
+
+    :param operatingSys: string, list, or tuple of string. Case insensitive.
+
+            - win, Windows
+            - mac, Darwin
+            - lin, Linux
+
+    :return: Not applicable.
+
+    >>> import platform
+
+    >>> # an example of disabled function
+    >>> @disableFor(platform.system())
+    ... def foo():
+    ...     return "Your platform: " + platform.system()
+    ...
+
+    >>> with raises(NotImplementedError, message="Expecting NotImplementedError"):
+    ...     foo()
+
+    >>> # an example of enabled function
+    >>> @disableFor([])
+    ... def bar(message='default'):
+    ...     return message
+    ...
+
+    >>> bar(message='hello')
+    'hello'
+    """
+
+    if isinstance(operatingSys, str):
+        systems = [operatingSys]
+    elif isinstance(operatingSys, list) or isinstance(operatingSys, tuple):
+        systems = operatingSys
+    else:
+        raise TypeError(str(operatingSys) + " is not a valid type. Expecting a string, list, or tuple.")
+
+    # map short names to platform.system() names
+    OPS = {
+        "win": "Windows",
+        "lin": "Linux",
+        "mac": "Darwin",
+        "windows": "Windows",
+        "linux": "Linux",
+        "darwin": "Darwin"
+    }
+
+    unsupported = []
+
+    for s in systems:
+        if s.lower() not in OPS:
+            raise ValueError(str(operatingSys) + " is not a valid operating system name. "
+                                                 "Only Win, Lin, and Mac is supported")
+        unsupported.append(OPS[s.lower()])
+
+    def _decorator(func):
+        @functools.wraps(func)
+        def _call(*args, **kwargs):
+            if platform.system() in unsupported:
+                raise NotImplementedError("Sorry, {} is not implemented for {}."
+                                          .format(func.__name__, platform.system()))
+            return func(*args, **kwargs)
+        return _call
+    return _decorator
+
+
+def requires(package, fatal=False, stderr=sys.stderr):
+    """
+    a decorator that will NOT call the function if the requirements are not fulfilled. i.e. ALL packages specified in
+    package MUST be importable. Importable is defined as a non-throwing importlib.import_module(package_name).
+
+    if fatal is specified, and one of the packages cannot be imported, then an ImportException will be raised
+
+    :param package: string, list, or tuple of package names.
+                packages are case sensitive
+
+    :param fatal: bool
+                should a failure to import any of the package result in an exception?
+
+    :param stderr: output stream.
+                prints a message for the first un-importable package
+
+    :return: Not applicable.
+
+    >>> # function is called because os and sys is detected
+    >>> @requires(['os', 'sys'])
+    ... def foo(message):
+    ...     import os, sys
+    ...     return message
+    ...
+    >>> foo("No problemo")
+    'No problemo'
+
+
+    >>> # function is not called because ssys is not found (does not raise exception)
+    >>> out = getfixture("tmpdir")
+    >>> with out.join("tmp.txt").open("w") as fp:
+    ...    @requires(['os', 'ssys'], stderr=fp)
+    ...    def bar():
+    ...        raise Exception("This function won't even be called")
+    ...    bar()
+    ...    print("No exception raised")
+    ...
+    No exception raised
+    >>> with out.join("tmp.txt").open("r") as fp:
+    ...     fp.readlines()[0].strip()
+    "one of '['os', 'ssys']' cannot be found in your python path. Skipping 'bar' function call which depends on it."
+
+
+    >>> # function is not called because ssys is not found (raise ImportError exception because it's fatal)
+    >>> out = getfixture("tmpdir")
+    >>> with out.join("tmp.txt").open("w") as fp:
+    ...    @requires(['os', 'ssys'], stderr=fp, fatal=True)
+    ...    def foobar():
+    ...        raise Exception("This function won't even be called")
+    ...    with raises(ImportError, message="Expecting ImportError"):
+    ...        foobar()
+    ...        print("This line is skipped because an exception will be raised")
+    ...
+    """
+    if isinstance(package, str):
+        packages = [package]
+    elif isinstance(package, list) or isinstance(package, tuple):
+        packages = package
+    else:
+        raise TypeError(str(package) + " is not a valid type. Expecting a string, list, or tuple.")
+
+    def _decorator(func):
+        def _hasPackage():
+            try:
+                for p in packages:
+                    importlib.import_module(p)
+                return True
+            except Exception:           # python3 raises ModuleNotFound, while python2 raises ImportError ...
+                if fatal:
+                    # reraise
+                    raise ImportError("{} is a required package for {} but is not found.".format(p, func.__name__))
+                return False
+
+        @functools.wraps(func)
+        def _call(*args, **kwargs):
+            if _hasPackage():
+                return func(*args, **kwargs)
+            else:
+                print("one of '{}' cannot be found in your python path. "
+                      "Skipping '{}' function call which depends on it."
+                      .format(package, func.__name__), file=stderr)
+        return _call
+    return _decorator
