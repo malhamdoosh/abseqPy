@@ -329,6 +329,7 @@ def _install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     return bins
 
 
+# no longer used. TAMO is installed by default together with abseq's setup.py
 def _install_TAMO():
     # TAMO comes packed with AbSeq, just need to install it!
     tar = tarfile.open('TAMO.tar.gz', "r:gz")
@@ -432,8 +433,8 @@ def install(directory):
     if len(sys.argv) != 2:
         _error("ERROR: Usage: python {} install_path".format(sys.argv[0]))
 
-    if not os.path.exists('TAMO.tar.gz'):
-        _error("ERROR: Please use this script in the directory where TAMO.tar.gz is in")
+    # if not os.path.exists('TAMO.tar.gz'):
+    #     _error("ERROR: Please use this script in the directory where TAMO.tar.gz is in")
 
     # although setup() has this, it's installed locally in abseq's installation dir.
     # By pip.installing here, it's going to be available globally
@@ -484,7 +485,7 @@ def install(directory):
         print("Found igblast, skipping installation")
 
     # install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
-    _install_TAMO()
+    #_install_TAMO()
 
     if 'IGDATA' not in os.environ:
         with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
