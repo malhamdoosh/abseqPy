@@ -1,0 +1,23 @@
+#!/bin/csh -f 
+set PYTHONVERSION="python2.4"
+set PYTHONINCLUDE="/usr/include/python2.4/"
+set PYTHONCONFIG="/usr/lib/python2.4/config"
+
+# NOT NEEDED UNLESS YOU WANT TO RE-SWIG
+#echo "swig -python -shadow -c++ $1.i"
+#swig -python -shadow -c++ $1.i
+
+
+echo "g++ -DUSE_DL_IMPORT -O3 -c $1.cxx $1_wrap.cxx -I$PYTHONINCLUDE"
+g++ -DUSE_DL_IMPORT -O3 -c $1.cxx $1_wrap.cxx -I$PYTHONINCLUDE
+
+echo "g++ -shared -Wl,--enable-auto-image-base $1.o $1_wrap.o -L$PYTHONCONFIG -l$PYTHONVERSION -o _$1.dll -lm"
+g++ -shared -Wl,--enable-auto-image-base $1.o $1_wrap.o -L/usr/lib/python2.4/config -lpython2.4 -o _$1.dll -lm
+
+echo "(cd .. && ln -s ${1}_source/_$1.dll .)"
+(cd .. && rm -f _$1.dll && ln -s ${1}_source/_$1.dll .)
+
+echo "(cd .. && ln -s $1.py .)"
+(cd .. && rm -f $1.py && ln -s ${1}_source/$1.py .)
+
+
