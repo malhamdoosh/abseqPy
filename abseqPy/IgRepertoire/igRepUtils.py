@@ -412,8 +412,7 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            leehom = ShortOpts(exe=LEEHOM, fq1=readFile1, fq2=readFile2, fqo=outputPrefix, t=threads)\
-                .append("--ancientdna --verbose")
+            leehom = ShortOpts(LEEHOM, "--ancientdna", fq1=readFile1, fq2=readFile2, fqo=outputPrefix, t=threads)
             # printto(stream, "Executing: " + str(leehom))
             leehom()
             gunzip(mergedFastq + '.gz')
