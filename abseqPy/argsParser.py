@@ -184,6 +184,12 @@ def parseCommandLineArguments(arguments=None):
     # required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
     filtering = parser.add_argument_group('filtering criteria', 'Ignore sequences that do not satisfy these criteria')
+    primerArgs = parser.add_argument_group('primer specificity analysis',
+                                           'Arguments related to --task primer')
+    upstreamArgs = parser.add_argument_group("upstream (5' UTR or secretion signal) analysis",
+                                             "Arguments related to --task 5utr or --task secretion")
+    restrictionSitesArgs = parser.add_argument_group("restriction sites analysis",
+                                                     "Arguments related to --task rsa or --task rsasimple")
     optional.add_argument('-f1', '--file1', dest="f1", help="path to sequence file 1. "
                                                             "Can only be omitted if -y/--yaml is specified.",
                           default=None)
@@ -252,9 +258,6 @@ def parseCommandLineArguments(arguments=None):
                                "index is ignored during analysis. By default, each individual sequence's "
                                "offset is inferred automatically. This argument has no effect when aligning"
                                " 5' primer during primer specificity analysis.", default=None, type=int)
-    optional.add_argument('-u', '--upstream', help="range of upstream sequences. Used in secretion signal analysis "
-                                                   "and 5UTR analysis. Index starts from 1. [default=[1, inf)]",
-                          default=None)
     optional.add_argument('-t5', '--trim5', help="number of nucleotides to trim on the 5'end of V domain. "
                                                  "This argument has no effect when aligning 5' primer during "
                                                  "primer specificity analysis or when no refinement is conducted. "
@@ -268,19 +271,6 @@ def parseCommandLineArguments(arguments=None):
                                                  "when aligning 3' primer during primer specificity analysis or when "
                                                  "no refinement is conducted."
                                                  " [default=0]", default=None)
-    optional.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides to offset for 5'end before "
-                                                               "aligning primer sequences. Only used in --task primer. "
-                                                               "[default=0]",
-                          default=0, type=int)
-    optional.add_argument('-d', '--database', help="fully qualified path to germline database directory. "
-                                                   "It should contain the FASTA files \"imgt_<species>_ig[khl][vdj]\" "
-                                                   "used by igblastn's -germline_db_V, -germline_db_D, and"
-                                                   " -germline_db_J arguments. If this option is not specified, "
-                                                   "the environment variable $IGBLASTDB should contain the "
-                                                   "fully qualified path.",
-                          default=None)
-    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes). [default=1]",
-                          type=int, default=1)
     optional.add_argument('-y', '--yaml', help="path to yaml file. This file allows multiple samples to be analysed "
                                                "simultaneously, each having their independent AbSeq parameters. "
                                                "Refer to abseqPy's README for more information.",
@@ -290,12 +280,29 @@ def parseCommandLineArguments(arguments=None):
                                                       "trimmed to --trim3 argument if provided. "
                                                       "[default = sequence (FR4 end) ends where J germline ends]",
                           dest='fr4cut', action='store_false')
-    optional.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
-                                                 " --task rsa or --task rsasimple is specified."
-                                                 " The expected table format is: Enzyme <white space> Recognition"
-                                                 "Sequence ", default=None)
-    optional.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
-    optional.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
+    restrictionSitesArgs.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
+                                                             " --task rsa or --task rsasimple is specified."
+                                                             " The expected table format is: "
+                                                             "Enzyme <white space> Recognition"
+                                                             "Sequence ", default=None)
+    primerArgs.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
+    primerArgs.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
+    primerArgs.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides to offset for 5'end before "
+                                                                 "aligning primer sequences. Only used "
+                                                                 "in --task primer. [default=0]",
+                            default=0, type=int)
+    upstreamArgs.add_argument('-u', '--upstream', help="range of upstream sequences. Used in secretion signal analysis "
+                                                       "and 5UTR analysis. Index starts from 1. [default=[1, inf)]",
+                              default=None)
+    optional.add_argument('-d', '--database', help="fully qualified path to germline database directory. "
+                                                   "It should contain the FASTA files \"imgt_<species>_ig[khl][vdj]\" "
+                                                   "used by igblastn's -germline_db_V, -germline_db_D, and"
+                                                   " -germline_db_J arguments. If this option is not specified, "
+                                                   "the environment variable $IGBLASTDB should contain the "
+                                                   "fully qualified path.",
+                          default=None)
+    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes). [default=1]",
+                          type=int, default=1)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
     return parser, parser.parse_args() if arguments is None else parser.parse_args(arguments)
