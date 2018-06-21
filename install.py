@@ -359,7 +359,7 @@ def _download_imgt(download_dir, species, species_layman):
     for url in links:
         gene = url[url.find("+") + 1:url.find("&")].lower()
         output = "{}_{}.imgt.raw".format(os.path.join(path, species_layman), gene)
-        _save_as(url+species, output, chmod=False)
+        _save_as(url + species, output, chmod=False)
         with open(output[:output.rfind(".")], "w") as writer, \
                 open(output) as reader:
 
@@ -485,19 +485,28 @@ def install(directory):
         print("Found igblast, skipping installation")
 
     # install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
-    #_install_TAMO()
+    # _install_TAMO()
 
-    if 'IGDATA' not in os.environ:
-        with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-            blast.download_edit_imgt_pl(d)
-            igdata_dir = os.path.join(d, 'igdata')
+    with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
+        if "IGDATA" in os.environ:
+            igdata_path_contents = os.listdir(os.path.expandvars("$IGDATA"))
+            duplicate_igdata = True
+        else:
+            igdata_path_contents = []
+            duplicate_igdata = False
+
+        igdata_dir = os.path.join(d, 'igdata')
+        if 'internal_data' not in igdata_path_contents:
             if not os.path.exists(igdata_dir):
                 os.makedirs(igdata_dir)
             blast.download_internal_data(igdata_dir)
+            igdata_downloaded = True
+
+        if 'optional_file' not in igdata_path_contents:
+            if not os.path.exists(igdata_dir):
+                os.makedirs(igdata_dir)
             blast.download_optional_file(igdata_dir)
-        igdata_downloaded = True
-    else:
-        print("Found IGDATA in ENV, skipping download")
+            igdata_downloaded = True
 
     if 'IGBLASTDB' not in os.environ:
         # download human and mouse IMGT GeneDB
@@ -529,22 +538,59 @@ def install(directory):
     else:
         print("Found IGBLASTDB in ENV, skipping download")
 
-    return igblastdb_downloaded, igdata_downloaded
+    return igblastdb_downloaded, igdata_downloaded, duplicate_igdata
+
+
+def ask_permission(directory):
+    msg = "\nYou are about to install abseqPy's external dependencies in {}.\nIt is your \
+responsibility to make sure that the folder is empty or \nthat the downloaded dependencies \
+will not override your existing files.\n\nProceed? [y/N]: ".format(directory)
+    try:
+        inputc = raw_input
+    except NameError:
+        inputc = input
+    try:
+        return str(inputc(msg)).lower() in ['y', 'yes']
+    except KeyboardInterrupt:
+        return False
 
 
 def main():
-    directory = sys.argv[1]
-    igblastdb_downloaded, igdata_downloaded = install(directory)
+    if len(sys.argv) != 2:
+        print("Usage: {} <installation directory>".format(sys.argv[0]), file=sys.stderr)
+        return 0
 
-    print()
-    print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent")
-    print()
-    print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")))
-    if igblastdb_downloaded:
-        print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(directory), "databases")))
-    if igdata_downloaded:
-        print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")))
-    print()
+    directory = sys.argv[1]
+    proceed = ask_permission(directory)
+
+    if proceed:
+
+        igblastdb_downloaded, igdata_downloaded, duplicate_igdata = install(directory)
+
+        print("", file=sys.stderr)
+        print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent",
+              file=sys.stderr)
+        print("", file=sys.stderr)
+        print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")), file=sys.stderr)
+        if igblastdb_downloaded:
+            print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(directory), "databases")),
+                  file=sys.stderr)
+        if igdata_downloaded:
+            if duplicate_igdata:
+                print(
+                    "\nDetected existing IGDATA=\"{ori}\" in your environment.\nHowever, you did not have all "
+                    "the required files in that directory.\nThe required files are downloaded in {dup},"
+                    "\nyou should move these file(s) to {ori} in order for abseqPy to work.\n"
+                    "\nIf you do not have permission to do so, you can copy all the files from\n{ori} to {dup},"
+                    " and append\n\n\texport IGDATA=\"{dup}\"\n\nto your ~/.bashrc (or equivalent) instead.".format(
+                        ori=os.path.expandvars("$IGDATA"), dup=os.path.join(os.path.abspath(directory), "igdata"))
+                    , file=sys.stderr)
+            else:
+                print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")),
+                      file=sys.stderr)
+        print("", file=sys.stderr)
+    else:
+        print("Aborted installer.py", file=sys.stderr)
 
     return 0
 

@@ -142,7 +142,8 @@ class IgRepertoire:
         :param sites: string
                                 path to restriction sites file. Required only if task was rsa or rsasimple
         :param database: string
-                                path to IgBLAST database (directory should contain output of makeblastdb).
+                                path to IgBLAST database (directory should contain output of makeblastdb, i.e.
+                                imgt_<species>_ig[hkl][vdj] fasta files for -germline_db_* in igblast's cmd args).
                                 Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
                                 will require db to be the string "$IGBLASTDB"
         :param task: string
