@@ -56,13 +56,6 @@ def main():
         print('-' * 60)
     finally:
         pass
-
-# TODO: generate HTML report for each analysis and give name to the report
-'''
-Report parameters
-Organize figures 
-'''
-
 # # Clean igblast files
 #     os.system("rm " + blastOutput)
 #     # Clean the output folder: remove fasta 

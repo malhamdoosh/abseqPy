@@ -58,8 +58,8 @@ class IgRepertoire:
                  merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
                  sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, detailedComposition=False,
                  actualqstart=-1, trim5=0, trim3=0,
-                 fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
-                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=DEFAULT_TASK, log=None,
+                 fr4cut=True, primer5endoffset=0, primer5end=None, primer3end=None,
+                 upstream=None, sites=None, database="$IGBLASTDB", task=DEFAULT_TASK, log=None,
                  yaml=None):
         """
 
@@ -129,8 +129,6 @@ class IgRepertoire:
                                 fr4cut automatically cut sequence after end of J germline gene
                                 (extend 3' end of J gene to get actual FR4 end position if mismatches occur). If this is
                                 set to False, trimming of the 3' end will depend on trim3's option
-        :param primer: int
-                                (not implemented yet)
         :param primer5endoffset: int
                                 number of nucleotides to offset before staring to align the 5' primer sequences. Only
                                 used during primer specificity analysis
@@ -147,8 +145,6 @@ class IgRepertoire:
                                 path to IgBLAST database (directory should contain output of makeblastdb).
                                 Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
                                 will require db to be the string "$IGBLASTDB"
-        :param report_interim: bool
-                                create intermediate report (not implemented yet)
         :param task: string
                                 all, annotate, abundance, diversity, fastqc, productivity,
                                 primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass. This variable
@@ -167,7 +163,6 @@ class IgRepertoire:
         self.chain = chain
         self.name = name
         self.fr4cut = fr4cut
-        self.reportInterim = report_interim
 
         # directory creation
         outputDir = os.path.abspath(outdir)
@@ -180,7 +175,6 @@ class IgRepertoire:
             os.makedirs(self.auxDir)
 
         self.threads = threads
-        self.primer = primer
         self.db = os.path.abspath(os.path.expandvars(database))
         self.bitScore = bitscore
         self.clonelimit = clonelimit
@@ -324,8 +318,8 @@ class IgRepertoire:
             #                 self.trimmed = True
 
             # Estimate the IGV family abundance for each library
-            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
-                                                               self.seqType, outdir=outAuxDir,
+            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(readFasta, self.chain, self.db, self.threads,
+                                                               self.seqsPerFile, self.seqType, outdir=outAuxDir,
                                                                domainSystem=self.domainSystem,
                                                                stream=logger)
             sys.stdout.flush()

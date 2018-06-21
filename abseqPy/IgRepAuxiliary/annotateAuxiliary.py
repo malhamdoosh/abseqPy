@@ -21,10 +21,8 @@ from abseqPy.IgRepertoire.igRepUtils import splitFastaFile, safeOpen
 from abseqPy.logger import printto, LEVEL
 
 
-def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='imgt', stream=None):
-        noWorkers = igRep.threads
-        seqsPerFile = igRep.seqsPerFile
-
+def annotateIGSeqRead(fastaFile, chain, db, noWorkers, seqsPerFile,
+                      seqType='dna', outdir="", domainSystem='imgt', stream=None):
         if fastaFile is None:
             return Counter()
 
@@ -36,27 +34,34 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='
         if totalFiles < noWorkers:
             seqsPerFile = int(noSeqs / noWorkers)
             totalFiles = int(ceil(noSeqs / seqsPerFile))
-        noSplit = noSeqs <= igRep.seqsPerFile
+        noSplit = noSeqs <= seqsPerFile
         printto(stream, "\t{0:,} sequences were found to be distributed into {1:,} file(s)"
                 .format(noSeqs, (totalFiles if not noSplit else 1)))
-        if igRep.primer > 0:
-            with safeOpen(fastaFile) as fp:
-                recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
-            records = []
-            for id_ in recordsAll:
-                rec = recordsAll[id_]
-                rec.description = ''
-                rec.seq = rec.seq[:igRep.primer]
-                records.append(rec)
-            filesDir = os.path.join(outdir, "tmp")
-            SeqIO.write(records, os.path.join(filesDir, "seqs.fasta"), 'fasta')
-            newFastFile = os.path.join(filesDir, "seqs.fasta")
-        else:
-            newFastFile = fastaFile
+
+        # todo: commented out on Thu 21 Jun 2018 16:01:06 AEST by JIAHONG FONG
+        # reason: unknown purpose - why are sequences being trimmed using the primer argument?
+        # chagelog: 1. newFastFile = fastaFile regardless, and remove the primer CMD argument entirely
+        # if igRep.primer > 0:
+        #     with safeOpen(fastaFile) as fp:
+        #         recordsAll = SeqIO.to_dict(SeqIO.parse(fp, 'fasta'))
+        #     records = []
+        #     for id_ in recordsAll:
+        #         rec = recordsAll[id_]
+        #         rec.description = ''
+        #         rec.seq = rec.seq[:igRep.primer]
+        #         records.append(rec)
+        #     filesDir = os.path.join(outdir, "tmp")
+        #     newFastFile = os.path.join(filesDir, "seqs.fasta")
+        #     SeqIO.write(records, newFastFile, 'fasta')
+        # else:
+        #     newFastFile = fastaFile
+
+        newFastFile = fastaFile
+
         # if we only asked for one worker or if the sequences within the fasta file is smaller than the threshold in
-        # in igRep.seqsPerFile, we can just analyze the file without splitting it
+        # in seqsPerFile, we can just analyze the file without splitting it
         if noWorkers == 1 or noSplit:
-            cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, igRep.chain, igRep.db,
+            cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, chain, db,
                                                        seqType, noWorkers, outdir,
                                                        domainSystem=domainSystem, stream=stream)
             sys.stdout.flush()
@@ -76,8 +81,8 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='
             workers = []
             try:
                 # Initialize workers
-                for i in range(noWorkers):
-                    w = IgBlastWorker(igRep.chain, igRep.db,
+                for _ in range(noWorkers):
+                    w = IgBlastWorker(chain, db,
                                       seqType, int(ceil(noWorkers / totalFiles)),
                                       domainSystem=domainSystem, stream=stream)
                     w.tasksQueue = tasks
@@ -92,7 +97,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='
                     tasks.put(os.path.join(filesDir, prefix + "part" + str(i + 1) + ext))
 
                 # Add a poison pill for each worker
-                for i in range(noWorkers + 10):
+                for _ in range(noWorkers + 10):
                     tasks.put(None)                  
                
                 # Wait all process workers to terminate    
@@ -126,8 +131,7 @@ def annotateIGSeqRead(igRep, fastaFile, seqType='dna', outdir="", domainSystem='
 
             # Clean folders to save space
             # TODO: remove .fasta and .out files
-            if noSeqs > igRep.seqsPerFile and os.path.exists(filesDir + os.path.sep + prefix + "part1" + ext):
-                for f in glob.glob(filesDir + os.path.sep + "*" + ext):
-                    os.remove(f)
+            if noSeqs > seqsPerFile and os.path.exists(filesDir + os.path.sep + prefix + "part1" + ext):
+                map(os.remove, glob.glob(filesDir + os.path.sep + "*" + ext))
 
         return cloneAnnot, filteredIDs
