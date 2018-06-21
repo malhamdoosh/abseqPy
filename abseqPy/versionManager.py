@@ -60,9 +60,20 @@ def _get_software_version(prog):
     try:
         if prog == 'igblast':
             retval = check_output(['igblastn', '-version']).split('\n')[1].strip().split()[2].rstrip(',')
-            return str(retval)
+            try:
+                # python3  (bytes)
+                return retval.decode()
+            except AttributeError:
+                # python2 (already in string)
+                return retval
         elif prog == 'clustalo' or prog == 'fastqc' or prog == 'gs':
-            retval = check_output([prog, '--version']).strip()
+            retval = check_output([prog, '--version'])
+            try:
+                # py3
+                retval = retval.decode().strip()
+            except AttributeError:
+                # py2
+                retval = retval.strip()
             if prog == 'fastqc':
                 retval = retval.split()[-1].strip().lstrip("v")
             return str(retval)
@@ -72,6 +83,12 @@ def _get_software_version(prog):
             return "-"
         elif prog == 'flash':
             retval = check_output(['flash', '--version'])
+            try:
+                # py3
+                retval = retval.decode()
+            except AttributeError:
+                # py2
+                retval = retval
             return (retval.split("\n")[0]).split()[-1].lstrip("v")
     except (CalledProcessError, OSError):
         return "Not found"
