@@ -42,7 +42,7 @@ def parseArgs(arguments=None):
     # we CANNOT allow f1 to be missing if arguments is not None (i.e. it's parsing from a YAML file)
     # otherwise, it could be missing if -y/--yaml was provided
     if args.f1 is None or not os.path.exists(args.f1):
-        if arguments is not None:
+        if arguments is not None or (args.f1 is not None and not os.path.exists(args.f1)):
             parser.error("-f1 {} not found!".format(args.f1))
         elif args.yaml is None:
             parser.error("Either one of -f1/--file1 or -y/--yaml must be specified!")
@@ -86,12 +86,22 @@ def parseArgs(arguments=None):
     # setting default values for upstream
     if args.task in ['secretion', '5utr']:
         args.upstream = [1, Inf] if args.upstream is None else extractRanges(args.upstream, 1)[0]
+    elif args.upstream is not None:
+        parser.error("Detected -u / --upstream argument but -t / --task is not one of 'secretion' or "
+                     "'5utr'.To prevent this error, please explicitly choose one of 'secretion' "
+                     "or '5utr' in -t / --task if you want to specify -u / --upstream.")
 
     # confirm that file to sites is provided
     if args.task in ['rsa', 'rsasimple']:
         if args.sites is None:
             parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
         args.sites = os.path.abspath(args.sites)
+        if not os.path.exists(args.sites):
+            parser.error("File provided to -st / --sites {} cannot be found!".format(args.sites))
+    elif args.sites is not None:
+        parser.error("Detected -st / --sites argument but -t / --task is not one of 'rsa' or 'rsasimple'. To prevent "
+                     "this error, please explicity choose one of 'rsa' or 'rsasimple' in -t / --task if you "
+                     "want to specify -st / --sites.")
 
     if args.actualqstart is not None:
         if args.actualqstart >= 1:
