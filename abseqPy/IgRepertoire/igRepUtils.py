@@ -151,19 +151,35 @@ def fastq2fasta(fastqFile, outputDir, stream=None):
     return filename
 
 
-'''
-The V domain can be delineated using either IMGT system (Lefranc et al 2003) or 
-Kabat system (Kabat et al, 1991, Sequences of Proteins of Immunological Interest, 
-National Institutes of Health Publication No. 91-3242, 5th ed., United States Department 
-of Health and Human Services, Bethesda, MD). 
-Domain annotation of the query sequence is based on pre-annotated domain information 
-for the best matched germline hit.
-
-IMGT classification system is used to delineate the V domain 
-'''
 def runIgblastn(blastInput, chain, threads=8,
                 db='$IGBLASTDB', igdata="$IGDATA", domainSystem='imgt',
                 outputDir="", species='human', stream=None):
+    """
+    Excerpt:
+        The V domain can be delineated using either IMGT system (Lefranc et al 2003) or
+        Kabat system (Kabat et al, 1991, Sequences of Proteins of Immunological Interest,
+        National Institutes of Health Publication No. 91-3242, 5th ed., United States Department
+        of Health and Human Services, Bethesda, MD).
+        Domain annotation of the query sequence is based on pre-annotated domain information
+        for the best matched germline hit.
+
+        IMGT classification system is used to delineate the V domain
+
+    this function simply runs the igblastn command and returns the output file name
+
+    :param blastInput: path to input fasta file
+    :param chain: chain type, one of hv, kv, or lv
+    :param threads: int
+    :param db: path to the directory containing imgt_<species>_ig[hkl][vdj]. Will also read
+    the environment variable $IGBLASTDB if not provided
+    :param igdata: path to the directory containing optional and internal data used by IgBLAST
+    This env variable is always defined otherwise igblast wouldn't work anyway
+    :param domainSystem: string, one of imgt or kabat
+    :param outputDir: output directory where the output file will be saved in
+    :param species: human is the only species supported currently
+    :param stream: logger stream object
+    :return: output filename
+    """
     if chain not in ['hv', 'kv', 'lv']:
         raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
 
@@ -190,12 +206,34 @@ def runIgblastn(blastInput, chain, threads=8,
     return blastOutput
 
 
-
-'''
-IMGT classification system is used to delineate the V domain 
-'''
 def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA', domainSystem='imgt',
                 outputDir="", species='human', stream=None):
+    """
+    Excerpt:
+        The V domain can be delineated using either IMGT system (Lefranc et al 2003) or
+        Kabat system (Kabat et al, 1991, Sequences of Proteins of Immunological Interest,
+        National Institutes of Health Publication No. 91-3242, 5th ed., United States Department
+        of Health and Human Services, Bethesda, MD).
+        Domain annotation of the query sequence is based on pre-annotated domain information
+        for the best matched germline hit.
+
+        IMGT classification system is used to delineate the V domain
+
+    this function simply runs the igblastn command and returns the output file name
+
+    :param blastInput: path to input fasta file
+    :param chain: chain type, one of hv, kv, or lv
+    :param threads: int
+    :param db: path to the directory containing imgt_<species>_ig[hkl][vdj]. Will also read
+    the environment variable $IGBLASTDB if not provided
+    :param igdata: path to the directory containing optional and internal data used by IgBLAST
+    This env variable is always defined otherwise igblast wouldn't work anyway
+    :param domainSystem: string, one of imgt or kabat
+    :param outputDir: output directory where the output file will be saved in
+    :param species: human is the only species supported currently
+    :param stream: logger stream object
+    :return: output filename
+    """
     if chain not in ['hv', 'kv', 'lv']:
         raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
 
@@ -293,13 +331,19 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
     return start, end, gapped  # 1-based
 
 
-'''
+def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False, stream=None):
+    """
     Extract a protein fragment from a protein sequence based on DNA positions
     start and end are 1-based
-'''
 
-
-def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False, stream=None):
+    :param protein:
+    :param start:
+    :param end:
+    :param offset:
+    :param trimAtStop:
+    :param stream:
+    :return:
+    """
     if isnan(start) or isnan(end):
         return ''
     if start != -1 and end != -1 and end - start < 1:
@@ -498,12 +542,17 @@ def compressCountsFamilyLevel(countsDict):
     return familyLevel
 
 
-'''
-    perform multiple sequence alignment using CLUSTAL
-'''
-
-
 def alignListOfSeqs(signals, outDir, threads, name, stream=None):
+    """
+    perform multiple sequence alignment using CLUSTAL
+
+    :param signals:
+    :param outDir:
+    :param threads:
+    :param name:
+    :param stream:
+    :return:
+    """
     L = map(len, signals)
 
     printto(stream,
