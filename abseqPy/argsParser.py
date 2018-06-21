@@ -269,7 +269,8 @@ def parseCommandLineArguments(arguments=None):
                                                  "no refinement is conducted."
                                                  " [default=0]", default=None)
     optional.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides to offset for 5'end before "
-                                                               "aligning primer sequences. [default=0]",
+                                                               "aligning primer sequences. Only used in --task primer. "
+                                                               "[default=0]",
                           default=0, type=int)
     optional.add_argument('-d', '--database', help="fully qualified path to germline database directory. "
                                                    "It should contain the FASTA files \"imgt_<species>_ig[khl][vdj]\" "
