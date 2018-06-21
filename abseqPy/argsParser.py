@@ -216,10 +216,10 @@ def parseCommandLineArguments(arguments=None):
                                                                " be a collection of all IGV genes", action='store_true')
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     filtering.add_argument('-b', '--bitscore', help="filtering criterion (V gene bitscore):"
-                                                   " Bitscore range (inclusive) to apply on V gene."
-                                                   " V genes with bitscores that do not fall within this range"
-                                                   " will be filtered out."
-                                                   " Accepted format: num1-num2 [default=300-inf]", default=None)
+                                                    " Bitscore range (inclusive) to apply on V gene."
+                                                    " V genes with bitscores that do not fall within this range"
+                                                    " will be filtered out."
+                                                    " Accepted format: num1-num2 [default=300-inf]", default=None)
     filtering.add_argument('-ss', '--sstart', help="filtering criterion (Subject V gene start index):"
                                                    " Filters out sequences with subject start index (of the V gene)"
                                                    " that do not fall within this start range (inclusive)."

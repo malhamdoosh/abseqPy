@@ -13,7 +13,6 @@ class IgMultiRepertoire:
     def __init__(self, args):
         self.result = Queue()
         self.buffer = []
-        self.plotManager = PlotManager(args)
         sampleNames = []
         if args.yaml is not None:
             outdirs = set()
@@ -29,37 +28,24 @@ class IgMultiRepertoire:
                 outdir = list(outdirs)[0]
             else:
                 raise Exception("Multiple output directory in YAML is currently not supported (yet)")
-            self.plotManager.processComparisons(documents, sampleNames, hasComparisons, outdir)
+            PlotManager.flushComparisons(documents, sampleNames, hasComparisons, outdir)
         else:
             outdir = args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, AUX_FOLDER, args.name, "{}.log".format(args.name))
             self.buffer.append(IgRepertoire(**vars(args)))
-            self.plotManager.processSingleInput(args.name, outdir)
+            PlotManager.flushSample(args.name, outdir)
         self.sampleCount = len(self.buffer)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """
-        Extremely important that finish is called (for 3 reasons):
-            1. Make sure that primer specificity was conducted if either one of primer files were provided (regardless of
-               the -t <task> option) - unless, of course, if -t was already 'primer',
-               then no additional analysis is required.
-            2. Queue might still be buffered, finish off cleanup here.
-            3. Then, delegate to plot manager to decide if there's further plotting required.
-        :return: None
-        """
-        noExceptionRaised = exc_tb is None and exc_val is None and exc_tb is None
-
+        # noExceptionRaised = exc_tb is None and exc_val is None and exc_tb is None
         self.result.close()
         self.result.join_thread()
 
-        if noExceptionRaised:
-            self.plotManager.plot()
-
-    def rockNRoll(self):
+    def start(self):
 
         # resource pool - initially all consumed by repertoire objects
         resourcePool = ResourcePool(0)

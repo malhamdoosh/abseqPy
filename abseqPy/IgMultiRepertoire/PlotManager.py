@@ -21,67 +21,33 @@ The plots that OBEY pythonPlotOn() = False is:
 
 
 class PlotManager:
+    """
+    This class acts as a messenger between abseqPy and abseqR.
+
+    It decides whether or not the python backend will be plotting anything (default = no).
+
+    It also has methods that flush the required metadata for abseqR to determine
+    what samples are being compared against each other in a file named after the value of _cfg
+    """
     # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
     _cfg = "abseq.cfg"
 
-    def __init__(self, args):
+    def __init__(self):
         PlotManager._pythonPlotting = False
-        self.metadata = []
-        self.end5File = args.primer5end
-        self.end3File = args.primer3end
-        self.upstream = args.upstream
-        self.outputDir = args.outdir
-        self.args = args
 
     @staticmethod
     def pythonPlotOn():
-        """
-        multiple threads / process may read this value. It's a RO value - it'll never be changed after RScriptsManager
-        is instantiated. There's no need to guard this against a race condition.
-        :return: True if python should plot graphs, false otherwise.
-        """
         return PlotManager._pythonPlotting
 
-    def plot(self):
-        """
-        plots csv files. If python plotting was on, then this function will have no effect
-        :return: None. Side effects: plots in R if specified as such
-        """
-        if not PlotManager._pythonPlotting:
-            # todo: because main script overridden stdout to AbSeq.log
-            # todo: change this to per-sample basis when logging is implemented correctly.
-            # i.e. use self.log instead of redirecting to sys.stdout (AbSeq.log)
-            DUMMY_VALUE = "None"
-            # primer args
-            arg1 = str(self.end5File)
-            arg2 = str(self.end3File)
-
-            # upstream args
-            arg3 = "{:.0f}".format(self.upstream[0]) if self.upstream else DUMMY_VALUE
-            arg4 = "{:.0f}".format(self.upstream[1]) if self.upstream else DUMMY_VALUE
-            sys.stdout.flush()
-            # retval = subprocess.call(["Rscript",
-            #                           ABSEQROOT + "/rscripts/masterScript.R",
-            #                           arg1,
-            #                           arg2,
-            #                           arg3,
-            #                           arg4],
-            #                          stdout=sys.stdout,
-            #                          stderr=sys.stdout
-            #                          )
-            # if retval != 0:
-            #     print("-" * 30)
-            #     print("Error detected in R plotting")
-            #     print("-" * 30)
-            # os.remove(PlotManager._tmpFile)        TODO: necessary?
-
-    def processSingleInput(self, name, outdir):
+    @staticmethod
+    def flushSample(name, outdir):
         with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')
             fp.write(name + '\n')
 
-    def processComparisons(self, pairings, sampleNames, hasComparisons, outdir):
+    @staticmethod
+    def flushComparisons(pairings, sampleNames, hasComparisons, outdir):
         written = set()
         with open(os.path.join(outdir, PlotManager._cfg), 'w') as fp:
             fp.write(ABSEQROOT + '\n')

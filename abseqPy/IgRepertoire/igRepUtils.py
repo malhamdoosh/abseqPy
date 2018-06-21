@@ -300,15 +300,15 @@ def findBestAlignment(seq, query, dna=False, offset=0, show=False):
 
 
 def extractProteinFrag(protein, start, end, offset=0, trimAtStop=False, stream=None):
-    if (isnan(start) or isnan(end)):
+    if isnan(start) or isnan(end):
         return ''
-    if (start != -1 and end != -1 and end - start < 1):
+    if start != -1 and end != -1 and end - start < 1:
         return ''
     # start and end are 1-based positions
     start = (start - offset) if start != -1 else start
     end = (end - offset) if end != -1 else end
     try:
-        if (start != -1):
+        if start != -1:
             # s = int(round((start  - 1.0 ) / 3))# 0-based
             s = int(((start - 1) / 3))  # 0-based
         else:
@@ -357,7 +357,7 @@ def extractCDRsandFRsProtein(protein, qsRec, offset, stream=None):
         #         print (protein, newProtein, seqs, offset)
         #         raise e
         raise Exception("ERROR at partitioning the protein sequence: ")
-    return (newProtein, seqs)
+    return newProtein, seqs
 
 
 def extractCDRsandFRsDNA(dna, qsRec):
@@ -466,7 +466,7 @@ def compressSeqGeneLevel(seqDict):
     geneLevel = {}
     for ighv in seqDict.keys():
         gene = ighv.split('*')[0]
-        if (geneLevel.get(gene, None) is None):
+        if geneLevel.get(gene, None) is None:
             geneLevel[gene] = []
         geneLevel[gene] += seqDict[ighv]
     return geneLevel
@@ -476,7 +476,7 @@ def compressSeqFamilyLevel(seqDict):
     familyLevel = {}
     for ighv in seqDict.keys():
         fam = ighv.split('-')[0].split('/')[0]
-        if (familyLevel.get(fam, None) is None):
+        if familyLevel.get(fam, None) is None:
             familyLevel[fam] = []
         familyLevel[fam] += seqDict[ighv]
     return familyLevel
