@@ -257,14 +257,16 @@ def parseCommandLineArguments(arguments=None):
                           default=None)
     optional.add_argument('-t5', '--trim5', help="number of nucleotides to trim on the 5'end of V domain. "
                                                  "This argument has no effect when aligning 5' primer during "
-                                                 "primer specificity analysis. [default=0]",
+                                                 "primer specificity analysis or when no refinement is conducted. "
+                                                 "[default=0]",
                           default=0, type=int)
     optional.add_argument('-t3', '--trim3', help="number of nucleotides to trim on the 3'end of V domain. "
-                                                 " If a (fasta) file was provided instead, AbSeq will use"
-                                                 " sequence(s) in the file to determine where to start trimming." 
-                                                 " That is, the sequences will be trimmed at the 3' end based"
-                                                 " on sequence(s) provided in the file. This argument has no effect "
-                                                 " when aligning 3' primer during primer specificity analysis."
+                                                 "If a (fasta) file was provided instead, AbSeq will use "
+                                                 "sequence(s) in the file to determine where to start trimming. "
+                                                 "That is, the sequences will be trimmed at the 3' end based "
+                                                 "on sequence(s) provided in the file. This argument has no effect "
+                                                 "when aligning 3' primer during primer specificity analysis or when "
+                                                 "no refinement is conducted."
                                                  " [default=0]", default=None)
     optional.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides to offset for 5'end before "
                                                                "aligning primer sequences. [default=0]",
