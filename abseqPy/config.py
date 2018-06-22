@@ -42,8 +42,6 @@ IGBLASTP = 'igblastp'
 #           ABSEQ's DEFUALT SETTINGS
 # ==========================================
 DEFAULT_TOP_CLONE_VALUE = 'inf'
-RSCRIPT_PAIRING_SEPARATOR = ';'
-RSCRIPT_SAMPLE_SEPARATOR = '|'
 DEFAULT_MERGER = 'leehom' if platform.system() != "Windows" else 'flash'
 DEFAULT_TASK = 'abundance'
 WEBLOGO = 'weblogo'

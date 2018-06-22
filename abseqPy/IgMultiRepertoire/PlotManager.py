@@ -29,7 +29,6 @@ class PlotManager:
     It also has methods that flush the required metadata for abseqR to determine
     what samples are being compared against each other in a file named after the value of _cfg
     """
-    # by default, don't plot in python unless rscripting is turned off
     _pythonPlotting = False
     _cfg = "abseq.cfg"
 
