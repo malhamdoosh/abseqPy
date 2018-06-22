@@ -558,8 +558,10 @@ class IgRepertoire:
             printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
                     LEVEL.WARN)
 
+        # enzyme, restriction site (seq), no. hits, percentage, no molecule, percentage of molecules
         siteHitsFile = os.path.join(outResDir, self.name + "_{}_rsasimple.csv"
                                     .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
+        # jaccard matrix (all vs all)
         overlap2File = siteHitsFile.replace('.csv', '_overlap_order2.csv')
 
         if os.path.exists(siteHitsFile):
@@ -567,8 +569,7 @@ class IgRepertoire:
                     os.path.basename(siteHitsFile), LEVEL.WARN)
             rsaResults = read_csv(siteHitsFile, header=0)
             if os.path.exists(overlap2File):
-                overlapResults = {}
-                overlapResults['order2'] = read_csv(overlap2File, header=0, index_col=0)
+                overlapResults = {'order2': read_csv(overlap2File, header=0, index_col=0)}
             else:
                 overlapResults = None
         else:
@@ -582,8 +583,7 @@ class IgRepertoire:
                               index=False)
             printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
             if overlapResults.get("order2", None) is not None:
-                overlapResults["order2"].to_csv(overlap2File,
-                                                header=True, index=True)
+                overlapResults["order2"].to_csv(overlap2File, header=True, index=True)
         # # print out the results        
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],

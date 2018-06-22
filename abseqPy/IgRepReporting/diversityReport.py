@@ -11,7 +11,7 @@ import multiprocessing
 
 from collections import Counter, defaultdict
 
-from abseqPy.IgRepAuxiliary.SeqUtils import createAlphabet, generateMotif
+from abseqPy.IgRepAuxiliary.seqUtils import createAlphabet, generateMotif
 from abseqPy.IgRepertoire.igRepUtils import writeClonoTypesToFile, createIfNot
 from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \

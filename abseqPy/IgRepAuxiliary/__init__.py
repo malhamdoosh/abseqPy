@@ -14,6 +14,6 @@ __all__ = [
     'RefineWorker',
     'restrictionAuxiliary',
     'RestrictionSitesScanner',
-    'SeqUtils',
+    'seqUtils.py',
     'upstreamAuxiliary'
 ]

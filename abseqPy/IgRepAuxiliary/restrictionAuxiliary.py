@@ -13,7 +13,7 @@ from multiprocessing import Queue, Manager
 from math import ceil
 from pandas.core.frame import DataFrame
 
-from abseqPy.IgRepAuxiliary.SeqUtils import readSeqFileIntoDict
+from abseqPy.IgRepAuxiliary.seqUtils import readSeqFileIntoDict
 from abseqPy.utilities import hasLargeMem
 from abseqPy.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
 from abseqPy.IgRepAuxiliary.productivityAuxiliary import ProcCounter
@@ -200,13 +200,13 @@ def loadRestrictionSites(sitesFile, stream=None):
         line = line.strip()
         if line and not line.startswith("#"):
             try:
-                fields = line.split()
-                if sites.get(fields[0], None) is not None:
-                    printto(stream, fields[0] + " is duplicated.", LEVEL.WARN)
-                site = fields[1].upper().strip()
+                enzyme, seq = line.split()
+                if enzyme in sites:
+                    printto(stream, enzyme + " is duplicated.", LEVEL.WARN)
+                site = str(seq).upper().strip()
                 site = replaceIUPACLetters(site)
                 site = site.replace('N', '.').replace('(', '[').replace(')', ']')                
-                sites[fields[0]] = site
+                sites[enzyme] = site
             except Exception as e:
                 printto(stream, "Offending line: {}, {}".format(line, line.split()), LEVEL.EXCEPT)
                 raise e
