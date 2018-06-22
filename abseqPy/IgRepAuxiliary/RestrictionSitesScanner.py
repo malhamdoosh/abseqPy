@@ -29,23 +29,18 @@ class RestrictionSitesScanner(Process):
         self.stream = stream
         
     def run(self):
-        print(self.name + " process is now ready to start a new job ...")
-        sys.stdout.flush() 
-        while True:            
+        printto(self.stream, self.name + " process is now ready to start a new job ...")
+        while True:
             nextTask = self.tasksQueue.get()
-            # t = time.time()
             if nextTask is None:
                 printto(self.stream, self.name + " process has stopped.")
                 self.exitQueue.put("exit")
                 break
-            # print("Waiting for a job took: {0:f}".format(time.time() - t))
             try:
-                # t = time.time()
                 if self.simpleScan:
                     self.runSimple(nextTask)
                 else:
                     self.runDetailed(nextTask)
-                # print("Running a job took: {0:f}".format(time.time() - t))
             except Exception as e:
                 printto(self.stream, "An error occurred while processing " + self.name, LEVEL.ERR)
                 # raise

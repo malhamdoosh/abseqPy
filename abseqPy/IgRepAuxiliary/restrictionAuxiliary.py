@@ -44,8 +44,7 @@ def postProcessRSA(stats, sitesInfo, stream=None):
     rsaResults.append(["Total", nan, nan, nan, stats["total"], 100])
     rsaResults = DataFrame(rsaResults, columns=["Enzyme", "Restriction Site", "No.Hits", "Percentage of Hits (%)",
                                                 "No.Molecules", "Percentage of Molecules (%)"])
-    overlapResults = {}
-    overlapResults["order1"] = stats["siteHitsSeqsIDs"]
+    overlapResults = {"order1": stats["siteHitsSeqsIDs"]}
     if len(stats["siteHitsSeqsIDs"]) >= 3:
         overlapResults["order2"] = calcRSAOverlapOrder2(stats["siteHitsSeqsIDs"], sites, stream=stream)
     return rsaResults, overlapResults
@@ -86,10 +85,8 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
         exitQueue = Queue()
         resultsQueue = Queue()
         procCounter = ProcCounter(noSeqs, desc="sequences", stream=stream)
-        if threads > totalTasks:
-            threads = totalTasks     
-        if not hasLargeMem():
-            threads = 2  
+        threads = min(threads, totalTasks)
+
         # Initialize workers
         for i in range(threads):
             w = RestrictionSitesScanner(records, cloneAnnot, procCounter,
@@ -99,41 +96,39 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
             w.resultsQueue = resultsQueue    
             workers.append(w)
             w.start()
-        if totalTasks > 1:
-            for i in range(totalTasks):
-                # t = time.time()
-                ids = queryIds[i * seqsPerWorker:(i+1) * seqsPerWorker]
-                tasks.put(ids)      
-                # print("Preparing a job took: {0:f}".format(time.time() - t))
-        else:                
-            recs = map(lambda x: records[x], queryIds)            
-            tasks.put(recs)
+
+        assert totalTasks > 0
+
+        for i in range(totalTasks):
+            ids = queryIds[i * seqsPerWorker:(i+1) * seqsPerWorker]
+            tasks.put(ids)
+
         # Add a poison pill for each worker
         for i in range(threads + 10):
-            tasks.put(None)       
-        # Wait all process workers to terminate                
-        i = 0 
+            tasks.put(None)
+
+        # Wait all process workers to terminate
+        i = 0
         while i < threads:    
             m = exitQueue.get()
             if m == "exit":
                 i += 1
-        printto(stream, "All workers have completed their tasks successfully.")
+
         # Collect results
+        printto(stream, "All workers have completed their tasks successfully.")
         printto(stream, "Results are being collated from all workers ...")
-        # invoking the result collection method   
         stats = collectRSASimpleResults(sitesInfo, resultsQueue, totalTasks, noSeqs, stream=stream)
         (rsaResults, overlapResults) = postProcessRSA(stats, sitesInfo, stream=stream)
         # End of parallel implementation
-        sys.stdout.flush()          
-
         printto(stream, "Results were collated successfully.")
+
     except Exception as e:
         printto(stream, "Something went wrong during the RSA scanning process!")
         raise e
     finally:        
         for w in workers:
             w.terminate()     
-        # records.close()
+
     return rsaResults, overlapResults
 
 
