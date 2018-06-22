@@ -42,7 +42,7 @@ def parseArgs(arguments=None):
     # we CANNOT allow f1 to be missing if arguments is not None (i.e. it's parsing from a YAML file)
     # otherwise, it could be missing if -y/--yaml was provided
     if args.f1 is None or not os.path.exists(args.f1):
-        if arguments is not None:
+        if arguments is not None or (args.f1 is not None and not os.path.exists(args.f1)):
             parser.error("-f1 {} not found!".format(args.f1))
         elif args.yaml is None:
             parser.error("Either one of -f1/--file1 or -y/--yaml must be specified!")
@@ -86,12 +86,22 @@ def parseArgs(arguments=None):
     # setting default values for upstream
     if args.task in ['secretion', '5utr']:
         args.upstream = [1, Inf] if args.upstream is None else extractRanges(args.upstream, 1)[0]
+    elif args.upstream is not None:
+        parser.error("Detected -u / --upstream argument but -t / --task is not one of 'secretion' or "
+                     "'5utr'.To prevent this error, please explicitly choose one of 'secretion' "
+                     "or '5utr' in -t / --task if you want to specify -u / --upstream.")
 
     # confirm that file to sites is provided
     if args.task in ['rsa', 'rsasimple']:
         if args.sites is None:
             parser.error("Restriction sites should be provided if --task rsa or --task rsasimple was specified")
         args.sites = os.path.abspath(args.sites)
+        if not os.path.exists(args.sites):
+            parser.error("File provided to -st / --sites {} cannot be found!".format(args.sites))
+    elif args.sites is not None:
+        parser.error("Detected -st / --sites argument but -t / --task is not one of 'rsa' or 'rsasimple'. To prevent "
+                     "this error, please explicity choose one of 'rsa' or 'rsasimple' in -t / --task if you "
+                     "want to specify -st / --sites.")
 
     if args.actualqstart is not None:
         if args.actualqstart >= 1:
@@ -170,56 +180,65 @@ def parseCommandLineArguments(arguments=None):
     :return: parser object, can be indexed for flag values
     """
     parser = argparse.ArgumentParser(description='AbSeq - antibody library quality control pipeline',
-                                     prog="AbSeq", add_help=False)
+                                     prog="abseq", add_help=False)
     # required = parser.add_argument_group('required arguments')
     optional = parser.add_argument_group('optional arguments')
-    filtering = parser.add_argument_group('filtering criteria', 'Reads that do not satisfy the following criteria'
-                                                                ' will be ignored')
+    filtering = parser.add_argument_group('filtering criteria', 'Ignore sequences that do not satisfy these criteria')
+    primerArgs = parser.add_argument_group('primer specificity analysis',
+                                           'Arguments related to --task primer')
+    upstreamArgs = parser.add_argument_group("upstream (5' UTR or secretion signal) analysis",
+                                             "Arguments related to --task 5utr or --task secretion")
+    restrictionSitesArgs = parser.add_argument_group("restriction sites analysis",
+                                                     "Arguments related to --task rsa or --task rsasimple")
     optional.add_argument('-f1', '--file1', dest="f1", help="path to sequence file 1. "
-                                                            "Can only be omitted if -y/--yaml is specified",
+                                                            "Can only be omitted if -y/--yaml is specified.",
                           default=None)
     optional.add_argument('-f2', '--file2', dest="f2", help="path to sequence file 2,"
                                                             " omit this option if sequences are not paired end or if"
-                                                            " -f1 is a path to directory of samples",
+                                                            " -f1 is a path to directory of samples.",
                           default=None)
-    optional.add_argument('-c', '--chain', default="hv", help="chain type [default=hv]",
+    optional.add_argument('-c', '--chain', default="hv", help="chain type. [default=hv]",
                           choices=['hv', 'lv', 'kv'])
     optional.add_argument('-t', '--task', default=DEFAULT_TASK, help="analysis task, supported tasks: \
                                                     all, annotate, abundance, \
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \
-                                                    seqlen, secretion, seqlenclass [default={}]".format(DEFAULT_TASK),
+                                                    seqlen, secretion, seqlenclass. [default={}]".format(DEFAULT_TASK),
                           choices=["all", "annotate", "abundance", "diversity",
                                    "fastqc", "productivity", "primer", "5utr", "rsasimple",
                                    "rsa", "seqlen", "secretion", "seqlenclass"])
-    optional.add_argument('-s', '--seqtype', default='dna', help="sequence type, supported seq type: dna or protein \
+    optional.add_argument('-s', '--seqtype', default='dna', help="sequence type, supported seq type: dna or protein. \
                                                                     [default=dna]",
                           choices=["dna", "protein"])
     optional.add_argument('-ds', '--domain_system', dest='domainSystem', default='imgt',
-                          help="domain system to use. Either one of Kabat or IMGT numbering [default=imgt]",
+                          help="domain system to use. Either one of Kabat or IMGT numbering. [default=imgt]",
                           choices=['imgt', 'kabat'])
     optional.add_argument('-m', '--merger', help="choice between different mergers. Omit this if no -f2 option"
-                                                 " is specified [default={}]".format(DEFAULT_MERGER),
+                                                 " is specified. [default={}]".format(DEFAULT_MERGER),
                           default=None,
                           choices=['leehom', 'flash', 'pear'])
-    optional.add_argument('-o', '--outdir', help="output directory [default = current working directory]", default="./")
-    optional.add_argument('-n', '--name', help="name of analysis [default = name of -f1]. This option"
-                                               " is ignored when -f1 is a directory", default=None)
-    optional.add_argument('-cl', '--clonelimit', help="outputs an intermediate file (top N overly expressed clones, "
-                                                      "top N under expressed clones) in "
-                                                      "./<OUTDIR>/<NAME>/diversity/clonotypes/; Specify"
-                                                      " a number or inf to retain all clones [default={}]"
+    optional.add_argument('-o', '--outdir', help="output directory. [default = current working directory]",
+                          default="./")
+    optional.add_argument('-n', '--name', help="name of analysis. [default = name inferred from file1]", default=None)
+    optional.add_argument('-cl', '--clonelimit', help="determines the number of clonotypes saved in "
+                                                      "\"<OUTDIR>/<NAME>/diversity/clonotypes/\""
+                                                      ". Expects a number or inf to retain all clones [default={}]. "
+                                                      "Note that this value determines the number of clonotypes abseqR "
+                                                      "will analyse."
                           .format(DEFAULT_TOP_CLONE_VALUE),
                           default=None)
-    optional.add_argument('-dc', '--detailedComposition', help="segregate each composition logo plot by IGV gene name."
-                                                               " This shows a composition logo for each IGV gene"
-                                                               " individually. Otherwise, composition logos will"
-                                                               " be a collection of all IGV genes", action='store_true')
+    optional.add_argument('-dc', '--detailedComposition', help="if specified, segregate each FR and CDR amino acid "
+                                                               "composition logo plot by their IGV gene name. "
+                                                               "This shows FR and CDR composition logos "
+                                                               "for *each* IGV gene individually. "
+                                                               "Otherwise, FR and CDR composition logos will "
+                                                               "be a collection of all IGV genes. "
+                                                               "[default = not segregated]", action='store_true')
     # line 173 in IgRepertoire.py, all ranges are inclusive when filtering rows from pandas's df
     filtering.add_argument('-b', '--bitscore', help="filtering criterion (V gene bitscore):"
-                                                   " Bitscore range (inclusive) to apply on V gene."
-                                                   " V genes with bitscores that do not fall within this range"
-                                                   " will be filtered out."
-                                                   " Accepted format: num1-num2 [default=300-inf]", default=None)
+                                                    " Bitscore range (inclusive) to apply on V gene."
+                                                    " V genes with bitscores that do not fall within this range"
+                                                    " will be filtered out."
+                                                    " Accepted format: num1-num2 [default=300-inf]", default=None)
     filtering.add_argument('-ss', '--sstart', help="filtering criterion (Subject V gene start index):"
                                                    " Filters out sequences with subject start index (of the V gene)"
                                                    " that do not fall within this start range (inclusive)."
@@ -239,44 +258,51 @@ def parseCommandLineArguments(arguments=None):
                                "index is ignored during analysis. By default, each individual sequence's "
                                "offset is inferred automatically. This argument has no effect when aligning"
                                " 5' primer during primer specificity analysis.", default=None, type=int)
-    optional.add_argument('-u', '--upstream', help="range of upstream sequences, secretion signal analysis and 5UTR"
-                                                   " analysis. Index starts from 1 [default=[1, inf)]", default=None)
-    optional.add_argument('-t5', '--trim5', help="number of nucleotides to trim on the 5'end of V domain."
-                                                 " This argument has no effect when aligning 5' primer during"
-                                                 " primer specificity analysis. [default=0]",
+    optional.add_argument('-t5', '--trim5', help="number of nucleotides to trim on the 5'end of V domain. "
+                                                 "This argument has no effect when aligning 5' primer during "
+                                                 "primer specificity analysis or when no refinement is conducted. "
+                                                 "[default=0]",
                           default=0, type=int)
     optional.add_argument('-t3', '--trim3', help="number of nucleotides to trim on the 3'end of V domain. "
-                                                 " If a (fasta) file was provided instead, AbSeq will use"
-                                                 " sequence(s) in the file to determine where to start trimming." 
-                                                 " That is, the sequences will be trimmed at the 3' end based"
-                                                 " on sequence(s) provided in the file. This argument has no effect "
-                                                 " when aligning 3' primer during primer specificity analysis."
+                                                 "If a (fasta) file was provided instead, AbSeq will use "
+                                                 "sequence(s) in the file to determine where to start trimming. "
+                                                 "That is, the sequences will be trimmed at the 3' end based "
+                                                 "on sequence(s) provided in the file. This argument has no effect "
+                                                 "when aligning 3' primer during primer specificity analysis or when "
+                                                 "no refinement is conducted."
                                                  " [default=0]", default=None)
-    optional.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides for 5' end offset before aligning"
-                                                               " primer sequences. [default=0]",
-                          default=0, type=int)
-    optional.add_argument('-p', '--primer', help="not implemented yet [default=-1]", default=-1, type=int)
-    optional.add_argument('-d', '--database', help="specify fully qualified path to germline database "
-                                                   "[default=$IGBLASTDB], type echo $IGBLASTDB in command line"
-                                                   " to see your default database used by AbSeq",
-                          default=None)
-    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes) [default=1]",
-                          type=int, default=1)
-    optional.add_argument('-y', '--yaml', help="path to yaml file.", required=False, default=None)
-    optional.add_argument('-r', '--report-interim', help="specify this flag to generate report."
-                                                         " Not implemented yet [default= no report]",
-                          dest="report_interim", action='store_true')
-    optional.add_argument('-nf4c', '--nofr4cut', help="when specified, the end of sequence (FR4 end) is either "
-                                                      "the end of the read if no --trim3 is provided or"
-                                                      " trimmed to --trim3 argument if provided. "
-                                                      " [default = sequence (FR4 end) ends where J germline ends]",
+    optional.add_argument('-y', '--yaml', help="path to yaml file. This file allows multiple samples to be analysed "
+                                               "simultaneously, each having their independent AbSeq parameters. "
+                                               "Refer to abseqPy's README for more information.",
+                          required=False, default=None)
+    optional.add_argument('-nf4c', '--nofr4cut', help="if specified, the end of sequence (FR4 end) is either "
+                                                      "the end of the read if no --trim3 is provided or "
+                                                      "trimmed to --trim3 argument if provided. "
+                                                      "[default = sequence (FR4 end) ends where J germline ends]",
                           dest='fr4cut', action='store_false')
-    optional.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
-                                                 " --task rsa or --task rsasimple is specified."
-                                                 " The expected table format is: Enzyme <white space> Recognition"
-                                                 "Sequence ", default=None)
-    optional.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
-    optional.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
+    restrictionSitesArgs.add_argument('-st', '--sites', help="path to restriction sites text file, required if"
+                                                             " --task rsa or --task rsasimple is specified."
+                                                             " The expected table format is: "
+                                                             "Enzyme <white space> Recognition"
+                                                             "Sequence ", default=None)
+    primerArgs.add_argument('-p3', '--primer3end', help="path to primer 3' end fasta file.", default=None)
+    primerArgs.add_argument('-p5', '--primer5end', help="path to primer 5' end fasta file.", default=None)
+    primerArgs.add_argument('-p5off', '--primer5endoffset', help="number of nucleotides to offset for 5'end before "
+                                                                 "aligning primer sequences. Only used "
+                                                                 "in --task primer. [default=0]",
+                            default=0, type=int)
+    upstreamArgs.add_argument('-u', '--upstream', help="range of upstream sequences. Used in secretion signal analysis "
+                                                       "and 5UTR analysis. Index starts from 1. [default=[1, inf)]",
+                              default=None)
+    optional.add_argument('-d', '--database', help="fully qualified path to germline database directory. "
+                                                   "It should contain the FASTA files \"imgt_<species>_ig[khl][vdj]\" "
+                                                   "used by igblastn's -germline_db_V, -germline_db_D, and"
+                                                   " -germline_db_J arguments. If this option is not specified, "
+                                                   "the environment variable $IGBLASTDB should contain the "
+                                                   "fully qualified path.",
+                          default=None)
+    optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes). [default=1]",
+                          type=int, default=1)
     optional.add_argument('-v', '--version', action='version', version='%(prog)s ' + VERSION)
     optional.add_argument('-h', '--help', action='help', help="show this help message and exit")
     return parser, parser.parse_args() if arguments is None else parser.parse_args(arguments)

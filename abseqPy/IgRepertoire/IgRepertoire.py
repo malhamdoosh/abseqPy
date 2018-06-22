@@ -58,8 +58,8 @@ class IgRepertoire:
                  merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
                  sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, detailedComposition=False,
                  actualqstart=-1, trim5=0, trim3=0,
-                 fr4cut=True, primer=None, primer5endoffset=0, primer5end=None, primer3end=None,
-                 upstream=None, sites=None, database="$IGBLASTDB", report_interim=False, task=DEFAULT_TASK, log=None,
+                 fr4cut=True, primer5endoffset=0, primer5end=None, primer3end=None,
+                 upstream=None, sites=None, database="$IGBLASTDB", task=DEFAULT_TASK, log=None,
                  yaml=None):
         """
 
@@ -129,8 +129,6 @@ class IgRepertoire:
                                 fr4cut automatically cut sequence after end of J germline gene
                                 (extend 3' end of J gene to get actual FR4 end position if mismatches occur). If this is
                                 set to False, trimming of the 3' end will depend on trim3's option
-        :param primer: int
-                                (not implemented yet)
         :param primer5endoffset: int
                                 number of nucleotides to offset before staring to align the 5' primer sequences. Only
                                 used during primer specificity analysis
@@ -144,11 +142,10 @@ class IgRepertoire:
         :param sites: string
                                 path to restriction sites file. Required only if task was rsa or rsasimple
         :param database: string
-                                path to IgBLAST database (directory should contain output of makeblastdb).
+                                path to IgBLAST database (directory should contain output of makeblastdb, i.e.
+                                imgt_<species>_ig[hkl][vdj] fasta files for -germline_db_* in igblast's cmd args).
                                 Environment variables are also accepted, for example, export IGBLASTDB=/path/to/db
                                 will require db to be the string "$IGBLASTDB"
-        :param report_interim: bool
-                                create intermediate report (not implemented yet)
         :param task: string
                                 all, annotate, abundance, diversity, fastqc, productivity,
                                 primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass. This variable
@@ -167,7 +164,6 @@ class IgRepertoire:
         self.chain = chain
         self.name = name
         self.fr4cut = fr4cut
-        self.reportInterim = report_interim
 
         # directory creation
         outputDir = os.path.abspath(outdir)
@@ -180,7 +176,6 @@ class IgRepertoire:
             os.makedirs(self.auxDir)
 
         self.threads = threads
-        self.primer = primer
         self.db = os.path.abspath(os.path.expandvars(database))
         self.bitScore = bitscore
         self.clonelimit = clonelimit
@@ -190,14 +185,10 @@ class IgRepertoire:
         self.seqType = seqtype
         self.domainSystem = domainSystem
 
-        if task in ['secretion', '5utr']:
-            self.upstream = upstream
+        self.upstream = upstream
+        self.sitesFile = sites
 
-        if task in ['rsa', 'rsasimple']:
-            self.sitesFile = sites
-
-        if task in ['diversity', 'all']:
-            self.detailedComposition = detailedComposition
+        self.detailedComposition = detailedComposition
 
         self.actualQstart = actualqstart
 
@@ -227,8 +218,7 @@ class IgRepertoire:
 
         setupLogger(self.name, self.task, log)
         writeParams(self.args, self.auxDir)
-        self._tasks = []
-        self._setupTasks()
+        self._tasks = self._setupTasks()
         self._summaryFile = os.path.join(self.auxDir, "summary.txt")
 
     def runFastqc(self):
@@ -324,8 +314,8 @@ class IgRepertoire:
             #                 self.trimmed = True
 
             # Estimate the IGV family abundance for each library
-            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(self, readFasta,
-                                                               self.seqType, outdir=outAuxDir,
+            (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(readFasta, self.chain, self.db, self.threads,
+                                                               self.seqsPerFile, self.seqType, outdir=outAuxDir,
                                                                domainSystem=self.domainSystem,
                                                                stream=logger)
             sys.stdout.flush()
@@ -959,43 +949,45 @@ class IgRepertoire:
 
     def _setupTasks(self):
         logger = logging.getLogger(self.name)
+        todo = []
         if self.task == 'all':
-            self._tasks = [AbSeqWorker.FASTQC, AbSeqWorker.ANNOT, AbSeqWorker.ABUN, AbSeqWorker.PROD, AbSeqWorker.DIVER]
+            todo += [AbSeqWorker.FASTQC, AbSeqWorker.ANNOT, AbSeqWorker.ABUN, AbSeqWorker.PROD, AbSeqWorker.DIVER]
         elif self.task == 'fastqc':
-            self._tasks = [AbSeqWorker.FASTQC]
+            todo.append(AbSeqWorker.FASTQC)
         elif self.task == 'annotate':
-            self._tasks = [AbSeqWorker.ANNOT]
+            todo.append(AbSeqWorker.ANNOT)
         elif self.task == 'abundance':
-            self._tasks = [AbSeqWorker.ABUN]
+            todo.append(AbSeqWorker.ABUN)
         elif self.task == 'productivity':
-            self._tasks = [AbSeqWorker.PROD]
+            todo.append(AbSeqWorker.PROD)
         elif self.task == 'diversity':
-            self._tasks = [AbSeqWorker.DIVER]
+            todo.append(AbSeqWorker.DIVER)
         elif self.task == 'secretion':
-            self._tasks = [AbSeqWorker.SECR]
+            todo.append(AbSeqWorker.SECR)
         elif self.task == '5utr':
-            self._tasks = [AbSeqWorker.UTR5]
+            todo.append(AbSeqWorker.UTR5)
         elif self.task == 'rsasimple':
-            self._tasks = [AbSeqWorker.RSAS]
+            todo.append(AbSeqWorker.RSAS)
         elif self.task == 'rsa':
-            self._tasks = [AbSeqWorker.RSA]
+            todo.append(AbSeqWorker.RSA)
         elif self.task == 'primer':
-            self._tasks = [AbSeqWorker.PRIM]
+            todo.append(AbSeqWorker.PRIM)
         elif self.task == 'seqlen':
-            self._tasks = [AbSeqWorker.SEQLEN]
+            todo.append(AbSeqWorker.SEQLEN)
         elif self.task == 'seqlenclass':
-            self._tasks = [(AbSeqWorker.SEQLEN, {'klass': True})]
+            todo.append((AbSeqWorker.SEQLEN, {'klass': True}))
         else:
             raise ValueError("Unknown task requested: {}".format(self.task))
 
         # make sure that if user specified either one of primer end file, we unconditionally run primer analysis
         # (duh)
         if self.task != 'primer' and (self.end3 or self.end5):
-            printto(logger, "Primer file detected, conducting primer specificity analysis ... ", LEVEL.INFO)
-            self._tasks.append(AbSeqWorker.PRIM)
+            printto(logger, "Primer file detected, will conduct primer specificity "
+                            "analysis in addition to {} ... ".format(self.task), LEVEL.INFO)
+            todo.append(AbSeqWorker.PRIM)
 
-        # easier to pop
-        self._tasks = self._tasks[::-1]
+        # reverse it so that the first to be popped out is the original first element
+        return todo[::-1]
 
     def analyzeIgProtein(self):
         raise NotImplementedError

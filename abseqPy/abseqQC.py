@@ -44,7 +44,7 @@ def main():
             with IgMultiRepertoire(argsVals) as igRepertoire:
                 # show a pretty banner before beginning analysis
                 print(formattedTitle(argsVals.task, argsVals.yaml is not None))
-                igRepertoire.rockNRoll()
+                igRepertoire.start()
 
             print("The analysis started at " + startTimeStr)
             print("The analysis took {}".format(timedelta(seconds=int(round(time.time() - startTime)))))
@@ -56,13 +56,6 @@ def main():
         print('-' * 60)
     finally:
         pass
-
-# TODO: generate HTML report for each analysis and give name to the report
-'''
-Report parameters
-Organize figures 
-'''
-
 # # Clean igblast files
 #     os.system("rm " + blastOutput)
 #     # Clean the output folder: remove fasta 

@@ -35,23 +35,23 @@ def writeParams(args, outDir):
     with open(filename, 'w') as out:
         out.write("AbSeqPy version: " + VERSION + "\n")
         out.write("IMGT version - IMGT database directory last modified time : "
-                  + _get_imgt_mod_date(args['database']) + "\n")
+                  + _getIMGTDate(args['database']) + "\n")
         merger = args.get("merger", None)
         if merger:
-            out.write("{} version: ".format(merger) + _get_software_version(merger) + "\n")
-        out.write("IgBLAST version: " + _get_software_version('igblast') + "\n")
+            out.write("{} version: ".format(merger) + _getSoftwareVersion(merger) + "\n")
+        out.write("IgBLAST version: " + _getSoftwareVersion('igblast') + "\n")
         out.write("pandas version: " + str(pandas.__version__) + "\n")
         out.write("numpy version: " + str(numpy.__version__) + "\n")
         out.write("biopy version: " + str(Bio.__version__) + "\n")
-        out.write("FastQC version: " + _get_software_version('fastqc') + "\n")
-        out.write("Clustalo version: " + _get_software_version('clustalo') + "\n")
+        out.write("FastQC version: " + _getSoftwareVersion('fastqc') + "\n")
+        out.write("Clustalo version: " + _getSoftwareVersion('clustalo') + "\n")
         out.write("Executed AbSeqPy with the following parameters:\n")
         for key, val in args.items():
             out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
     return os.path.basename(filename)
 
 
-def _get_software_version(prog):
+def _getSoftwareVersion(prog):
     """
     taken as-is from setup.py (flash version modification)
     :param prog: program name. Possible values: igblast, clustalo, fastqc, gs, leehom, flash
@@ -60,9 +60,20 @@ def _get_software_version(prog):
     try:
         if prog == 'igblast':
             retval = check_output(['igblastn', '-version']).split('\n')[1].strip().split()[2].rstrip(',')
-            return str(retval)
+            try:
+                # python3  (bytes)
+                return retval.decode()
+            except AttributeError:
+                # python2 (already in string)
+                return retval
         elif prog == 'clustalo' or prog == 'fastqc' or prog == 'gs':
-            retval = check_output([prog, '--version']).strip()
+            retval = check_output([prog, '--version'])
+            try:
+                # py3
+                retval = retval.decode().strip()
+            except AttributeError:
+                # py2
+                retval = retval.strip()
             if prog == 'fastqc':
                 retval = retval.split()[-1].strip().lstrip("v")
             return str(retval)
@@ -72,12 +83,18 @@ def _get_software_version(prog):
             return "-"
         elif prog == 'flash':
             retval = check_output(['flash', '--version'])
+            try:
+                # py3
+                retval = retval.decode()
+            except AttributeError:
+                # py2
+                retval = retval
             return (retval.split("\n")[0]).split()[-1].lstrip("v")
     except (CalledProcessError, OSError):
         return "Not found"
 
 
-def _get_imgt_mod_date(fname):
+def _getIMGTDate(fname):
     fname = os.path.abspath(os.path.expandvars(fname))
     if os.path.exists(fname):
         return str(datetime.datetime.fromtimestamp(os.path.getmtime(fname)).replace(microsecond=0))

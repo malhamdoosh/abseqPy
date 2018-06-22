@@ -88,7 +88,7 @@ class RestrictionSitesScanner(Process):
         pass
     
   
-def sliceRecord((rec, qsRec)):
+def sliceRecord(rec, qsRec):
     qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
     if isnan(qsRec['fr4.end']):
         end = len(rec.seq)

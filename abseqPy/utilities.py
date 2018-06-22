@@ -14,6 +14,21 @@ from abseqPy.config import MEM_GB
 
 # temporarily overrides PATH variable with EXTERNAL_DEP_DIR/bin, IGBLASTDB and IGDATA (if they exist)
 class PriorityPath:
+    """
+    this class is deprecated. It was initially used when abseqPy's pip automatically install
+    3rd party dependencies. As that was phased out, this class no long has it use.
+    In the future, if users want to provid a custom directory of binaries (the 3rd party bins),
+    this class can support path overriding
+
+    This class overrides the PATH, IGDATA and IGBLASTDB for abseqPy to work properly.
+    PATH: will be updated to have all 3rd party dependencies (eg, clustalo, fastqc, leeHomMulti, etc ...)
+
+    IGDATA: will be updated to the directory containing optional_data and internal_data (see IgBLAST setup page)
+
+    IGBLASTDB: will be updated to the directory containing imgt_<species>_ig[hkl][vdj] fasta files as arguments
+    to -germline_db_* in igblast
+
+    """
     def __init__(self):
         self.updated = False
         self.old_env = os.environ.copy()

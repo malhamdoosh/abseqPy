@@ -2,6 +2,7 @@ from setuptools import setup, find_packages, Extension
 
 import subprocess
 import sys
+import platform
 
 
 def readme():
@@ -31,10 +32,12 @@ setup(name="abseqPy",
       install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'weblogo>=3.4', 'matplotlib>=1.5.1',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml', 'scipy>=0.19.0'],
       packages=find_packages(),
-      ext_modules=[Extension('TAMO.MD._MDsupport', ['TAMO/MD/MDsupport_source/MDsupport.cxx', 
-                                                   'TAMO/MD/MDsupport_source/MDsupport_wrap.cxx']), 
-                   Extension('TAMO.util._swilk',   ['TAMO/util/swilk_source/swilk.cxx', 
-                                                   'TAMO/util/swilk_source/swilk_wrap.cxx'])],
+      ext_modules=([
+          Extension('TAMO.MD._MDsupport',
+                    ['TAMO/MD/MDsupport_source/MDsupport.cxx', 'TAMO/MD/MDsupport_source/MDsupport_wrap.cxx']),
+          Extension('TAMO.util._swilk',
+                    ['TAMO/util/swilk_source/swilk.cxx', 'TAMO/util/swilk_source/swilk_wrap.cxx'])
+      ] if platform.system() != "Windows" else []),
       include_package_data=True,
       entry_points={
           'console_scripts': ['abseq=abseqPy.abseqQC:main'],
