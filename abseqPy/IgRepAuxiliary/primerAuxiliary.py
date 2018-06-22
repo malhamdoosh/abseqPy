@@ -76,8 +76,7 @@ def addPrimerData(cloneAnnot, readFile, format, fr4cut, trim5end,
         records.close()
 
     primerAnnot = DataFrame(cloneAnnotList, columns=newColumns)
-    primerAnnot.index = primerAnnot.queryid
-    del primerAnnot['queryid']
+    primerAnnot.set_index('queryid', drop=True, inplace=True)
     return primerAnnot
 
 
