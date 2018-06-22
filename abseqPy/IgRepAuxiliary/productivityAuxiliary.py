@@ -80,11 +80,8 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         exitQueue = Queue()
         resultsQueue = Queue()
         procCounter = ProcCounter(noSeqs, stream=stream)
-        if threads > totalTasks:
-            threads = totalTasks
-        if not hasLargeMem():
-            threads = 2
-            # Initialize workers 
+        threads = min(threads, totalTasks)
+        # Initialize workers
         workers = []
         for i in range(threads):
             w = RefineWorker(procCounter, chain, actualQstart, fr4cut,
