@@ -38,3 +38,14 @@ def test_replaceIUPACLetters():
     assert replaceIUPACLetters("AAAA") == replaceIUPACLetters("aaaa")
     assert replaceIUPACLetters("NNVH") == replaceIUPACLetters("nnvh")
     assert replaceIUPACLetters("ACGT") == replaceIUPACLetters("acgt")
+
+
+def test_findHits():
+    # test simple definition of re.finditer
+    import re
+    simple_seq = "ACGTACGT"
+    site1 = re.compile(r"[ACG][ACG][GT]T")
+    site2 = re.compile(r"[ACG][ACG][GT]TAC[GT][TA]")
+    assert len(findHits(simple_seq, site1)) == 2
+    assert len(findHits(simple_seq, site2)) == 1
+

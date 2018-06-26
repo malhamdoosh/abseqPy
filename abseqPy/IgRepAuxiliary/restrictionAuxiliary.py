@@ -4,7 +4,7 @@
     Python Version: 2.7
     Changes log: check git commits. 
 '''
-
+from __future__ import division
 import re
 import sys
 
@@ -14,7 +14,6 @@ from math import ceil
 from pandas.core.frame import DataFrame
 
 from abseqPy.IgRepAuxiliary.seqUtils import readSeqFileIntoDict
-from abseqPy.utilities import hasLargeMem
 from abseqPy.IgRepAuxiliary.RestrictionSitesScanner import RestrictionSitesScanner
 from abseqPy.IgRepAuxiliary.productivityAuxiliary import ProcCounter
 from abseqPy.logger import printto, LEVEL
@@ -30,33 +29,26 @@ def initSimpleRSAStats(sites):
     return stats
         
 
-def postProcessRSA(stats, sitesInfo, stream=None):
-    rsaResults = []
-    sites = sorted(stats["siteHitSeqsCount"], key=stats["siteHitSeqsCount"].get)    
-    for site in sites:
-        rsaResults.append([site, sitesInfo[site],
-                           stats["siteHitsCount"][site],
-                           stats["siteHitsCount"][site] * 100.0 / sum(stats["siteHitsCount"].values()),
-                           stats["siteHitSeqsCount"][site],
-                           stats["siteHitSeqsCount"][site] * 100.0 / stats["total"]])
-    rsaResults.append(["Cut by any", nan, nan, nan, stats["seqsCutByAny"],
-                       stats["seqsCutByAny"] * 100.0 / stats["total"]])
-    rsaResults.append(["Total", nan, nan, nan, stats["total"], 100])
-    rsaResults = DataFrame(rsaResults, columns=["Enzyme", "Restriction Site", "No.Hits", "Percentage of Hits (%)",
-                                                "No.Molecules", "Percentage of Molecules (%)"])
-    overlapResults = {"order1": stats["siteHitsSeqsIDs"]}
-    if len(stats["siteHitsSeqsIDs"]) >= 3:
-        overlapResults["order2"] = calcRSAOverlapOrder2(stats["siteHitsSeqsIDs"], sites, stream=stream)
-    return rsaResults, overlapResults
-
-
 def calcRSAOverlapOrder2(order1, sites, stream=None):
+    """
+    returns a n by n matrix where n is len(sites) of jaccard index
+
+    :param order1: dictionary of sets of ids
+    :param sites: collection of enzymes
+    :param stream: logging stream
+    :return: n by n dataframe that has the form of a named matrix:
+
+         enz1 enz2 enz3
+    enz1    1  0.3  0.4
+    enz2  0.3    1  0.5
+    enz3  0.5  0.5    1
+    """
     printto(stream, "The 2nd order overlapping matrix is being calculated using Jaccard Index ... ")
     overlap = []
     for site1 in sites:
         overlap.append([])
         for site2 in sites:
-            inter = len(order1[site1].intersection(order1[site2])) * 1.0
+            inter = len(order1[site1].intersection(order1[site2]))
             uni = len(order1[site1].union(order1[site2]))
             if uni != 0:
                 overlap[-1].append(inter / uni)
@@ -67,20 +59,45 @@ def calcRSAOverlapOrder2(order1, sites, stream=None):
     return overlap
 
 
-def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, threads, stream=None):
+def scanRestrictionSitesSimple(name, readFile, cloneAnnot, sitesFile, threads, stream=None):
+    """
+    :param name:
+    :param readFile:
+    :param cloneAnnot:
+    :param sitesFile:
+    :param threads:
+    :param stream:
+    :return: 2-tuple:
+    (
+        dataframe with columns: "Enzyme", "Restriction Site", "No.Hits", "Percentage of Hits (%)",
+                                "No.Molecules", "Percentage of Molecules (%)"
+                                where
+                                    1. No.Hits are the total number of found hits for an enzyme (one molecule may have
+                                        multiple enzyme hits)
+                                    2. No.Molecules are the total number of molecules that the enzyme matched against.
+                                       (if a molecule has multiple hotspots, only one is counted)
+        dictionary with optional keys:
+            {
+                "order1" : {'enzyme1': {'seq_id1', 'seq_id2', 'seq_id3', ...}, 'enzyme2': {'seq_id5', ...} , ... },
+                "order2" : Dataframe of n^2(all-vs-all) rows where each row is a jaccard index of the ids that each
+                           pairwise comparison of the enzyme yields. This dataframe has an index column and header
+                           that is identical (i.e. a "named matrix") - see calcRSAOverlapOrder2's return value
+            }
+            "order1" is always there, "order2" only appears if the number of enzymes is at least 3(len(sitesInfo)) >= 3)
+    )
+    """
     sitesInfo = loadRestrictionSites(sitesFile, stream=stream)
     seqsPerWorker = len(sitesInfo)
     workers = []   
     try:
         m = Manager()        
         records = m.dict()
-        readSeqFileIntoDict(readFile, format, records, stream=stream)
+        readSeqFileIntoDict(readFile, records, stream=stream)
         queryIds = cloneAnnot.index
         noSeqs = len(queryIds)
         printto(stream, "{:,} restriction sites are being scanned for {:,} sequences ..."
                 .format(len(sitesInfo), noSeqs))
-        # Parallel implementation of the refinement
-        totalTasks = int(ceil(noSeqs * 1.0 / seqsPerWorker)) 
+        totalTasks = int(ceil(noSeqs / seqsPerWorker))
         tasks = Queue()      
         exitQueue = Queue()
         resultsQueue = Queue()
@@ -89,7 +106,8 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
 
         # Initialize workers
         for i in range(threads):
-            w = RestrictionSitesScanner(records, cloneAnnot, procCounter,
+            # pass in a minified cloneAnnot, the bare minimum of what's required in the runSimple() method
+            w = RestrictionSitesScanner(records, cloneAnnot[['vqstart', 'vstart', 'fr4.end']], procCounter,
                                         sitesInfo.copy(), simpleScan=True, stream=stream)
             w.tasksQueue = tasks
             w.exitQueue = exitQueue  
@@ -100,26 +118,22 @@ def scanRestrictionSitesSimple(name, readFile, format, cloneAnnot, sitesFile, th
         assert totalTasks > 0
 
         for i in range(totalTasks):
-            ids = queryIds[i * seqsPerWorker:(i+1) * seqsPerWorker]
-            tasks.put(ids)
+            tasks.put(queryIds[i * seqsPerWorker:(i+1) * seqsPerWorker])
 
         # Add a poison pill for each worker
-        for i in range(threads + 10):
+        for _ in range(threads + 10):
             tasks.put(None)
 
         # Wait all process workers to terminate
         i = 0
         while i < threads:    
-            m = exitQueue.get()
-            if m == "exit":
-                i += 1
+            i += (exitQueue.get() == "exit")
 
         # Collect results
         printto(stream, "All workers have completed their tasks successfully.")
         printto(stream, "Results are being collated from all workers ...")
         stats = collectRSASimpleResults(sitesInfo, resultsQueue, totalTasks, noSeqs, stream=stream)
         (rsaResults, overlapResults) = postProcessRSA(stats, sitesInfo, stream=stream)
-        # End of parallel implementation
         printto(stream, "Results were collated successfully.")
 
     except Exception as e:
@@ -137,54 +151,96 @@ def collectRSASimpleResults(sitesInfo, resultsQueue, totalTasks, noSeqs, stream=
     total = 0    
     while totalTasks:                
         result = resultsQueue.get()
-        totalTasks -= 1                           
         if result is None:
-            continue        
-#         print(total, resultsQueue.qsize())      
-        statsi = result        
-        # update relevant statistics
+            continue
+        totalTasks -= 1
+        statsi = result
+
+        # -------- update relevant statistics -------  #
+
+        # 1. total number of sequences that are cut by any sites at all (i.e. number of sequences that are cut by
+        #    *at least* one site)
         stats["seqsCutByAny"] += statsi["seqsCutByAny"]
         for site in sitesInfo.keys():
+            # 2. total number of "possible hits" of this 'site' on all sequences (note, multi-hits are counted)
             stats["siteHitsCount"][site] += statsi["siteHitsCount"][site]
+            # 3. total number of "hits" of this 'site' on all sequences (note, multi-hits on one sequence are still
+            #    counted as one, not multi) - this is a "duplicate" field of siteHitsSeqsIDs, we could've taken the
+            #    length of sitHitsSeqsIDs, it would be equal to this. This is left here from legacy code.
             stats["siteHitSeqsCount"][site] += statsi["siteHitSeqsCount"][site]
+            # 4. the ids of which this site has at least one match, this length of this value should be equal to
+            #    siteHitSeqsCount
             stats["siteHitsSeqsIDs"][site] += statsi["siteHitsSeqsIDs"][site]
-            # print(statsi["siteHitsSeqsIDs"][site])
+
         total += statsi["total"]
         if total % 50000 == 0:
             printto(stream, '\t%d/%d records have been collected ... ' % (total, noSeqs))
-            sys.stdout.flush()
+
     printto(stream, '\t%d/%d sequences have been collected ... ' % (total, noSeqs))
+
+    assert total == noSeqs
+
     stats["total"] = noSeqs
+
+    # doesn't make any sense to have duplicates anywhere
     for site in sitesInfo.keys():
+        assert stats["siteHitsSeqsIDs"][site] == list(set(stats["siteHitsSeqsIDs"][site]))
         stats["siteHitsSeqsIDs"][site] = set(stats["siteHitsSeqsIDs"][site])
+
     return stats
-# for id in iter:
-#         record = records[id]
-#         try:              
-#             seq = str(record.seq)
-#             seqRC = str(Seq(seq).reverse_complement())
-#             cut = False
-#             for site in stats["siteHitsCount"].keys():
-#                 hits = findHits(seq, sitesInfo[site])                
-#                 if len(hits) == 0:
-#                     hits = findHits(seqRC, sitesInfo[site])                   
-#                 if len(hits) > 0:
-#                     stats["siteHitsCount"][site] += len(hits) 
-#                     stats["siteHitSeqsCount"][site] += 1                     
-#                     stats["siteHitsSeqsIDs"][site].add(record.id)   
-#                     cut = True                 
-#             if cut:
-#                 stats["seqsCutByAny"] += 1
-#             procSeqs += 1
-#             if procSeqs % seqsPerFile == 0:
-#                 print('%d/%d sequences have been searched ... ' % (procSeqs, stats["total"]))
-#                 sys.stdout.flush()
-# #                 break
-#         except BaseException as e:                
-#             print(e)
-#             raise        
-#     print('%d/%d sequences have been searched ... ' % (procSeqs, stats["total"]))
-#     records.close()
+
+
+def postProcessRSA(stats, sitesInfo, stream=None):
+    """
+    returns a processed RSA result tuple. see return value for more information
+
+    :param stats: dictionary of stats. see collectRSASimpleResults for the exact format
+    :param sitesInfo: dictionary of enzymes mapped to their compiled regex
+    :param stream: logging stream
+    :return: 2-tuple:
+    (
+        dataframe with columns: "Enzyme", "Restriction Site", "No.Hits", "Percentage of Hits (%)",
+                                "No.Molecules", "Percentage of Molecules (%)"
+                                where
+                                    1. No.Hits are the total number of found hits for an enzyme (one molecule may have
+                                        multiple enzyme hits)
+                                    2. No.Molecules are the total number of molecules that the enzyme matched against.
+                                       (if a molecule has multiple hotspots, only one is counted)
+        dictionary with optional keys:
+            {
+                "order1" : {'enzyme1': {'seq_id1', 'seq_id2', 'seq_id3', ...}, 'enzyme2': {'seq_id5', ...} , ... },
+                "order2" : Dataframe of n^2(all-vs-all) rows where each row is a jaccard index of the ids that each
+                           pairwise comparison of the enzyme yields
+            }
+            "order1" is always there, "order2" only appears if the number of enzymes is at least 3(len(sitesInfo)) >= 3)
+    )
+    """
+    rsaResults = []
+    # sort site names by their highest sequence hit (deduplicated) count (i.e. non-multi-hit count)
+    sites = sorted(stats["siteHitSeqsCount"], key=stats["siteHitSeqsCount"].get)
+    for site in sites:
+        # site name, site regex pattern, total number of hits (incl multi-hit), normalized total multi-hit, \
+        #       total number molecules that are hit by this site, normalized tot. no.mol that are hit by site (dedup)
+        rsaResults.append([site, sitesInfo[site].pattern,
+                           stats["siteHitsCount"][site],
+                           stats["siteHitsCount"][site] / sum(stats["siteHitsCount"].values()),
+                           stats["siteHitSeqsCount"][site],
+                           stats["siteHitSeqsCount"][site] / stats["total"]])
+
+    # total number of sequences that are cut by at least one site (and normalized)
+    rsaResults.append(["Cut by any", nan, nan, nan, stats["seqsCutByAny"], stats["seqsCutByAny"] / stats["total"]])
+    # total number of sequences (and normalized, 100%, doh!)
+    rsaResults.append(["Total", nan, nan, nan, stats["total"], 100])
+    rsaResults = DataFrame(rsaResults, columns=["Enzyme", "Restriction Site", "No.Hits", "Percentage of Hits (%)",
+                                                "No.Molecules", "Percentage of Molecules (%)"])
+
+    overlapResults = {"order1": stats["siteHitsSeqsIDs"]}
+
+    # if there are at least 3 sites, calculate overlap order2
+    if len(stats["siteHitsSeqsIDs"]) >= 3:
+        overlapResults["order2"] = calcRSAOverlapOrder2(stats["siteHitsSeqsIDs"], sites, stream=stream)
+
+    return rsaResults, overlapResults
 
 
 def loadRestrictionSites(sitesFile, stream=None):
@@ -192,9 +248,12 @@ def loadRestrictionSites(sitesFile, stream=None):
     given a whitespace separated file containing 2 columns, return a dictionary of restriction enzyme names to
     a regex translated sequence. Ignores all lines that starts with "#"
 
-    :param sitesFile:
-    :param stream:
-    :return:
+    :param sitesFile: file with 2 cols, enzyme <ws> seq. Any line that *starts* with # will be ignored
+    :param stream: logging stream
+    :return: dictionary of enzyme to precompiled regex mapping, for example:
+    {
+        "ENZYME1": re.compile("AC[GT]..A")     # assuming ENZYME1's IUPAC sequence was "ACKNNA"
+    }
     """
     with open(sitesFile) as fp:
         sites = {}
@@ -206,7 +265,7 @@ def loadRestrictionSites(sitesFile, stream=None):
                     if enzyme in sites:
                         printto(stream, enzyme + " is duplicated, the older enzyme sequence {} ".format(sites[enzyme]) +
                                                  "will be overridden.", LEVEL.WARN)
-                    sites[enzyme] = replaceIUPACLetters(str(seq).upper().strip())
+                    sites[enzyme] = re.compile(replaceIUPACLetters(str(seq).upper().strip()))
                 except Exception as e:
                     printto(stream, "Offending line: {}, {}".format(line, line.split()), LEVEL.EXCEPT)
                     raise e
@@ -285,7 +344,13 @@ def findHitsRegion(qsRec, hitStarts):
 
 
 def findHits(seq, site):
+    """
+    returns non overlapping matching indices of "site" in "seq"
+
+    :param seq: nucleotide string
+    :param site: compiled site, for example, re.compile("AC[GT].T")
+    :return: a list of start indices, where "seq" matched "site"
+    """
     seq = seq.upper()
-    site = site.replace('/', '')  
-    return [match.start() for match in re.finditer('(?=(%s))' % site, seq)]
+    return [match.start() for match in site.finditer(seq)]
 #     return len(re.findall(site, seq))

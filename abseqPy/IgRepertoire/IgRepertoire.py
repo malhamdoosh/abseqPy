@@ -575,7 +575,7 @@ class IgRepertoire:
         else:
             self.annotateClones(outAuxDir)
             (rsaResults, overlapResults) = scanRestrictionSitesSimple(self.name,
-                                                                      self.readFile, self.format,
+                                                                      self.readFile,
                                                                       self.cloneAnnot, self.sitesFile,
                                                                       self.threads)
             rsaResults.to_csv(siteHitsFile, header=True, index=False)

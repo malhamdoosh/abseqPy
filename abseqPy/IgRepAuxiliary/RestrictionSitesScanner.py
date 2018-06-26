@@ -5,7 +5,6 @@
     Changes log: check git commits. 
 '''
 
-import sys
 
 from multiprocessing import Process
 from numpy import isnan
@@ -28,7 +27,7 @@ class RestrictionSitesScanner(Process):
         self.exitQueue = None
         self.resultsQueue = None
         self.stream = stream
-        
+
     def run(self):
         printto(self.stream, self.name + " process is now ready to start a new job ...")
         while True:
@@ -42,17 +41,21 @@ class RestrictionSitesScanner(Process):
                     self.runSimple(nextTask)
                 else:
                     self.runDetailed(nextTask)
-            except Exception as e:
+            except Exception:
                 printto(self.stream, "An error occurred while processing " + self.name, LEVEL.ERR)
-                # raise
-                # sys.exit()
                 self.resultsQueue.put(None)
                 continue
         return
     
     def runSimple(self, nextTask):
+        """
+        Runs Restriction sites simple analysis
+
+        :param nextTask: iterable of sequence ids that should exist in self.records
+        :return: None
+        """
         stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initSimpleRSAStats(self.sites)
-        stats['total'] = len(nextTask)      
+        stats['total'] = len(nextTask)
         for id_ in nextTask:
             # record = raw sequence (taken from m.dict())
             record = self.records[id_]
@@ -62,20 +65,25 @@ class RestrictionSitesScanner(Process):
                 end = len(record)
             else:
                 end = int(qsRec['fr4.end'])
-            record = record[qstart:end]  
-            seq = record
-            seqRC = str(Seq(seq).reverse_complement())            
+            seq = record[qstart:end]
+            seqRC = str(Seq(seq).reverse_complement())
             cut = False
-            for site in stats["siteHitsCount"].keys():
-                hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seq, self.sites[site])
+            for site, siteRegex in self.sites.items():
+                hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seq, siteRegex)
                 if len(hits) == 0:                    
-                    hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seqRC, self.sites[site])
+                    hits = abseqPy.IgRepAuxiliary.restrictionAuxiliary.findHits(seqRC, siteRegex)
                 if len(hits) > 0:
-                    stats["siteHitsCount"][site] += len(hits) 
-                    stats["siteHitSeqsCount"][site] += 1                     
+                    # how many times has this site found a match on this sequence (seq / seqRC)
+                    stats["siteHitsCount"][site] += len(hits)
+                    # how many times has this site found a match on *a* sequence
+                    # (yes, this is a "duplicate" field of siteHitsSeqsIDs, we could've taken the length of
+                    # siteHitsSeqsIDs, it would be equal to this)
+                    stats["siteHitSeqsCount"][site] += 1
+                    # add the ids of sequences where this site has a match for
                     stats["siteHitsSeqsIDs"][site].append(id_)
                     cut = True                 
             if cut:
+                # total number of sequences that are cut by *at least* one site
                 stats["seqsCutByAny"] += 1
         self.procCounter.increment(len(nextTask))                         
         self.resultsQueue.put(stats)

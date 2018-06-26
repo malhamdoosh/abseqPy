@@ -25,7 +25,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import Alphabet
 from Bio import Alphabet
 
-from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs
+from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs, safeOpen, detectFileFormat
 from abseqPy.config import WEBLOGO
 from abseqPy.logger import printto, LEVEL
 from abseqPy.utilities import ShortOpts, requires
@@ -41,39 +41,14 @@ from abseqPy.utilities import ShortOpts, requires
 # from TAMO.MotifTools import Motif
 
 
-def readSeqFileIntoDict(seqFile, format="fastq", outDict=None, stream=None):
+def readSeqFileIntoDict(seqFile, outDict=None, stream=None):
+    printto(stream, "Processing {} ... loading sequences into dictionary".format(os.path.basename(seqFile)))
+    format = detectFileFormat(seqFile)
     if outDict is None:
         outDict = {}
-    try:
-        if format == "fastq":
-            with open(seqFile) as h:
-                while True:
-                    line = h.readline()
-                    if not line:
-                        break
-                    id = line.strip("\n")[1:].split()[0]
-                    seq = h.readline().strip("\n") 
-                    outDict[id] = seq
-                    h.readline()
-                    h.readline()
-#                     print(id)
-        elif format == "fasta":
-            with open(seqFile) as h:
-                while True:            
-                    line = h.readline()
-                    if not line:
-                        break
-                    line = line.strip("\n")
-                    if line.startswith(">"):
-                        id = line[1:].split()[0]
-                        outDict[id] = ""
-                    else:
-                        outDict[id] += line                            
-        else:
-            raise Exception("Unknown sequence file format")
-    except Exception as e: 
-        printto(stream, "Something went wrong while reading a sequence file", LEVEL.EXCEPT)
-        raise e
+    with safeOpen(seqFile) as fp:
+        for rec in SeqIO.parse(fp, format):
+            outDict[rec.id] = str(rec.seq)
     return outDict
 
 
