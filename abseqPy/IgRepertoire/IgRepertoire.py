@@ -260,13 +260,19 @@ class IgRepertoire:
                                      self.threads, self.merger, self.hdfDir, stream=logger)
             self.readFile = mergedFastq
 
-    def annotateClones(self, filterOutDir=None):
+    def annotateClones(self, filterOutDir=None, inplaceProductive=False):
         """
         annotate clones from self.read using IgBLAST. self.cloneAnnot will be a dataframe
         with annotated clones
+
         :param filterOutDir: string.
                 filtered clones will be placed in this directory under the
                 name /filterOutDir/<self.name>_filtered_out_clones.txt
+
+        :param inplaceProductive bool.
+                retain clones in self.cloneAnnot only if it's productive (no stop codon and correct vj-frame). This
+                filter has nothing to do with filterOutDir (filterOutDir is based on igblastn's vqstart, vstart, etc...)
+
         :return: None
         """
         logger = logging.getLogger(self.name)
@@ -377,6 +383,11 @@ class IgRepertoire:
             printto(logger, "File found ... {}".format(os.path.basename(outputFile)), LEVEL.WARN)
             printto(logger, "File found ... {}".format(os.path.basename(noOutlierOutputFile)), LEVEL.WARN)
 
+        if inplaceProductive:
+            # if we want productive sequences only:
+            #       also note that this is un-refined "productivity" classification
+            self.cloneAnnot = self.cloneAnnot[(self.cloneAnnot['stopcodon'] == "No") &
+                                              (self.cloneAnnot['v-jframe'] == "In-frame")]
         # finally, write number of filtered reads
         writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
 
@@ -543,7 +554,6 @@ class IgRepertoire:
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeRestrictionSitesSimple(self):
-        # TODO: parallelize this function to run faster
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, "restriction_sites")
@@ -573,7 +583,7 @@ class IgRepertoire:
             else:
                 overlapResults = None
         else:
-            self.annotateClones(outAuxDir)
+            self._getBestCloneAnnot(outAuxDir, inplaceFiltered=True, inplaceProductive=True)
             (rsaResults, overlapResults) = scanRestrictionSitesSimple(self.name,
                                                                       self.readFile,
                                                                       self.cloneAnnot, self.sitesFile,
@@ -590,8 +600,7 @@ class IgRepertoire:
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeRestrictionSites(self):
-        # todo
-        raise NotImplementedError
+        # TODO: make this work, and parallelize this function to run faster
         # logger = logging.getLogger(self.name)
         #
         # outResDir = os.path.join(self.auxDir, "restriction_sites")
@@ -910,6 +919,37 @@ class IgRepertoire:
                 (self.cloneAnnot['vqstart'] <= self.qStart[1])
         )
         return selectedRows
+
+    def _getBestCloneAnnot(self, outAuxDir, inplaceFiltered, inplaceProductive):
+        """
+        populate self.cloneAnnot by the following order:
+            1. if the refined dataframe exists, load it into self.cloneAnnot
+            2. if the refined dataframe doesnt exist, but the unrefined one does, load that instead
+            3. if the unrefined dataframe also doesn't exist, conduct the UNREFINED annotation step
+               (i.e. call self.annotateClones)
+
+        note that self.cloneAnnot will be filtered inplace if any of the inplace* arguments are true, to save space
+
+        :param outAuxDir: string.
+                Will dump a filtered ids text file here if it's required to annotate clones
+
+        :param inplaceFiltered: bool
+                Should the sequences be filtered (by FR1-4 consensus lengths). WARNING: this option is only used when
+                refinement has already been conducted and found. Otherwise, the unrefined dataframe has no information
+                about this, thus will ignore this argument.
+
+        :param inplaceProductive: bool
+                Should the sequences be productive?
+
+        :return: None
+        """
+        refinedCloneAnnotFile = os.path.join(self.hdfDir, "productivity", self.name + "_refined_clones_annot.h5")
+
+        if os.path.exists(refinedCloneAnnotFile):
+            self.analyzeProductivity(inplaceFiltered=inplaceFiltered, inplaceProductive=inplaceProductive)
+        else:
+            # take the unrefined "productive" clones, since we do not have refined dataframe
+            self.annotateClones(outAuxDir, inplaceProductive=inplaceProductive)
 
     def _reloadAnnot(self):
         """

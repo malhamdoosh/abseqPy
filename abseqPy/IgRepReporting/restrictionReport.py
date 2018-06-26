@@ -20,11 +20,11 @@ def generateOverlapFigures(overlapResults, noSeqs, name, siteHitsFile, stream=No
                            that is identical (i.e. a "named matrix") - see calcRSAOverlapOrder2's return value
             }
             "order1" is always there, "order2" only appears if the number of enzymes is at least 3(len(sitesInfo)) >= 3)
-    :param noSeqs:
-    :param name:
-    :param siteHitsFile:
-    :param stream:
-    :return:
+    :param noSeqs: total number of sequences
+    :param name: string. sample name
+    :param siteHitsFile: string. output file name
+    :param stream: logger stream
+    :return: None
     """
     if overlapResults is None:
         return
