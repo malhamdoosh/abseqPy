@@ -11,3 +11,4 @@
 /dist/
 **/3rd_party*/
 .pytest_cache/
+.cache/

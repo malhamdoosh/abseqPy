@@ -16,6 +16,7 @@ from abseqPy.logger import printto, LEVEL
 
 
 class RestrictionSitesScanner(Process):
+    # todo: remove cloneAnnot. using (xthreads) expensive memory multiplier
     def __init__(self, records, cloneAnnot, procCounter, sites, simpleScan=True, stream=None):
         super(RestrictionSitesScanner, self).__init__()
         self.records = records
@@ -80,6 +81,7 @@ class RestrictionSitesScanner(Process):
         self.resultsQueue.put(stats)
         
     def runDetailed(self, nextTask):
+        # todo: move code here
         pass
     
   

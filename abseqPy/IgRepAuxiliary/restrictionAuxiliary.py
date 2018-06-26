@@ -188,51 +188,59 @@ def collectRSASimpleResults(sitesInfo, resultsQueue, totalTasks, noSeqs, stream=
 
 
 def loadRestrictionSites(sitesFile, stream=None):
-    f = open(sitesFile)
-    lines = f.readlines()
-    sites = {}
-    for line in lines:
-        line = line.strip()
-        if line and not line.startswith("#"):
-            try:
-                enzyme, seq = line.split()
-                if enzyme in sites:
-                    printto(stream, enzyme + " is duplicated.", LEVEL.WARN)
-                site = str(seq).upper().strip()
-                site = replaceIUPACLetters(site)
-                site = site.replace('N', '.').replace('(', '[').replace(')', ']')                
-                sites[enzyme] = site
-            except Exception as e:
-                printto(stream, "Offending line: {}, {}".format(line, line.split()), LEVEL.EXCEPT)
-                raise e
+    """
+    given a whitespace separated file containing 2 columns, return a dictionary of restriction enzyme names to
+    a regex translated sequence. Ignores all lines that starts with "#"
+
+    :param sitesFile:
+    :param stream:
+    :return:
+    """
+    with open(sitesFile) as fp:
+        sites = {}
+        for line in fp:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                try:
+                    enzyme, seq = line.split()
+                    if enzyme in sites:
+                        printto(stream, enzyme + " is duplicated, the older enzyme sequence {} ".format(sites[enzyme]) +
+                                                 "will be overridden.", LEVEL.WARN)
+                    sites[enzyme] = replaceIUPACLetters(str(seq).upper().strip())
+                except Exception as e:
+                    printto(stream, "Offending line: {}, {}".format(line, line.split()), LEVEL.EXCEPT)
+                    raise e
+
     printto(stream, "Restricting sites have been loaded")
     return sites
 
 
-iupac = {
+def replaceIUPACLetters(iupacSeq):
+    """
+    translates IUPAC letters to regex ACGT letters
+    :param iupacSeq: string of IUPAC sequence
+    :return: equivalent IUPAC sequence in a ACGT regex string
+    """
+    iupac = {
         'A': 'A',
         'C': 'C',
         'G': 'G',
         'T': 'T',
-        'R': '(AG)',
-        'Y': '(CT)',
-        'S': '(GC)',
-        'W': '(AT)',
-        'K': '(GT)',
-        'M': '(AC)',
-        'B': '(CGT)',
-        'D': '(AGT)',
-        'H': '(ACT)',
-        'V': '(ACG)',
-        'N': 'N'
-        }
-
-
-def replaceIUPACLetters(iupacSeq):
+        'R': '[AG]',
+        'Y': '[CT]',
+        'S': '[GC]',
+        'W': '[AT]',
+        'K': '[GT]',
+        'M': '[AC]',
+        'B': '[CGT]',
+        'D': '[AGT]',
+        'H': '[ACT]',
+        'V': '[ACG]',
+        'N': '.'
+    }
     tcgaSeq = ''
-    iupacLetters = ''.join(iupac.keys())
     for s in iupacSeq.upper():
-        if s not in iupacLetters:
+        if s not in iupac:
             tcgaSeq += s
         else:
             tcgaSeq += iupac[s]

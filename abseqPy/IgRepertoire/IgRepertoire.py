@@ -578,11 +578,9 @@ class IgRepertoire:
                                                                       self.readFile, self.format,
                                                                       self.cloneAnnot, self.sitesFile,
                                                                       self.threads)
-            rsaResults.to_csv(siteHitsFile,
-                              header=True,
-                              index=False)
+            rsaResults.to_csv(siteHitsFile, header=True, index=False)
             printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
-            if overlapResults.get("order2", None) is not None:
+            if "order2" in overlapResults:
                 overlapResults["order2"].to_csv(overlap2File, header=True, index=True)
         # # print out the results        
         generateOverlapFigures(overlapResults,
