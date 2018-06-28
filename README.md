@@ -25,7 +25,7 @@
 **AbSeq** has been tested on Unix-like platforms (`macOS` and `Linux`).
 Windows support hasn't been tested but should work as expected.
 
-Currently, **AbSeq** runs on Python 2.7 &mdash; fret not, Python 3.6 support is underway.
+Currently, **AbSeq** runs on Python 2.7 &mdash; fret not, Python 3.6 support is under way.
 
 
 ## Wiki
@@ -61,7 +61,7 @@ then, installing external dependencies into a folder named `~/.local/abseq` is a
 $ python install.py ~/.local/abseq
 ```
 
-The script works with either Python versions, and `~/.local/abseq` can be replaced with any directory.
+The script works with Python 2 and 3, and `~/.local/abseq` can be replaced with any directory.
 
 > The script will remind users to update their environment variables
 
@@ -91,11 +91,11 @@ Invoking `abseq -h` in the command line will display the arguments **AbSeq** use
 
 ## YAML
 
-Besides calling `abseq` with command line arguments, `abseq` also supports `-y <file>` or `--yaml <file>` argument that
+Besides calling `abseq` with command line arguments, `abseq` also supports `-y <file>` or `--yaml <file>` that
 reads off arguments defined within the provided `file`.
 
 #### Example
-Assuming a file named `example1.yml` has the following content:
+Assuming a file named `example.yml` has the following content:
 
 ```yaml
 defaults:
@@ -122,7 +122,7 @@ task: abundance
 detailedComposition: ~
 ```
 
-then executing `abseq -y example1.yml` is equivalent to running 3 simultaneous instances of
+then executing `abseq -y example.yml` is equivalent to running 3 simultaneous instances of
 `abseq` with the arguments in the `defaults` field applied to each sample (PCR1, PCR2, PCR3):
 
 ```bash
@@ -134,4 +134,4 @@ $ abseq --task abundance --outdir results --threads 7 --bitscore 300 --alignlen 
 >   --name PCR3 --detailedComposition --file1 fastq/PCR3_ACGT_L001_R1.fastq.gz --file2 fastq/PCR3_ACGT_L001_R2.fastq.gz
 ```
 
-> The sample *PCR3* overrides the `bitscore` and `task` argument with `300` and `abundance`, and enables the `--detailedComposition` flag
+> The sample PCR3 *overrides* the `bitscore` and `task` argument with `300` and `abundance` and enables the `--detailedComposition` flag.
