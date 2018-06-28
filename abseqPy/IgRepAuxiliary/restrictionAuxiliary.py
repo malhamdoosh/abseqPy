@@ -134,7 +134,7 @@ def scanRestrictionSites(name, readFile, cloneAnnot, sitesFile, threads, simple=
         for _ in range(threads):
             # pass in a minified cloneAnnot, the bare minimum of what's required in the runSimple() / runDetailed()
             # method
-            w = RestrictionSitesScanner(records, cloneAnnot[_requiredColumns(simple=simple)], procCounter,
+            w = RestrictionSitesScanner(records, cloneAnnot, procCounter,
                                         sitesInfo.copy(), simpleScan=simple, stream=stream)
             w.tasksQueue = tasks
             w.exitQueue = exitQueue
@@ -417,13 +417,3 @@ def findHits(seq, site):
     """
     seq = seq.upper()
     return [match.start() for match in site.finditer(seq)]
-
-
-def _requiredColumns(simple):
-    """
-    returns the required columns to run RSA simple/detailed in RestrictionSitesScanner.run()
-    :param simple: bool. RSA simple or RSA detailed
-    :return: list of strings
-    """
-    base = ['vqstart', 'vstart', 'fr4.end']
-    return base if simple else (base + ['vgene'])
