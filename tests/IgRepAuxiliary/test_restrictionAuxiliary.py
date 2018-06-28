@@ -49,3 +49,5 @@ def test_findHits():
     assert len(findHits(simple_seq, site1)) == 2
     assert len(findHits(simple_seq, site2)) == 1
 
+    assert findHits(simple_seq, site1) == [0, 4]
+    assert findHits(simple_seq, site2) == [0]

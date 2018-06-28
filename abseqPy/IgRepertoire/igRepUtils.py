@@ -33,7 +33,8 @@ def detectFileFormat(fname, noRaise=False):
     """
     detects if the filename ends with fastq or fasta extensions (it can be zipped)
     :param fname: filename for which the extension should be identified (fname can be zipped)
-    :return: "fastq" or "fasta" or None depending on the extensions
+    :return: "fastq" or "fasta" or None depending on the extensions. This output is compatible with the expected
+    input argument to the 'format' parameter in SeqIO.* function variants
     """
 
     class FileFormatNotSupported(Exception):

@@ -36,7 +36,7 @@ def generateOverlapFigures(overlapResults, noSeqs, name, siteHitsFile, stream=No
         title += '\nTotal is {:,}'.format(int(noSeqs))
         plotVenn(overlapResults["order1"], siteHitsFile.replace('.csv', '_venn.png'), title, stream=stream)
 
-    # if order2 is in overlapResults, then it implies that there's at LEAST 3 enzymes
+    # if order2 is in overlapResults, then it implies that there's AT LEAST 3 enzymes
     if "order2" in overlapResults:
         title = 'Restriction sites in Sample ' + name
         title += '\nTotal is {:,}'.format(int(noSeqs))

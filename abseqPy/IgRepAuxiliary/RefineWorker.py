@@ -203,7 +203,7 @@ def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
                 qsRec['stopcodon'] = 'Yes'
 
                 # update the annotation fields with the new calculated values
-        gaps = abs(qsRec['vqstart'] - qsRec['vstart']) - offset
+        gaps = int(abs(qsRec['vqstart'] - qsRec['vstart']) - offset)
         mismatches = qsRec['vstart'] - 1
         if qsRec['vstart'] > qsRec['vqstart'] and gaps > 0:
             mismatches -= gaps
@@ -237,7 +237,7 @@ def refineInFramePrediction(qsRec, record, actualQstart, flags, stream=None):
         inframe = False
 
     # the query clone is not in concordance with the start of the germline gene
-    offset = qsRec['vqstart'] - qsRec['vstart'] + 1  # 1-based
+    offset = int(qsRec['vqstart'] - qsRec['vstart']) + 1  # 1-based
     if (inframe and (offset < 1 or
                      (actualQstart != -1 and (offset - 1 - actualQstart) % 3 != 0))):
         inframe = False
