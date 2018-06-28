@@ -590,12 +590,14 @@ class IgRepertoire:
             # else:
             #     overlapResults = None
         else:
+            printto(logger, "Searching for cloneAnnot dataframe, filtering for FR consensus lengths and "
+                            "productive reads only", LEVEL.INFO)
             if simple:
                 # take the best available cloneAnnot dataframe, if available, otherwise just use unrefined cloneAnnot
                 self._getBestCloneAnnot(outAuxDir, inplaceFiltered=True, inplaceProductive=True, stream=logger)
             else:
                 # always take the refined dataframe, in contrast to RSA simple which takes any available one
-                self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=True)
+                self.analyzeProductivity(inplaceFiltered=True, inplaceProductive=True)
             (rsaResults, overlapResults) = scanRestrictionSites(self.name, self.readFile, self.cloneAnnot,
                                                                 self.sitesFile, self.threads, simple=simple,
                                                                 stream=logger)
@@ -835,14 +837,19 @@ class IgRepertoire:
         :return: None
         """
         refinedCloneAnnotFile = os.path.join(self.hdfDir, "productivity", self.name + "_refined_clones_annot.h5")
-
         if os.path.exists(refinedCloneAnnotFile):
             printto(stream, "Found refined clone annotation file {}, loading dataframe ..."
                     .format(os.path.basename(refinedCloneAnnotFile)))
+            printto(stream, "\tFiltered for:")
+            printto(stream, "\t\tFR1, FR2, FR3, FR4 consensus lengths: {}".format(str(inplaceFiltered)))
+            printto(stream, "\t\tRefined productivity: {}".format(str(inplaceProductive)))
             self.analyzeProductivity(inplaceFiltered=inplaceFiltered, inplaceProductive=inplaceProductive)
         else:
             printto(stream,
                     "Refined clone annotation file not found, falling back to unrefined clone annotation dataframe.")
+            printto(stream, "\tFiltered for:")
+            printto(stream, "\t\tFR1, FR2, FR3, FR4 consensus lengths: {}".format(str(inplaceFiltered)))
+            printto(stream, "\t\tUnrefined productivity: {}".format(str(inplaceProductive)))
             # take the unrefined "productive" clones, since we do not have refined dataframe
             self.annotateClones(outAuxDir, inplaceProductive=inplaceProductive)
 
