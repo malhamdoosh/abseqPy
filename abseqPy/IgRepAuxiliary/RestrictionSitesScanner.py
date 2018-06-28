@@ -57,7 +57,7 @@ class RestrictionSitesScanner(Process):
         :param nextTask: iterable of sequence ids that should exist in self.records
         :return: None
         """
-        stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initRSAStats(simple=self.simpleScan)
+        stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initRSAStats(simple=True)
         stats['total'] = len(nextTask)
         for id_ in nextTask:
             # record = raw sequence (taken from m.dict())
@@ -88,7 +88,7 @@ class RestrictionSitesScanner(Process):
         self.resultsQueue.put(stats)
         
     def runDetailed(self, nextTask):
-        stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initRSAStats(simple=self.simpleScan)
+        stats = abseqPy.IgRepAuxiliary.restrictionAuxiliary.initRSAStats(simple=False)
         stats['total'] = len(nextTask)
         for id_ in nextTask:
             # record = raw sequence (taken from m.dict())

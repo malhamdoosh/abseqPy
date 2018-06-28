@@ -164,7 +164,7 @@ def scanRestrictionSites(name, readFile, cloneAnnot, sitesFile, threads, simple=
         printto(stream, "Results were collated successfully.")
 
     except Exception as e:
-        printto(stream, "Something went wrong during the RSA scanning process!")
+        printto(stream, "Something went wrong during the RSA scanning process, error: {}".format(str(e)), LEVEL.EXCEPT)
         raise e
     finally:
         for w in workers:
@@ -177,11 +177,10 @@ def collectRSAResults(sitesInfo, resultsQueue, totalTasks, noSeqs, simple=True, 
     stats = initRSAStats(simple=simple)
     total = 0
     while totalTasks:
-        result = resultsQueue.get()
-        if result is None:
+        statsi = resultsQueue.get()
+        if statsi is None:
             continue
         totalTasks -= 1
-        statsi = result
 
         # -------- update relevant statistics -------  #
 
@@ -289,9 +288,9 @@ def postProcessRSA(stats, sitesInfo, simple=True, stream=None):
                       )
 
     rsaResults = DataFrame(rsaResults,
-                           columns=["Enzyme", "Restriction Site", "No.Hits",
+                           columns=(["Enzyme", "Restriction Site", "No.Hits",
                                     "Percentage of Hits (%)", "No.Molecules", "Percentage of Molecules (%)"] +
-                                   [] if simple else extraColumns
+                                    ([] if simple else extraColumns))
                            )
 
     overlapResults = {"order1": stats["siteHitsSeqsIDs"]}
@@ -427,4 +426,4 @@ def _requiredColumns(simple):
     :return: list of strings
     """
     base = ['vqstart', 'vstart', 'fr4.end']
-    return base if simple else base.append('vgene')
+    return base if simple else (base + ['vgene'])
