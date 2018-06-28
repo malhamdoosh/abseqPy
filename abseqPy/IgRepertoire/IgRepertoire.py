@@ -210,12 +210,6 @@ class IgRepertoire:
         self.cloneAnnot = None
         self.cloneSeqs = None
         self.readFile = None
-        # True of any of the following directories are already created. We need to distinguish this
-        # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
-        # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
-        self.warnOldDir = any(map(lambda x: os.path.exists(os.path.join(self.hdfDir, x)),
-                                  ["abundance", "productivity", "diversity", "restriction_sites",
-                                   "primer_specificity", 'utr5', 'secretion']))
 
         setupLogger(self.name, self.task, log)
         writeParams(self.args, self.auxDir)
@@ -565,7 +559,7 @@ class IgRepertoire:
 
         if not os.path.isdir(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
             # RSA uses filtered dataframes, and saves its data files with filtered results. If the user has changed
             # any of their filtering criteria, they should remove or rename the directory before regenerating the files
             printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
@@ -623,7 +617,8 @@ class IgRepertoire:
 
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
+            # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'secretion' directory if you've changed the filtering criteria.",
                     LEVEL.WARN)
 
@@ -633,13 +628,14 @@ class IgRepertoire:
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta" \
+        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
-            printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
+            printto(logger, "\tUpstream sequences file {} was found! Loading file ... "
+                    .format(os.path.basename(upstreamFile)), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
 
@@ -683,7 +679,8 @@ class IgRepertoire:
 
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
+            # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'utr5' directory if you've changed the filtering criteria",
                     LEVEL.WARN)
 
@@ -693,13 +690,14 @@ class IgRepertoire:
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta" \
+        upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
-            printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
+            printto(logger, "\tUpstream sequences file {} was found! Loading file... "
+                    .format(os.path.basename(upstreamFile)), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
         expectLength = self.upstream[1] - self.upstream[0] + 1
