@@ -14,7 +14,6 @@ _REGIONS = ['fr1', 'cdr1', 'fr2', 'cdr2', 'fr3', 'cdr3', 'fr4']
 #  as the spectratype of non-expanded T- and B-cells has a symmetric gaussian-like distribution.
 def annotateSpectratypes(cloneAnnot, amino=True):
     # TODO: add annotation to clonotypes, e.g., germline genes
-    # TODO: add nucleotide level calculations
     denom = 3 if amino else 1
     spectraTypes = {}
     for region in _REGIONS:

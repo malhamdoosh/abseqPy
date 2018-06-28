@@ -77,17 +77,6 @@ def estimateDiversity(clonoTypes, flatClonoTypes, name, outDir, threads=2, segre
     generateSeqMotifs(flatClonoTypes, name, outDir, threads=threads, stream=stream)
     generateRarefactionPlots(flatClonoTypes, name, outDir, threads=threads, stream=stream)
     printto(stream, "The diversity of the library is being estimated ... ")
-    calcDiversity(flatClonoTypes, name, outDir)
-
-
-# todo: diversity indices
-def calcDiversity(clonoTypes, name, outDir):
-    # regions = clonoTypes.keys()
-    # regions.sort()
-    # rarenessCounts = {}
-    # for region in regions:
-    #     rarenessCounts[region] = Counter(clonoTypes[region].values())
-    pass
 
 
 def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
