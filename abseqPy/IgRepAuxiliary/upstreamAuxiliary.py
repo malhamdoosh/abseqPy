@@ -374,7 +374,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
                     logging stream
     :return: None
     """
-    from abseqPy.IgRepAuxiliary.SeqUtils import generateMotifs
+    from abseqPy.IgRepAuxiliary.seqUtils import generateMotifs
 
     if level == 'variant':
         # single argument identity function

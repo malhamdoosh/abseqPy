@@ -51,9 +51,10 @@ class PrimerWorker(Process):
                                                     self.primer3sequences))
                 self.resultsQueue.put(recs)
                 self.procCounter.increment(len(recs))
-                sys.stdout.flush()
             except Exception as e:
-                printto(self.stream, "An error as occurred while processing " + self.name, LEVEL.EXCEPT)
+                printto(self.stream, "An error as occurred while processing " + self.name + " with error {}".format(
+                    str(e)
+                ), LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
                 continue
         return

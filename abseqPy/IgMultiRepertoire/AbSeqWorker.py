@@ -5,13 +5,12 @@ from multiprocessing import Process, current_process, Lock, Value
 
 
 class AbSeqWorker(Process):
-    ops = FASTQC, ANNOT, ABUN, PROD, DIVER, SECR, UTR5, RSAS, RSA, PRIM, SEQLEN = 'runFastqc', 'annotateClones', \
+    ops = FASTQC, ANNOT, ABUN, PROD, DIVER, SECR, UTR5, RSA, PRIM, SEQLEN = 'runFastqc', 'annotateClones', \
                                                                           'analyzeAbundance',\
                                                                           'analyzeProductivity',\
                                                                           'analyzeDiversity', \
                                                                           'analyzeSecretionSignal',\
                                                                           'analyze5UTR', \
-                                                                          'analyzeRestrictionSitesSimple', \
                                                                           'analyzeRestrictionSites', \
                                                                           'analyzePrimerSpecificity', \
                                                                           'analyzeSeqLen'

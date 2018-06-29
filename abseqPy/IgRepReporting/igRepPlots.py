@@ -21,7 +21,7 @@ from Bio import SeqIO
 from numpy import Inf, mean, isnan
 
 import abseqPy.IgRepertoire.igRepUtils
-from abseqPy.IgRepAuxiliary.SeqUtils import maxlen, WeightedPopulation
+from abseqPy.IgRepAuxiliary.seqUtils import maxlen, WeightedPopulation
 from abseqPy.IgMultiRepertoire.PlotManager import PlotManager
 from abseqPy.logger import printto, LEVEL
 

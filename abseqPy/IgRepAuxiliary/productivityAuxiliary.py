@@ -80,11 +80,8 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
         exitQueue = Queue()
         resultsQueue = Queue()
         procCounter = ProcCounter(noSeqs, stream=stream)
-        if threads > totalTasks:
-            threads = totalTasks
-        if not hasLargeMem():
-            threads = 2
-            # Initialize workers 
+        threads = min(threads, totalTasks)
+        # Initialize workers
         workers = []
         for i in range(threads):
             w = RefineWorker(procCounter, chain, actualQstart, fr4cut,
@@ -158,8 +155,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
     # add new column for filtering based on FR region
     newColumns = getAnnotationFields(chain) + ['filtered']
     cloneAnnot = DataFrame(cloneAnnotList, columns=newColumns)
-    cloneAnnot.index = cloneAnnot.queryid
-    del cloneAnnot['queryid']
+    cloneAnnot.set_index('queryid', inplace=True, drop=True)
     gc.collect()
 
     # Create data frame of FR and CDR sequences
@@ -167,8 +163,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
     cloneSeqs = DataFrame(transSeqs, columns=cols)
     for col in cols:
         cloneSeqs.loc[:, col] = cloneSeqs[col].map(str)
-    cloneSeqs.index = cloneSeqs.queryid
-    del cloneSeqs['queryid']
+    cloneSeqs.set_index('queryid', inplace=True, drop=True)
 
     return cloneAnnot, cloneSeqs
 

@@ -19,7 +19,7 @@ from numpy import Inf, logical_not
 
 from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker
 from abseqPy.IgRepAuxiliary.upstreamAuxiliary import plotUpstreamLenDist, extractUpstreamSeqs, \
-     findUpstreamMotifs
+    findUpstreamMotifs
 from abseqPy.IgRepAuxiliary.primerAuxiliary import addPrimerData, generatePrimerPlots
 from abseqPy.config import FASTQC, AUX_FOLDER, HDF_FOLDER, DEFAULT_TASK, DEFAULT_MERGER, DEFAULT_TOP_CLONE_VALUE
 from abseqPy.IgRepertoire.igRepUtils import gunzip, fastq2fasta, mergeReads, \
@@ -34,7 +34,7 @@ from abseqPy.IgRepReporting.productivityReport import generateProductivityReport
 from abseqPy.IgRepReporting.diversityReport import generateDiversityReport
 from abseqPy.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
     annotateClonotypes
-from abseqPy.IgRepAuxiliary.restrictionAuxiliary import scanRestrictionSitesSimple
+from abseqPy.IgRepAuxiliary.restrictionAuxiliary import scanRestrictionSites
 from abseqPy.IgRepReporting.restrictionReport import generateOverlapFigures
 from abseqPy.utilities import ShortOpts
 
@@ -54,6 +54,7 @@ class IgRepertoire:
     """
     creates an AbSeq.IgRepertoire object with QC methods
     """
+
     def __init__(self, f1, f2=None, name=None, fmt=None, chain='hv', seqtype='dna', domainSystem='imgt',
                  merger=DEFAULT_MERGER, outdir='.', threads=1, bitscore=(0, Inf), alignlen=(0, Inf),
                  sstart=(1, Inf), qstart=(1, Inf), clonelimit=DEFAULT_TOP_CLONE_VALUE, detailedComposition=False,
@@ -209,12 +210,6 @@ class IgRepertoire:
         self.cloneAnnot = None
         self.cloneSeqs = None
         self.readFile = None
-        # True of any of the following directories are already created. We need to distinguish this
-        # from the beginning because AbSeq also re-reads HDF within the same analysis to prevent
-        # pickling self.cloneAnnot, self.cloneSeqs into multiprocessing.Queue
-        self.warnOldDir = any(map(lambda x: os.path.exists(os.path.join(self.hdfDir, x)),
-                                  ["abundance", "productivity", "diversity", "restriction_sites",
-                                   "primer_specificity", 'utr5', 'secretion']))
 
         setupLogger(self.name, self.task, log)
         writeParams(self.args, self.auxDir)
@@ -243,7 +238,7 @@ class IgRepertoire:
 
         printto(logger, "Fastqc is running ... ")
 
-        fastqc = ShortOpts(exe=FASTQC, o=outDir, t=self.threads)\
+        fastqc = ShortOpts(exe=FASTQC, o=outDir, t=self.threads) \
             .append(self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else ""))
         # printto(logger, "Executing " + str(fastqc))
         fastqc()
@@ -260,13 +255,19 @@ class IgRepertoire:
                                      self.threads, self.merger, self.hdfDir, stream=logger)
             self.readFile = mergedFastq
 
-    def annotateClones(self, filterOutDir=None):
+    def annotateClones(self, filterOutDir=None, inplaceProductive=False):
         """
         annotate clones from self.read using IgBLAST. self.cloneAnnot will be a dataframe
         with annotated clones
+
         :param filterOutDir: string.
                 filtered clones will be placed in this directory under the
                 name /filterOutDir/<self.name>_filtered_out_clones.txt
+
+        :param inplaceProductive bool.
+                retain clones in self.cloneAnnot only if it's productive (no stop codon and correct vj-frame). This
+                filter has nothing to do with filterOutDir (filterOutDir is based on igblastn's vqstart, vstart, etc...)
+
         :return: None
         """
         logger = logging.getLogger(self.name)
@@ -335,7 +336,7 @@ class IgRepertoire:
             writeSummary(self._summaryFile, "AnnotatedReads", self.cloneAnnot.shape[0])
 
         printto(logger, "Number of clones that are annotated is {0:,}".format(
-                int(self.cloneAnnot.shape[0])), LEVEL.INFO)
+            int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
         filterOutDir = outAuxDir if filterOutDir is None else filterOutDir
         # Filter clones based on bitscore, alignLen, qStart, and sStart
@@ -350,9 +351,9 @@ class IgRepertoire:
         retained = int(self.cloneAnnot.shape[0]) - len(filteredIDs)
 
         printto(logger, 'Percentage of retained clones is {:.2%} ({:,}/{:,})'.format(
-                retained / self.cloneAnnot.shape[0],
-                retained,
-                int(self.cloneAnnot.shape[0])), LEVEL.INFO)
+            retained / self.cloneAnnot.shape[0],
+            retained,
+            int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
         self.cloneAnnot = self.cloneAnnot[selectedRows]
 
@@ -378,6 +379,11 @@ class IgRepertoire:
             printto(logger, "File found ... {}".format(os.path.basename(outputFile)), LEVEL.WARN)
             printto(logger, "File found ... {}".format(os.path.basename(noOutlierOutputFile)), LEVEL.WARN)
 
+        if inplaceProductive:
+            # if we want productive sequences only:
+            #       also note that this is un-refined "productivity" classification
+            self.cloneAnnot = self.cloneAnnot[(self.cloneAnnot['stopcodon'] == "No") &
+                                              (self.cloneAnnot['v-jframe'] == "In-frame")]
         # finally, write number of filtered reads
         writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
 
@@ -496,7 +502,7 @@ class IgRepertoire:
             0 if before == 0 else cloneAnnot.shape[0] / before,
             int(cloneAnnot.shape[0]),
             int(before)
-            ), LEVEL.INFO)
+        ), LEVEL.INFO)
 
         # write number of productive reads
         writeSummary(self._summaryFile, "ProductiveReads", cloneAnnot.shape[0])
@@ -543,10 +549,9 @@ class IgRepertoire:
         paramFile = writeParams(self.args, outResDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
-    def analyzeRestrictionSitesSimple(self):
-        # TODO: parallelize this function to run faster
+    def analyzeRestrictionSites(self, simple):
         logger = logging.getLogger(self.name)
-
+        ssimple = 'simple' if simple else 'detailed'
         outResDir = os.path.join(self.auxDir, "restriction_sites")
         outAuxDir = os.path.join(self.hdfDir, "restriction_sites")
 
@@ -555,165 +560,52 @@ class IgRepertoire:
 
         if not os.path.isdir(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
+            # RSA uses filtered dataframes, and saves its data files with filtered results. If the user has changed
+            # any of their filtering criteria, they should remove or rename the directory before regenerating the files
             printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
                     LEVEL.WARN)
 
-        siteHitsFile = os.path.join(outResDir, self.name + "_{}_rsasimple.csv"
-                                    .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
+        # enzyme, restriction site (seq), no. hits, percentage, no molecule, percentage of molecules
+        siteHitsFile = os.path.join(outResDir, self.name + "_{}_rsa{}.csv"
+                                    .format(os.path.splitext(os.path.basename(self.sitesFile))[0], ssimple))
+
+        # jaccard matrix (all vs all)
         overlap2File = siteHitsFile.replace('.csv', '_overlap_order2.csv')
 
         if os.path.exists(siteHitsFile):
-            printto(logger, "Restriction sites were already scanned at ... " +
-                    os.path.basename(siteHitsFile), LEVEL.WARN)
-            rsaResults = read_csv(siteHitsFile, header=0)
-            if os.path.exists(overlap2File):
-                overlapResults = {}
-                overlapResults['order2'] = read_csv(overlap2File, header=0, index_col=0)
-            else:
-                overlapResults = None
+            printto(logger, "Restriction sites were already scanned at {}".format(
+                os.path.basename(siteHitsFile)) + ", skipping RSA({}) ...".format(ssimple), LEVEL.WARN)
+            return
+            # data files are already found, dont bother loading them
+            # rsaResults = read_csv(siteHitsFile, header=0)
+            # # this will exist only if there was >= 3 enzymes analyzed previously
+            # if os.path.exists(overlap2File):
+            #     overlapResults = {'order2': read_csv(overlap2File, header=0, index_col=0)}
+            # else:
+            #     overlapResults = None
         else:
-            self.annotateClones(outAuxDir)
-            (rsaResults, overlapResults) = scanRestrictionSitesSimple(self.name,
-                                                                      self.readFile, self.format,
-                                                                      self.cloneAnnot, self.sitesFile,
-                                                                      self.threads)
-            rsaResults.to_csv(siteHitsFile,
-                              header=True,
-                              index=False)
+            printto(logger, "Searching for cloneAnnot dataframe, filtering for FR consensus lengths and "
+                            "productive reads only", LEVEL.INFO)
+            if simple:
+                # take the best available cloneAnnot dataframe, if available, otherwise just use unrefined cloneAnnot
+                self._getBestCloneAnnot(outAuxDir, inplaceFiltered=True, inplaceProductive=True, stream=logger)
+            else:
+                # always take the refined dataframe, in contrast to RSA simple which takes any available one
+                self.analyzeProductivity(inplaceFiltered=True, inplaceProductive=True)
+            (rsaResults, overlapResults) = scanRestrictionSites(self.name, self.readFile, self.cloneAnnot,
+                                                                self.sitesFile, self.threads, simple=simple,
+                                                                stream=logger)
+            rsaResults.to_csv(siteHitsFile, header=True, index=False)
             printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
-            if overlapResults.get("order2", None) is not None:
-                overlapResults["order2"].to_csv(overlap2File,
-                                                header=True, index=True)
+            if "order2" in overlapResults:
+                overlapResults["order2"].to_csv(overlap2File, header=True, index=True)
         # # print out the results        
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],
                                self.name, siteHitsFile, stream=logger)
         paramFile = writeParams(self.args, outResDir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
-
-    def analyzeRestrictionSites(self):
-        # todo
-        raise NotImplementedError
-        # logger = logging.getLogger(self.name)
-        #
-        # outResDir = os.path.join(self.auxDir, "restriction_sites")
-        # outAuxDir = os.path.join(self.hdfDir, "restriction_sites")
-        #
-        # if not os.path.isdir(outResDir):
-        #     os.makedirs(outResDir)
-        #
-        # if not os.path.isdir(outAuxDir):
-        #     os.makedirs(outAuxDir)
-        # elif self.warnOldDir:
-        #     printto(logger, "WARNING: remove the 'restriction_sites' directory if you changed the filtering criteria.",
-        #             LEVEL.WARN)
-        #
-        # siteHitsFile = os.path.join(outResDir, self.name + "_{}.csv"
-        #                             .format(os.path.splitext(os.path.basename(self.sitesFile))[0]))
-        #
-        # if os.path.exists(siteHitsFile):
-        #     print("Restriction sites were already searched at ... " + os.path.basename(siteHitsFile))
-        #     return
-        #
-        # if self.cloneAnnot is None or self.cloneSeqs is None:
-        #     self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=False)
-        #
-        # rsites = loadRestrictionSites(self.sitesFile, stream=logger)
-        # printto(logger, "Restriction sites are being searched ... ")
-        # gc.collect()
-        #
-        # queryIds = self.cloneAnnot.index
-        # siteHitsCount = {}
-        # siteHitSeqsCount = {}
-        # hitRegion = {}
-        # siteHitSeqsGermline = {}
-        # seqsCutByAny = 0
-        # siteHitsSeqsIDs = {}
-        # siteHitsSeqsIGV = {}
-        # for site in rsites.keys():
-        #     siteHitsCount[site] = 0
-        #     siteHitSeqsCount[site] = 0
-        #     hitRegion[site] = Counter({'fr1': 0, 'cdr1': 0,
-        #                                'fr2': 0, 'cdr2': 0,
-        #                                'fr3': 0, 'cdr3': 0,
-        #                                'fr4': 0})
-        #     siteHitSeqsGermline[site] = []
-        #     siteHitsSeqsIDs[site] = set()
-        #     siteHitsSeqsIGV[site] = set()
-        # germline = {'fr1', 'fr2', 'fr3', 'cdr1', 'cdr2'}
-        # procSeqs = 0
-        # #         if hasLargeMem():
-        # #             TODO: remember to make sure SeqIO.parse is parsing a unzipped self.readFile1
-        # #                   (use safeOpen from IgRepertoire.utils) if not sure
-        # #             records = SeqIO.to_dict(SeqIO.parse(self.readFile1, self.format))
-        # #         else:
-        # # SeqIO.index can only open string file names and they must be uncompressed
-        # records = SeqIO.index(gunzip(self.readFile1), self.format)
-        # for id_ in queryIds:
-        #     record = records[id_]
-        #     try:
-        #         qsRec = self.cloneAnnot.loc[record.id].to_dict()
-        #         qstart = qsRec['vqstart'] - qsRec['vstart']  # zero-based
-        #         if isnan(qsRec['fr4.end']):
-        #             end = len(record.seq)
-        #         else:
-        #             end = int(qsRec['fr4.end'])
-        #         seq = str(record.seq[qstart:end])
-        #         seqRC = str(Seq(seq).reverse_complement())
-        #         cut = False
-        #         for site in siteHitsCount.keys():
-        #             hits = findHits(seq, rsites[site])
-        #             strand = "forward"
-        #             if len(hits) == 0:
-        #                 hits = findHits(seqRC, rsites[site])
-        #                 strand = "reversed"
-        #             if len(hits) > 0:
-        #                 siteHitsCount[site] += len(hits)
-        #                 siteHitSeqsCount[site] += 1
-        #                 hitsRegion = findHitsRegion(qsRec, hits)
-        #                 if (len(set(hitsRegion).intersection(germline)) > 0
-        #                         and len(siteHitSeqsGermline[site]) < 10000):
-        #                     siteHitSeqsGermline[site].append((strand, str(record.seq)))
-        #                     siteHitsSeqsIGV[site].add(qsRec['vgene'].split('*')[0])
-        #                 hitRegion[site] += Counter(hitsRegion)
-        #                 siteHitsSeqsIDs[site].add(record.id)
-        #                 cut = True
-        #         if cut:
-        #             seqsCutByAny += 1
-        #         procSeqs += 1
-        #         if procSeqs % self.seqsPerFile == 0:
-        #             print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
-        #     #                 break
-        #     except BaseException as e:
-        #         print(qstart, end, len(record.seq), str(record.seq))
-        #         print(e)
-        #         raise
-        # print('{}/{} sequences have been searched ... '.format(procSeqs, len(queryIds)))
-        # # # print out the results
-        # f = open(siteHitsFile, 'w')
-        # f.write("Enzyme,Restriction Site,No.Hits,Percentage of Hits (%),"
-        #         "No.Molecules,Percentage of Molecules (%),FR1,CDR1,FR2,CDR2,FR3,CDR3,FR4, V Germlines \n")
-        # sites = sorted(siteHitSeqsCount, key=siteHitSeqsCount.get)
-        # for site in sites:
-        #     f.write("{},{},{},{:.3%},{},{:.3%},{},{},{},{},{},{},{},{}\n"
-        #             .format(site, rsites[site], siteHitsCount[site],
-        #                     siteHitsCount[site] / sum(siteHitsCount.values()),
-        #                     siteHitSeqsCount[site], siteHitSeqsCount[site] / len(queryIds),
-        #                     hitRegion[site]['fr1'], hitRegion[site]['cdr1'], hitRegion[site]['fr2'],
-        #                     hitRegion[site]['cdr2'], hitRegion[site]['fr3'], hitRegion[site]['cdr3'],
-        #                     hitRegion[site]['fr4'], '|'.join(siteHitsSeqsIGV[site])))
-        #     # write the first 100 sequences cut in the germline of each restriction enzyme
-        #     seqs = []
-        #     for (strand, seq) in siteHitSeqsGermline[site]:
-        #         seqs.append(SeqRecord(Seq(seq), id='seq' + str(len(seqs)) + strand))
-        #     SeqIO.write(seqs, siteHitsFile.replace('.csv', '_germline' + site + '.fasta'), 'fasta')
-        # f.write("Sequences cut by any of the above enzymes, {}, {:.3%}\n"
-        #         .format(seqsCutByAny, seqsCutByAny / len(queryIds)))
-        # f.close()
-        # # Ven Diagram of overlapping sequences
-        # plotVenn(siteHitsSeqsIDs, siteHitsFile.replace('.csv', '_venn.png'), stream=logger)
-        # print("Restriction enzyme results were written to " + siteHitsFile)
 
     def analyzeSecretionSignal(self):
         logger = logging.getLogger(self.name)
@@ -726,7 +618,8 @@ class IgRepertoire:
 
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
+            # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'secretion' directory if you've changed the filtering criteria.",
                     LEVEL.WARN)
 
@@ -736,13 +629,14 @@ class IgRepertoire:
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"\
+        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
-            printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
+            printto(logger, "\tUpstream sequences file {} was found! Loading file ... "
+                    .format(os.path.basename(upstreamFile)), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
 
@@ -786,7 +680,8 @@ class IgRepertoire:
 
         if not os.path.exists(outAuxDir):
             os.makedirs(outAuxDir)
-        elif self.warnOldDir:
+        else:
+            # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'utr5' directory if you've changed the filtering criteria",
                     LEVEL.WARN)
 
@@ -796,13 +691,14 @@ class IgRepertoire:
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"\
+        upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
             extractUpstreamSeqs(self.cloneAnnot, self.readFile, self.upstream, upstreamFile, stream=logger)
         else:
-            printto(logger, "\tUpstream sequences file was found! ... " + os.path.basename(upstreamFile), LEVEL.WARN)
+            printto(logger, "\tUpstream sequences file {} was found! Loading file... "
+                    .format(os.path.basename(upstreamFile)), LEVEL.WARN)
 
         upstreamFile = os.path.abspath(upstreamFile)
         expectLength = self.upstream[1] - self.upstream[0] + 1
@@ -917,16 +813,58 @@ class IgRepertoire:
         printto(logger, "\tSubject V gene start: " + repr(self.sStart), LEVEL.INFO)
         printto(logger, "\tQuery V gene start: " + repr(self.qStart), LEVEL.INFO)
         selectedRows = (
-                (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &     # check bit-Score
+                (self.cloneAnnot['bitscore'] >= self.bitScore[0]) &  # check bit-Score
                 (self.cloneAnnot['bitscore'] <= self.bitScore[1]) &
-                (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &     # check alignment length
+                (self.cloneAnnot['alignlen'] >= self.alignLen[0]) &  # check alignment length
                 (self.cloneAnnot['alignlen'] <= self.alignLen[1]) &
-                (self.cloneAnnot['vstart'] >= self.sStart[0]) &         # check subject (V gene) start position
+                (self.cloneAnnot['vstart'] >= self.sStart[0]) &  # check subject (V gene) start position
                 (self.cloneAnnot['vstart'] <= self.sStart[1]) &
-                (self.cloneAnnot['vqstart'] >= self.qStart[0]) &        # check query (V gene) start position
+                (self.cloneAnnot['vqstart'] >= self.qStart[0]) &  # check query (V gene) start position
                 (self.cloneAnnot['vqstart'] <= self.qStart[1])
         )
         return selectedRows
+
+    def _getBestCloneAnnot(self, outAuxDir, inplaceFiltered, inplaceProductive, stream=None):
+        """
+        populate self.cloneAnnot by the following order:
+            1. if the refined dataframe exists, load it into self.cloneAnnot
+            2. if the refined dataframe doesnt exist, but the unrefined one does, load that instead
+            3. if the unrefined dataframe also doesn't exist, conduct the UNREFINED annotation step
+               (i.e. call self.annotateClones)
+
+        note that self.cloneAnnot will be filtered inplace if any of the inplace* arguments are true, to save space
+
+        :param outAuxDir: string.
+                Will dump a filtered ids text file here if it's required to annotate clones
+
+        :param inplaceFiltered: bool
+                Should the sequences be filtered (by FR1-4 consensus lengths). WARNING: this option is only used when
+                refinement has already been conducted and found. Otherwise, the unrefined dataframe has no information
+                about this, thus will ignore this argument.
+
+        :param inplaceProductive: bool
+                Should the sequences be productive?
+
+        :param stream: logger object
+
+        :return: None
+        """
+        refinedCloneAnnotFile = os.path.join(self.hdfDir, "productivity", self.name + "_refined_clones_annot.h5")
+        if os.path.exists(refinedCloneAnnotFile):
+            printto(stream, "Found refined clone annotation file {}, loading dataframe ..."
+                    .format(os.path.basename(refinedCloneAnnotFile)))
+            printto(stream, "\tFiltered for:")
+            printto(stream, "\t\tFR1, FR2, FR3, FR4 consensus lengths: {}".format(str(inplaceFiltered)))
+            printto(stream, "\t\tRefined productivity: {}".format(str(inplaceProductive)))
+            self.analyzeProductivity(inplaceFiltered=inplaceFiltered, inplaceProductive=inplaceProductive)
+        else:
+            printto(stream,
+                    "Refined clone annotation file not found, falling back to unrefined clone annotation dataframe.")
+            printto(stream, "\tFiltered for:")
+            printto(stream, "\t\tFR1, FR2, FR3, FR4 consensus lengths: {}".format(str(inplaceFiltered)))
+            printto(stream, "\t\tUnrefined productivity: {}".format(str(inplaceProductive)))
+            # take the unrefined "productive" clones, since we do not have refined dataframe
+            self.annotateClones(outAuxDir, inplaceProductive=inplaceProductive)
 
     def _reloadAnnot(self):
         """
@@ -982,9 +920,9 @@ class IgRepertoire:
         elif self.task == '5utr':
             todo.append(AbSeqWorker.UTR5)
         elif self.task == 'rsasimple':
-            todo.append(AbSeqWorker.RSAS)
+            todo.append((AbSeqWorker.RSA, {'simple': True}))
         elif self.task == 'rsa':
-            todo.append(AbSeqWorker.RSA)
+            todo.append((AbSeqWorker.RSA, {'simple': False}))
         elif self.task == 'primer':
             todo.append(AbSeqWorker.PRIM)
         elif self.task == 'seqlen':
@@ -1043,4 +981,3 @@ class IgRepertoire:
         #     print("Protein sequences have been already analyzed ... ")
         # else:
         #     self.analyzeAbundance()
-
