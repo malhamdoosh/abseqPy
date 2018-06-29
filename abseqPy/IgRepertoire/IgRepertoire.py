@@ -877,6 +877,14 @@ class IgRepertoire:
         printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeSeqLen(self, klass=False):
+        """
+        plots the distribution length of raw sequences (after merging, if needed). This is different from
+        annotClones()'s plot because this will show the dist length of all sequences, including those filtered
+        by abseq's filtering criteria
+
+        :param klass:
+        :return:
+        """
         logger = logging.getLogger(self.name)
 
         outResdir = os.path.join(self.auxDir, 'annot')
@@ -885,6 +893,9 @@ class IgRepertoire:
 
         if not os.path.exists(outResdir):
             os.makedirs(outResdir)
+
+        if self.readFile is None:
+            self.mergePairedReads()
 
         if klass:
             outputFile = os.path.join(outResdir, self.name + '_length_dist_classes.png')

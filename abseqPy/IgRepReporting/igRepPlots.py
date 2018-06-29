@@ -42,7 +42,7 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
     with abseqPy.IgRepertoire.igRepUtils.safeOpen(seqFile) as fp:
         for rec in SeqIO.parse(fp, fileFormat):
             if len(rec) <= maxLen:
-                if rec.id.split('|') > 1:
+                if len(rec.id.split('|')) > 1:
                     ighvID = rec.id.split('|')[1]
                 else:
                     ighvID = rec.id
