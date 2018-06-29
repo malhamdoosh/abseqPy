@@ -290,6 +290,7 @@ class IgRepertoire:
             if self.task == "annotate":
                 printto(logger, "\tClones annotation file found and no further work needed ... " +
                         os.path.basename(cloneAnnotFile))
+                return
             else:
                 printto(logger, "\tClones annotation file found and being loaded ... " +
                         os.path.basename(cloneAnnotFile))
