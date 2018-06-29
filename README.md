@@ -14,7 +14,7 @@
 # Introduction
 
 ## AbSeq
-**AbSeq** is a quality control pipeline for high throughput antibody sequencing, currently running on version 1.0
+**AbSeq** is a quality control pipeline for high throughput antibody sequencing, currently running on version 1.0.0
 
 ## About
 * **AbSeq** is developed by Monther Alhamdoosh and JiaHong Fong
@@ -22,8 +22,7 @@
 
 ## Supported platforms
 
-**AbSeq** has been tested on Unix-like platforms (`macOS` and `Linux`).
-Windows support hasn't been tested but should work as expected.
+**AbSeq** works on Unix-like platforms and Windows.
 
 Currently, **AbSeq** runs on Python 2.7 &mdash; fret not, Python 3.6 support is under way.
 
