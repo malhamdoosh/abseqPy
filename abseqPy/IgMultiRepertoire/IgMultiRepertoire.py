@@ -1,10 +1,11 @@
+from __future__ import print_function
 import os
+import sys
 
 from multiprocessing import Queue
 
 from abseqPy.config import AUX_FOLDER
 from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool
-from abseqPy.IgMultiRepertoire.PlotManager import PlotManager
 from abseqPy.IgRepertoire.IgRepertoire import IgRepertoire
 from abseqPy.argsParser import parseYAML, parseArgs
 
@@ -16,25 +17,17 @@ class IgMultiRepertoire:
         sampleNames = []
         if args.yaml is not None:
             outdirs = set()
-            documents, hasComparisons = parseYAML(args.yaml)
-            for yamlArg in documents[:(-1 if hasComparisons else len(documents))]:
+            for yamlArg in parseYAML(args.yaml):
                 arg = parseArgs(yamlArg)
                 arg.outdir = os.path.abspath(arg.outdir) + os.path.sep
                 outdirs.add(arg.outdir)
                 arg.log = os.path.join(arg.outdir, AUX_FOLDER, arg.name, arg.name + ".log")
                 sampleNames.append(arg.name)
                 self.buffer.append(IgRepertoire(**vars(arg)))
-            if len(outdirs) == 1:
-                outdir = list(outdirs)[0]
-            else:
-                raise Exception("Multiple output directory in YAML is currently not supported (yet)")
-            PlotManager.flushComparisons(documents, sampleNames, hasComparisons, outdir)
         else:
-            outdir = args.outdir = os.path.abspath(args.outdir) + os.path.sep
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, AUX_FOLDER, args.name, "{}.log".format(args.name))
             self.buffer.append(IgRepertoire(**vars(args)))
-            PlotManager.flushSample(args.name, outdir)
         self.sampleCount = len(self.buffer)
 
     def __enter__(self):
@@ -72,12 +65,12 @@ class IgMultiRepertoire:
             # done
 
         except AbSeqWorkerException as e:
-            print("\n\n{}".format(e.errors))
-            print("\n\nSomething went horribly wrong while trying to run AbSeq!")
-            print("GeneralWorker stacktrace:")
-            print("-" * 120)
-            print(e.tracebackMsg)
-            print("-" * 120)
+            print("\n\n{}".format(e.errors), file=sys.stderr)
+            print("\n\nSomething went horribly wrong while trying to run AbSeq!", file=sys.stderr)
+            print("GeneralWorker stacktrace:", file=sys.stderr)
+            print("-" * 120, file=sys.stderr)
+            print(e.tracebackMsg, file=sys.stderr)
+            print("-" * 120, file=sys.stderr)
             # re-raise exception
             raise e
         # catch-all exception

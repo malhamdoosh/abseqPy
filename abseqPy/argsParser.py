@@ -353,44 +353,33 @@ def printUsage(parser, additional_msg=None):
 
 def parseYAML(yamlFile):
     """
-    returns a tuple. The list of lists is guaranteed to have the 'compare' document last if it exists within that list.
-    Use the second value of the tuple to check if 'compare' has been specified.
+    Parses the YAML file without checking if the key value pairs are valid. It's up to the caller to check
 
     :param yamlFile: string
                 path to yaml file
-    :return: tuple (a,b)
-                a is a list of lists, each nested list is an individual sample's args based off the YAML config file
-                b is a boolean informing whether or not the 'compare' key was found in the YAML file. i.e., if the user
-                wants to compare samples.
+    :return: list of list
+                list of lists, each nested list is an individual sample's args based off the YAML config file.
+                For example:
+                    [ ['--file1', '/path/to/f1', '--merger', 'leehom', ...], ['--file1', 'path/', ...], ...]
     """
     DEFAULTS_KEY = 'defaults'
-    COMPARE_KEY = 'compare'
     with open(yamlFile) as fp:
         contents = fp.read()
     # this will contain lists that have long args followed by their values, eg:
     # [ ['--file1', '/path/to/f1', '--merger', 'leehom', ...], ['--file1', 'path/', ...], ...]
     outputArgs = []
-    comparisonArg = None
 
     defaults = {}
     for doc in yaml.load_all(contents):
         if DEFAULTS_KEY in doc:
             # make sure the only key in the 'defaults' document is 'defaults'
             if len(doc) != 1:
-                raise Exception("Default args document expects one key:value pair, got {} instead".format(len(doc)))
+                raise ValueError("'defaults' expects one key:value pair, got {} instead".format(len(doc)))
             defaults = doc[DEFAULTS_KEY]
 
     for doc in yaml.load_all(contents):
-        # if this doc was a comparison doc, record it and store it away for later use
-        if COMPARE_KEY in doc:
-            # make sure there's only one key:value for 'compare' key
-            if len(doc) != 1:
-                raise Exception("Compare document expects one key:value pair, got {} instead".format(len(doc)))
-            comparisonArg = ['--compare', str(doc[COMPARE_KEY])]
-        # by the way, don't worry about arg documents having the DEFAULTS_KEY within them because the for loop
-        # that's been constructing the defaults dict would've raised an exception
-        elif DEFAULTS_KEY not in doc:
-            # create a fresh copy of "defaults" filled in with, wait for it - default arg values.
+        if DEFAULTS_KEY not in doc:
+            # create a fresh copy of "defaults" filled in with default arg values.
             args = deepcopy(defaults)
             # doc is something like:
             # {'file2': 'fastq/IgGR2_BNJYK_TAAGGCGA-CTCGTA_L001_R2.fastq.gz',
@@ -408,8 +397,4 @@ def parseYAML(yamlFile):
                 if val is not None:
                     argsList.append(str(val))
             outputArgs.append(argsList)
-
-    if comparisonArg is not None:
-        outputArgs.append(comparisonArg)
-        return outputArgs, True
-    return outputArgs, False
+    return outputArgs
