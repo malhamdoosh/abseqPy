@@ -148,7 +148,7 @@ class IgRepertoire:
                                 will require db to be the string "$IGBLASTDB"
         :param task: string
                                 all, annotate, abundance, diversity, fastqc, productivity,
-                                primer, 5utr, rsasimple, rsa, seqlen, secretion, seqlenclass. This variable
+                                primer, 5utr, rsasimple, rsa, seqlen, secretion. This variable
                                 is responsible for the "banner" printed in the log file.
         :param log: string
                                 path to logger file
@@ -882,9 +882,12 @@ class IgRepertoire:
         annotClones()'s plot because this will show the dist length of all sequences, including those filtered
         by abseq's filtering criteria
 
-        :param klass:
-        :return:
+        :param klass: deprecated. Should always be false
+        :return: None
         """
+
+        assert not klass
+
         logger = logging.getLogger(self.name)
 
         outResdir = os.path.join(self.auxDir, 'annot')
@@ -986,8 +989,8 @@ class IgRepertoire:
             todo.append(AbSeqWorker.PRIM)
         elif self.task == 'seqlen':
             todo.append(AbSeqWorker.SEQLEN)
-        elif self.task == 'seqlenclass':
-            todo.append((AbSeqWorker.SEQLEN, {'klass': True}))
+        # elif self.task == 'seqlenclass':
+        #     odo.append((AbSeqWorker.SEQLEN, {'klass': True}))
         else:
             raise ValueError("Unknown task requested: {}".format(self.task))
 

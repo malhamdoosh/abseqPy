@@ -202,10 +202,10 @@ def parseCommandLineArguments(arguments=None):
     optional.add_argument('-t', '--task', default=DEFAULT_TASK, help="analysis task, supported tasks: \
                                                     all, annotate, abundance, \
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \
-                                                    seqlen, secretion, seqlenclass. [default={}]".format(DEFAULT_TASK),
+                                                    seqlen, secretion. [default={}]".format(DEFAULT_TASK),
                           choices=["all", "annotate", "abundance", "diversity",
                                    "fastqc", "productivity", "primer", "5utr", "rsasimple",
-                                   "rsa", "seqlen", "secretion", "seqlenclass"])
+                                   "rsa", "seqlen", "secretion"])
     optional.add_argument('-s', '--seqtype', default='dna', help="sequence type, supported seq type: dna or protein. \
                                                                     [default=dna]",
                           choices=["dna", "protein"])

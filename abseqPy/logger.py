@@ -30,7 +30,6 @@ _BANNER = {
     'rsa': "Comprehensive Restriction Sites Analysis",
     'primer': "Primer Specificity Analysis",
     'seqlen': "Sequence Length Distribution",
-    'seqlenclass': "Class Sequence Length Distribution",
     'default': "Running AbSeq on all sample(s)"
 }
 
