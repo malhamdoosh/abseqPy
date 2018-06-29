@@ -1,17 +1,15 @@
 import os
 import ast
-import sys
 
 from abseqPy.config import ABSEQROOT
 
 """
-XXX: IMPORTANT NOTE
-As of Nov 22 2017: 
-The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False is:
-    1) plotSeqLenDist
-    2) plotVenn                 - mostly used by restriction sites
+As of Fri Jun 29 14:42:16 AEST 2018
+The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False, because abseqR hasn't supported them are:
+    1) plotSeqLenDist           - only one that still depends on this is -t seqlen
+    2) plotVenn                 - used by restriction sites and primer analysis
     3) plotHeatMap              - generateStatsHeatmap
-    4) plotHeatmapFromDF
+    4) plotHeatmapFromDF        - restriction sites analysis (detailed and simple)
 The plots that OBEY pythonPlotOn() = False is:
     1) all diversity plots (rarefaction, duplication, recapture)
     2) plotDist()

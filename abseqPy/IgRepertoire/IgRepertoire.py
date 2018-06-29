@@ -802,6 +802,9 @@ class IgRepertoire:
         else:
             outputFile = os.path.join(outResdir, self.name + '_seq_length_dist.png')
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format, maxbins=-1, stream=logger)
+            outputFile = os.path.join(outResdir, self.name + '_seq_length_dist_no_outliers.png')
+            plotSeqLenDist(self.readFile, self.name, outputFile, self.format, removeOutliers=True,
+                           maxbins=-1, stream=logger)
 
         paramFile = writeParams(self.args, outResdir)
         printto(logger, "The analysis parameters have been written to " + paramFile)
