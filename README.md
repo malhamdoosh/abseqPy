@@ -43,16 +43,19 @@ There will be more information on contribution guidelines in the wikipage in the
 
 ## Dependencies
 
-A python script is available [here](install.py) which installs all the necessary external dependencies.
+A python script is available [here](install.py) which downloads and installs all the necessary external dependencies.
+
+> **Internet access is required for the script to download files**.
 
 Before proceeding, these tools must be present:
 
 * [C/C++ compilers](https://gcc.gnu.org/) (Windows users will not require this)
+* [make](https://en.wikipedia.org/wiki/Make_(software)) (Windows users will not require this)
+* [CMake](https://cmake.org/) (Windows users will not require this)
 * [perl](https://www.perl.org/get.html)
 * [git](https://git-scm.com/)
-* [make](https://en.wikipedia.org/wiki/Make_(software))
 * [python](https://www.python.org)
-* [CMake](https://cmake.org/)
+* [Java JRE](http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html) version 1.6 or higher
 
 then, installing external dependencies into a folder named `~/.local/abseq` is as easy as
 
