@@ -22,7 +22,7 @@
 
 ## Supported platforms
 
-**AbSeq** works on Unix-like platforms and Windows.
+**AbSeq** works on Unix-like platforms.
 
 Currently, **AbSeq** runs on Python 2.7 &mdash; fret not, Python 3.6 support is under way.
 
