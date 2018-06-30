@@ -220,7 +220,7 @@ def _install_clustal_omega(installation_dir=".", version=versions['clustalo'][-1
         # windows has no symlink, go straight to bin directory!
         for f in os.listdir(os.path.join(clustalo_installation_dir, windows_bin[:windows_bin.find('.zip')])):
             src_ = os.path.join(clustalo_installation_dir, windows_bin[:windows_bin.find('.zip')], f)
-            shutil.move(src_, os.path.join(installation_dir, 'bin'))
+            shutil.move(src_, os.path.join(installation_dir, 'bin', f))
     else:
         _error('Unknown system architecture. Non windows, mac or linux detected')
 
@@ -303,11 +303,16 @@ def _install_ghost_script(installation_dir='.', threads=2, version=versions['gs'
         _ = check_output(['make', 'install'])
         os.chdir(old_dir)
     else:
-        binary = "gs{}w64.exe".format(version.replace('.', ''))
-        addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{0}/gs{0}w64.exe" \
-            .format(version.replace('.', ''))
-        _save_as(addr, binary, chmod=False)
-        os.rename(binary, os.path.join(target_dir, 'bin', 'gs'))
+        addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{}/ghostpcl-{}-win64.zip" \
+            .format(version.replace('.', ''), version)
+        gs_dir = "ghostpcl-{}-win64".format(version)
+        _save_as(addr, gs_dir + ".zip", chmod=False)
+        zip_ref = zipfile.ZipFile(gs_dir + ".zip")
+        zip_ref.extractall(gs_dir)
+        # nested folder, not a typo
+        gs_out_dir = os.path.join(gs_dir, gs_dir)
+        for f in os.listdir(gs_out_dir):
+            shutil.move(os.path.join(gs_out_dir, f), os.path.join(installation_dir, 'bin', f))
     # dont need to return binary directory, it's already in installation_dir/bin
 
 
@@ -320,7 +325,7 @@ def _install_igblast(installation_dir='.', version=versions['igblast'][-1]):
         elif plat == WIN:
             bins = blast.install_bins('ncbi-igblast-{}-x64-win64.tar.gz'.format(version), installation_dir)
             for bin_ in bins:
-                shutil.move(bin_, os.path.join(installation_dir, 'bin'))
+                shutil.move(bin_, os.path.join(installation_dir, 'bin', os.path.basename(bin_)))
         elif plat == LIN:
             bins = blast.install_bins('ncbi-igblast-{}-x64-linux.tar.gz'.format(version), installation_dir)
         else:
@@ -378,7 +383,7 @@ def _download_imgt(download_dir, species, species_layman):
                     break
                 writer.write(line)
             # remove raw
-            os.remove(output)
+        os.remove(output)
 
 
 def _igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
@@ -446,6 +451,9 @@ def install(directory):
     d = _setup_dir(directory)
 
     d_bin = os.path.join(d, 'bin')
+    if not os.path.exists(d_bin):
+        os.makedirs(d_bin)
+        
     plat, _ = _get_sys_info()
 
     if _needs_installation('clustalo'):
@@ -524,7 +532,7 @@ def install(directory):
                 blast.download_edit_imgt_pl(d)
 
         # if we don't have makeblastdb, download it!
-        if not os.path.exists(os.path.join(d_bin, 'makeblastdb')):
+        if not os.path.exists(os.path.join(d_bin, _binary_file('makeblastdb'))):
             retvals = _install_igblast(d)
             for b in retvals:
                 _syml(b, d_bin)
@@ -553,6 +561,13 @@ will not override your existing files.\n\nProceed? [y/N]: ".format(directory)
         return str(inputc(msg)).lower() in ['y', 'yes']
     except KeyboardInterrupt:
         return False
+
+
+def _binary_file(binary):
+    plat, _ = _get_sys_info()
+    if plat == WIN:
+        return binary + ".exe"
+    return binary
 
 
 def main():
