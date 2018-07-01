@@ -19,9 +19,12 @@ def windows_filter(package):
     fatal error C1083: Cannot open include file: 'regex.h': No such file or directory
 
     :param package: package name
-    :return: True if this package should be installed in windows too
+    :return: True if this package should be installed in the host OS (True for all packages in non-windows machines)
+    Windows machines will not install TAMO
     """
-    return 'TAMO' not in package.upper()
+    if platform.system() == "Windows":
+        return 'TAMO' not in package.upper()
+    return True
 
 
 # weird bug where setup_requires numpy is not obeyed
