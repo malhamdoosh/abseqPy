@@ -579,6 +579,10 @@ def main():
         return 0
 
     directory = sys.argv[1]
+    if ' ' in directory:
+        print("Installation directory is not allowed to contain spaces!")
+        return 1
+
     proceed = ask_permission(directory)
 
     if proceed:
@@ -592,6 +596,19 @@ def main():
         if igblastdb_downloaded:
             print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(directory), "databases")),
                   file=sys.stderr)
+        if igdata_downloaded:
+            if duplicate_igdata:
+                print(
+                    "\nDetected existing IGDATA=\"{ori}\" in your environment.\nHowever, you did not have all "
+                    "the required files in that directory.\nThe required files are downloaded in {dup},"
+                    "\nyou should move these file(s) to {ori} in order for abseqPy to work.\n"
+                    "\nIf you do not have permission to do so, you can copy all the files from\n{ori} to {dup},"
+                    " and append\n\n\texport IGDATA=\"{dup}\"\n\nto your ~/.bashrc (or equivalent) instead.".format(
+                        ori=os.path.expandvars("$IGDATA"), dup=os.path.join(os.path.abspath(directory), "igdata"))
+                    , file=sys.stderr)
+            else:
+                print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")),
+                      file=sys.stderr)
         if platform.system() == "Windows":
             # windows needs extra FASTQCROOT export - perl script needs to be invoked manually, not via shebang
             if fastqc_downloaded:
@@ -609,20 +626,6 @@ def main():
         else:
             print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")),
                   file=sys.stderr)
-
-        if igdata_downloaded:
-            if duplicate_igdata:
-                print(
-                    "\nDetected existing IGDATA=\"{ori}\" in your environment.\nHowever, you did not have all "
-                    "the required files in that directory.\nThe required files are downloaded in {dup},"
-                    "\nyou should move these file(s) to {ori} in order for abseqPy to work.\n"
-                    "\nIf you do not have permission to do so, you can copy all the files from\n{ori} to {dup},"
-                    " and append\n\n\texport IGDATA=\"{dup}\"\n\nto your ~/.bashrc (or equivalent) instead.".format(
-                        ori=os.path.expandvars("$IGDATA"), dup=os.path.join(os.path.abspath(directory), "igdata"))
-                    , file=sys.stderr)
-            else:
-                print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")),
-                      file=sys.stderr)
 
         print("", file=sys.stderr)
     else:
