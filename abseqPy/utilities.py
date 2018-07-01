@@ -142,7 +142,13 @@ class CommandLine:
         if not stderr:
             stderr, closeErr = open(os.devnull, "w"), True
 
-        subprocess.check_call(shlex.split(str(self)), stdout=stdout, stderr=stderr)
+        if sys.version_info[0] == 2:
+            # escape paths containing '\' (windows path)
+            subprocess.check_call(shlex.split(str(self).encode('string-escape')), stdout=stdout, stderr=stderr)
+        else:
+            subprocess.check_call(shlex.split(str(self).encode('unicode_escape').decode()),
+                                  stdout=stdout, stderr=stderr)
+
 
         if closeOut:
             stdout.close()

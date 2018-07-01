@@ -4,7 +4,7 @@ PyYAML
 numpy >= 1.11.3
 pandas >= 0.20.1
 biopython >= 1.66
-weblogo >= 3.4
+weblogo >= 3.4            # only for non-windows machine
 matplotlib >= 1.5.1
 tables >= 3.2.3.1
 matplotlib-venn

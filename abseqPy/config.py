@@ -8,11 +8,39 @@
 
 import os
 import sys
+import re
 import platform
+
+
+# >> helper functions
+def _findWebLogo():
+    """
+    on unix systems, return the binary name 'weblogo'
+    on windows systems, return the path to 'weblogo' script with "python" prefixed in front, EG
+    "python c:\pythonN\Scripts\weblogo" (where N is 2 or 3, depending on the version of weblogo installed)
+
+    if weblogo wasn't installed in PYTHONPATH, return 'None' (string) regardless of the OS
+
+    :return: "weblogo" or "python c:\pythonN\Scripts\weblogo" depending on the operating system.
+    Returns 'None" (string) if weblogo can't be located, regardless of the OS.
+    """
+    try:
+        import weblogolib
+        if platform.system() != 'Windows':
+            return 'weblogo'
+        else:
+            path = weblogolib.__file__
+            return "python {}".format(re.sub(r'lib.*', 'Scripts\\weblogo', path))
+    except:
+        return "None"
+
+# >> end of: helper functions
+
 
 # ==========================================
 #           ABSEQ's VERSION
 # ==========================================
+
 ABSEQROOT = os.path.abspath(os.path.dirname(__file__))
 VERSION = '1.1.15'
 
@@ -36,15 +64,13 @@ IGBLASTN = 'igblastn'
 IGBLASTP = 'igblastp'
 
 
-
-
 # ==========================================
 #           ABSEQ's DEFUALT SETTINGS
 # ==========================================
 DEFAULT_TOP_CLONE_VALUE = 'inf'
 DEFAULT_MERGER = 'leehom' if platform.system() != "Windows" else 'flash'
 DEFAULT_TASK = 'abundance'
-WEBLOGO = 'weblogo'
+WEBLOGO = _findWebLogo()
 
 
 #  === Chain type: K ===

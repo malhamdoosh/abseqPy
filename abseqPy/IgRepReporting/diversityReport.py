@@ -17,7 +17,7 @@ from abseqPy.IgRepReporting.igRepPlots import plotSeqLenDist, \
     generateCumulativeLogo, plotSeqDuplication, plotSeqRarefaction, \
     plotSeqRecaptureNew
 from abseqPy.logger import LEVEL, printto
-from abseqPy.utilities import hasLargeMem
+from abseqPy.utilities import hasLargeMem, requires
 
 
 def generateDiversityReport(spectraTypes, clonoTypes, name, outDir, topClonotypes, threads=2, segregate=False,
@@ -261,6 +261,7 @@ def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detail
         generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
 
 
+@requires('weblogolib')
 def generateSeqMotifs(flatClonoTypes, name, outDir, threads=2, stream=None):
     """
     Create motif plots for FR and CDR regions

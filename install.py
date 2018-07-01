@@ -302,17 +302,18 @@ def _install_ghost_script(installation_dir='.', threads=2, version=versions['gs'
         _ = check_output(['make', '-j', str(threads)])
         _ = check_output(['make', 'install'])
         os.chdir(old_dir)
-    else:
-        addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{}/ghostpcl-{}-win64.zip" \
-            .format(version.replace('.', ''), version)
-        gs_dir = "ghostpcl-{}-win64".format(version)
-        _save_as(addr, gs_dir + ".zip", chmod=False)
-        zip_ref = zipfile.ZipFile(gs_dir + ".zip")
-        zip_ref.extractall(gs_dir)
-        # nested folder, not a typo
-        gs_out_dir = os.path.join(gs_dir, gs_dir)
-        for f in os.listdir(gs_out_dir):
-            shutil.move(os.path.join(gs_out_dir, f), os.path.join(installation_dir, 'bin', f))
+    # 1/07/2018 - Window's ghostscript renderer has issues removed from abseqPy's diversity_analysis::weblogo
+    # else:
+        # addr = "http://github.com/ArtifexSoftware/ghostpdl-downloads/releases/download/gs{}/ghostpcl-{}-win64.zip" \
+        #     .format(version.replace('.', ''), version)
+        # gs_dir = "ghostpcl-{}-win64".format(version)
+        # _save_as(addr, gs_dir + ".zip", chmod=False)
+        # zip_ref = zipfile.ZipFile(gs_dir + ".zip")
+        # zip_ref.extractall(gs_dir)
+        # # nested folder, not a typo
+        # gs_out_dir = os.path.join(gs_dir, gs_dir)
+        # for f in os.listdir(gs_out_dir):
+        #     shutil.move(os.path.join(gs_out_dir, f), os.path.join(installation_dir, 'bin', f))
     # dont need to return binary directory, it's already in installation_dir/bin
 
 

@@ -302,6 +302,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     plt.close()
 
 
+@requires('weblogolib')
 def generateMotifLogo(m, filename, outdir='.', dna=True, stream=None):
     instances = m.instances
     records = []
