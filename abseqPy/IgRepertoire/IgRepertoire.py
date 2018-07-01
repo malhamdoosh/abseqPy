@@ -36,7 +36,7 @@ from abseqPy.IgRepAuxiliary.diversityAuxiliary import annotateSpectratypes, \
     annotateClonotypes
 from abseqPy.IgRepAuxiliary.restrictionAuxiliary import scanRestrictionSites
 from abseqPy.IgRepReporting.restrictionReport import generateOverlapFigures
-from abseqPy.utilities import ShortOpts
+from abseqPy.utilities import ShortOpts, quote
 
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
@@ -239,7 +239,7 @@ class IgRepertoire:
         printto(logger, "Fastqc is running ... ")
 
         fastqc = ShortOpts(exe=FASTQC, o=outDir, t=self.threads) \
-            .append(self.readFile1 + " " + (self.readFile2 if self.readFile2 is not None else ""))
+            .append(quote(self.readFile1) + " " + (quote(self.readFile2) if self.readFile2 is not None else ""))
         # printto(logger, "Executing " + str(fastqc))
         fastqc()
         paramFile = writeParams(self.args, outDir)

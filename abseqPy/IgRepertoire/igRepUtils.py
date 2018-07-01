@@ -26,7 +26,7 @@ from Bio.SubsMat import MatrixInfo as matlist
 
 from abseqPy.config import CLUSTALOMEGA, IGBLASTN, IGBLASTP, LEEHOM, PEAR, FLASH
 from abseqPy.logger import printto, LEVEL
-from abseqPy.utilities import hasLargeMem, ShortOpts
+from abseqPy.utilities import hasLargeMem, ShortOpts, quote
 
 
 def detectFileFormat(fname, noRaise=False):
@@ -447,7 +447,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            pear = ShortOpts(exe=PEAR, f=readFile1, r=readFile2, o=outputPrefix, j=threads, v=15, n=350)
+            pear = ShortOpts(exe=PEAR, f=quote(readFile1), r=quote(readFile2), o=quote(outputPrefix),
+                             j=threads, v=15, n=350)
             # printto(stream, "Executing: " + str(pear))
             pear()
         else:
@@ -457,7 +458,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            leehom = ShortOpts(LEEHOM, "--ancientdna", fq1=readFile1, fq2=readFile2, fqo=outputPrefix, t=threads)
+            leehom = ShortOpts(LEEHOM, "--ancientdna", fq1=quote(readFile1), fq2=quote(readFile2),
+                               fqo=quote(outputPrefix), t=threads)
             # printto(stream, "Executing: " + str(leehom))
             leehom()
             gunzip(mergedFastq + '.gz')
@@ -469,8 +471,8 @@ def mergeReads(readFile1, readFile2, threads=3, merger='leehom', outDir="./", st
         if not exists(mergedFastq):
             printto(stream, "{} and {} are being merged ...".format(os.path.basename(readFile1)
                                                                     , os.path.basename(readFile2)))
-            flash = ShortOpts(exe=FLASH, t=threads, o=outputPrefix, r=300, f=450, s=50)\
-                .append("{} {}".format(readFile1, readFile2))
+            flash = ShortOpts(exe=FLASH, t=threads, o=quote(outputPrefix), r=300, f=450, s=50)\
+                .append("{} {}".format(quote(readFile1), quote(readFile2)))
             # printto(stream, "Executing: " + str(flash))
             flash()
             for f in glob.glob("{}.*".format(outputPrefix)):
@@ -567,7 +569,7 @@ def alignListOfSeqs(signals, outDir, threads, name, stream=None):
         seqs.append(SeqRecord(Seq(signals[i]), id='seq' + str(i)))
     SeqIO.write(seqs, tempSeq, 'fasta')
 
-    clustal = ShortOpts(CLUSTALOMEGA, i=tempSeq, o=tempAlign)\
+    clustal = ShortOpts(CLUSTALOMEGA, i=quote(tempSeq), o=quote(tempAlign))\
         .append("--threads={} --outfmt=clustal".format(threads))
 
     # printto(stream, "Executing: " + str(clustal))
@@ -851,12 +853,12 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, bl
                       show_translation="",
                       extend_align5end="",
                       domain_system=domainSystem,
-                      query=blastInput,
+                      query=quote(blastInput),
                       organism=species,
                       auxiliary_data=os.path.join(igdata, 'optional_file', '{}_gl.aux'.format(species)),
                       outfmt=7,
                       num_threads=threads,
-                      out=blastOutput, **cmd)
+                      out=quote(blastOutput), **cmd)
     # printto(stream, "Executing : " + str(blast))
     return blast
 

@@ -28,7 +28,8 @@ from Bio import Alphabet
 from abseqPy.IgRepertoire.igRepUtils import alignListOfSeqs, safeOpen, detectFileFormat
 from abseqPy.config import WEBLOGO
 from abseqPy.logger import printto, LEVEL
-from abseqPy.utilities import ShortOpts, requires
+from abseqPy.utilities import ShortOpts, requires, quote
+
 
 # the following are conditionally imported in functions that require them to reduce abseq's dependency list
 # It's here for a simple glance of required dependencies
@@ -316,7 +317,7 @@ def generateMotifLogo(m, filename, outdir='.', dna=True, stream=None):
 
     SeqIO.write(records, tmpFile, 'fasta')
 
-    weblogo = ShortOpts(exe=WEBLOGO, f=tmpFile, o=filename, A=("dna" if dna else "protein"), F="png",
+    weblogo = ShortOpts(exe=WEBLOGO, f=quote(tmpFile), o=quote(filename), A=("dna" if dna else "protein"), F="png",
                         n=200, D="fasta", s="medium", c=("classic" if dna else "auto"),
                         X="NO", Y="NO")\
         .append("--errorbars NO --fineprint CSL --resolution 600")

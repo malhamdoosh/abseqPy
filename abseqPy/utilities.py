@@ -343,3 +343,12 @@ def requires(package, fatal=False, stderr=sys.stderr):
                       .format(package, func.__name__), file=stderr)
         return _call
     return _decorator
+
+
+def quote(string, quote="\""):
+    """
+    wraps string with quotes ("). Used mostly for paths with spaces
+    :param string: original string
+    :return: "string" with quotes(") wrapped around
+    """
+    return "{}{}{}".format(quote, string, quote)
