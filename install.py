@@ -463,9 +463,11 @@ def install(directory):
     else:
         print("Found clustalo, skipping installation")
 
+    fastqc_downloaded = False
     if _needs_installation('fastqc'):
         b_fastqc = _install_fastqc(d)
         _syml(b_fastqc, d_bin)
+        fastqc_downloaded = True
     else:
         print("Found fastqc, skipping installation")
 
@@ -547,7 +549,7 @@ def install(directory):
     else:
         print("Found IGBLASTDB in ENV, skipping download")
 
-    return igblastdb_downloaded, igdata_downloaded, duplicate_igdata
+    return fastqc_downloaded, igblastdb_downloaded, igdata_downloaded, duplicate_igdata
 
 
 def ask_permission(directory):
@@ -581,16 +583,33 @@ def main():
 
     if proceed:
 
-        igblastdb_downloaded, igdata_downloaded, duplicate_igdata = install(directory)
+        fastqc_downloaded, igblastdb_downloaded, igdata_downloaded, duplicate_igdata = install(directory)
 
         print("", file=sys.stderr)
         print("Installation complete, remember to add the following line(s) to your ~/.bashrc or equivalent",
               file=sys.stderr)
         print("", file=sys.stderr)
-        print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")), file=sys.stderr)
         if igblastdb_downloaded:
             print("\texport IGBLASTDB=\"{}\"".format(os.path.join(os.path.abspath(directory), "databases")),
                   file=sys.stderr)
+        if platform.system() == "Windows":
+            # windows needs extra FASTQCROOT export - perl script needs to be invoked manually, not via shebang
+            if fastqc_downloaded:
+                print("\texport FASTQCROOT=\"{}\"".format(os.path.join(os.path.abspath(directory), "bin")))
+
+            # export now doesn't show ':' as Unix systems does - don't wanna confuse reader
+            print("\texport PATH=\"{}\"".format(os.path.join(os.path.abspath(directory), "bin")), file=sys.stderr)
+            print("\nFor windows users, export <Variable>=<Value> means you should type key=value pair\n"
+                  "into your user environment variable. This can be accessed via\n\n"
+                  "\tStartMenu > typing in 'env' in the search box > Click on 'Edit the system environment variables' "
+                  ">\n"
+                  "\tClick on 'Environment Variables...' button > Click 'New...' to add new Variable(all but PATH)\n"
+                  "\tor 'Edit...' to append your PATH variable (remember to use ';'). Ask your local administrator\n"
+                  "\tif this message is confusing to you.")
+        else:
+            print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")),
+                  file=sys.stderr)
+
         if igdata_downloaded:
             if duplicate_igdata:
                 print(
@@ -604,6 +623,7 @@ def main():
             else:
                 print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")),
                       file=sys.stderr)
+
         print("", file=sys.stderr)
     else:
         print("Aborted installer.py", file=sys.stderr)

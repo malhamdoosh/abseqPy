@@ -34,6 +34,18 @@ def _findWebLogo():
     except:
         return "None"
 
+
+def _find_fastQC():
+    """
+    fastqc shebang does not work in windows, manually execute perl script using perl interpreter
+
+    :return: "fastqc" or "perl <path>/<to>/<fastqc>" if OS is windows
+    """
+    if platform.system() == "Windows":
+        return 'perl ' + os.path.join(os.path.expandvars("$FASTQCROOT"), 'fastqc')
+    else:
+        return 'fastqc'
+
 # >> end of: helper functions
 
 
@@ -53,7 +65,7 @@ EXTERNAL_DEP_DIR = '3rd_party'
 # 1. clustal omega
 CLUSTALOMEGA = 'clustalo'
 # 2. FASTQC
-FASTQC = 'fastqc'
+FASTQC = _find_fastQC()
 # 3. mergers
 LEEHOM = 'leeHomMulti'
 FLASH = 'flash'
