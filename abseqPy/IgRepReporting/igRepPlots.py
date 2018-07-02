@@ -100,6 +100,18 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
         weights = map(lambda x: counts[x], sizes)
     if removeOutliers:
         sizes, weights = excludeOutliers(sizes, weights)
+
+    # guard against possible undefined "sizes" and len(sizes) == 0, in which we want to exit early in both cases
+    try:
+        # guard against max(sizes) ValueError: max() arg is an empty sequence (len(sizes) must be at least one!)
+        if len(sizes) == 0:
+            printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+            return
+    except NameError:
+        # guard against size not defined (NameError: name 'sizes' is not defined)
+        printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+        return
+
     bins = max(sizes) - min(sizes)
     if bins > maxbins:
         bins = bins / 2
