@@ -57,7 +57,8 @@ setup(name="abseqPy",
                                  ['TAMO/MD/MDsupport_source/MDsupport.cxx',
                                   'TAMO/MD/MDsupport_source/MDsupport_wrap.cxx']),
                        Extension('TAMO.util._swilk',
-                                 ['TAMO/util/swilk_source/swilk.cxx', 'TAMO/util/swilk_source/swilk_wrap.cxx'])
+                                 ['TAMO/util/swilk_source/swilk.cxx',
+                                  'TAMO/util/swilk_source/swilk_wrap.cxx'])
                    ] if platform.system() != "Windows" else []),
       include_package_data=True,
       entry_points={
@@ -66,6 +67,12 @@ setup(name="abseqPy",
       classifiers=(
             "Programming Language :: Python :: 2.7",
             "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-            "Operating System :: OS Independent",
+            "Operating System :: MacOS",
+            "Operating System :: Microsoft",
+            "Operating System :: POSIX",
+            "Operating System :: Unix",
+            "Topic :: Scientific/Engineering :: Bio-Informatics",
+            "Intended Audience :: Science/Research",
+            "Environment :: Console"
       )
 )
