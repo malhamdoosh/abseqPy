@@ -34,14 +34,15 @@ for pack in setup_requires:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
 
 setup(name="abseqPy",
-      version="X.Y.Z",
+      version="0.99.0",
       description="Quality control pipeline for antibody libraries",
-      license="placeholder",
       long_description=readme(),
-      author="CSL",
-      author_email="placeholder",
-      maintainer="CSL",
-      maintainer_email="placeholder",
+      long_description_content_type="text/markdown",
+      author="Monther Alhamdoosh",
+      author_email="m.hamdoosh@gmail.com",
+      url="https://github.com/malhamdoosh/abseqPy",
+      maintainer="Jia Hong Fong",
+      maintainer_email="jfong361@gmail.com",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
       setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1',
@@ -61,4 +62,10 @@ setup(name="abseqPy",
       include_package_data=True,
       entry_points={
           'console_scripts': ['abseq=abseqPy.abseqQC:main'],
-      })
+      },
+      classifiers=(
+            "Programming Language :: Python :: 2.7",
+            "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+            "Operating System :: OS Independent",
+      )
+)

@@ -54,7 +54,7 @@ def _find_fastQC():
 # ==========================================
 
 ABSEQROOT = os.path.abspath(os.path.dirname(__file__))
-VERSION = '1.1.15'
+VERSION = '0.99.0'
 
 # ====================================================================================
 #           ABSEQ's EXTERNAL DEPENDENCIES

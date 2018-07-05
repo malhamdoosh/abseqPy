@@ -14,7 +14,7 @@
 # Introduction
 
 ## AbSeq
-**AbSeq** is a quality control pipeline for high throughput antibody sequencing, currently running on version X.Y.Z
+**AbSeq** is a quality control pipeline for high throughput antibody sequencing, currently running on version 0.99.0
 
 ## About
 * **AbSeq** is developed by Monther Alhamdoosh and JiaHong Fong
