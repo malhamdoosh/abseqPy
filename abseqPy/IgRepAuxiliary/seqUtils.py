@@ -226,9 +226,9 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
         ighvMotifs = pickle.load(open(motifsFile, 'rb'))
 
     prefixName, sampleName = os.path.split(outputPrefix)
-    dendogramDirectory = os.path.join(prefixName, 'dendograms')
-    if not exists(dendogramDirectory):
-        os.makedirs(dendogramDirectory)
+    dendrogramDirectory = os.path.join(prefixName, 'dendrograms')
+    if not exists(dendrogramDirectory):
+        os.makedirs(dendrogramDirectory)
 
     if len(ighvMotifs) > 0:
         groupedMotifs = defaultdict(list)
@@ -236,24 +236,24 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
             ighv = m.id.split('-')[0].split('/')[0]
             groupedMotifs[ighv].append(m)
         try:
-            motifClustersFile = os.path.join(dendogramDirectory, sampleName + '_pwm_clusters.txt')
+            motifClustersFile = os.path.join(dendrogramDirectory, sampleName + '_pwm_clusters.txt')
 
             _old_stdout = sys.stdout
             sys.stdout = open(motifClustersFile, 'w')
 
             for ighv in groupedMotifs.keys():
-                newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_{}_newick.dnd'.format(ighv))
+                newickdendrogramFile = os.path.join(dendrogramDirectory, sampleName + '_{}_newick.dnd'.format(ighv))
                 tree = UPGMA(groupedMotifs[ighv], DFUNC)
                 print_tree_id(tree)
 
-                saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title=(ighv + " family clustering"), logger=stream)
+                saveNewickdendrogram(newickdendrogramFile, tree, sys.stdout, title=(ighv + " family clustering"), logger=stream)
 
             lists = groupedMotifs.values()
             tree = UPGMA([m for lst in lists for m in lst], DFUNC)
             print_tree_id(tree)
 
-            newickDendogramFile = os.path.join(dendogramDirectory, sampleName + '_newick.dnd')
-            saveNewickDendogram(newickDendogramFile, tree, sys.stdout, title="Clustering of all IGHV", logger=stream)
+            newickdendrogramFile = os.path.join(dendrogramDirectory, sampleName + '_newick.dnd')
+            saveNewickdendrogram(newickdendrogramFile, tree, sys.stdout, title="Clustering of all IGHV", logger=stream)
 
             sys.stdout.close()
             sys.stdout = _old_stdout
@@ -264,7 +264,7 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
             printto(stream, "Motifs couldn't be clustered!", LEVEL.ERR)
 
 
-def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
+def saveNewickdendrogram(newickClusterFile, tree, stream, title="", logger=None):
     """
     :param newickClusterFile:
     :param tree:  UPGMA object
@@ -281,7 +281,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
     with open(newickClusterFile, 'w') as newickfp:
         newickfp.write(phylipTree)
 
-    printto(logger, "Newick dendogram{}written to ".format(desc) + os.path.basename(newickClusterFile))
+    printto(logger, "Newick dendrogram{}written to ".format(desc) + os.path.basename(newickClusterFile))
 
     # show ascii art
     phylipTree = Phylo.read(newickClusterFile, format='newick')
@@ -294,7 +294,7 @@ def saveNewickDendogram(newickClusterFile, tree, stream, title="", logger=None):
         print("\t Not drawn because of 0 weights", file=stream)
         pass
 
-    # plot dendogram in matplotlib
+    # plot dendrogram in matplotlib
     phylipTree.ladderize()
     fig, axes = plt.subplots(figsize=(8, 5))
     Phylo.draw(phylipTree, do_show=False, axes=axes, show_confidence=True)
