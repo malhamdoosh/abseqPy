@@ -1,0 +1,10 @@
+
+To uninstall TAMO, simply remove the TAMO/ directory from your python 
+library and, optionally, the associated data directory.  If you need to 
+find these, you can enter the following into python:
+
+>>> import TAMO, TAMO.paths
+>>> print TAMO.__path__
+>>> print TAMO.paths.TAMOdata
+
+

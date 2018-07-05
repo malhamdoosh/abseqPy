@@ -1,11 +1,7 @@
 include TAMO.tar.gz
 include README.md
 include NEWS
-include abseq-run
-recursive-include abseq/rscripts/ *.R
-# NOTE TO PROGRAMMER: IF YOU CHANGE 3rd_party TO SOME OTHER DIRECTORY NAME, MAKE SURE YOU CHANGE
-# IT IN config.py AND setup.py TOO! (just search for this comment and you'll find the exact location)
-recursive-include abseq/3rd_party/ *
+include abseq
 include LICENSE
 include INSTALL.md
 include requirements.txt

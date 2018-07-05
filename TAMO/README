@@ -1,0 +1,140 @@
+TAMO -- Tools for the Analysis of Motifs
+
+Copyright (2005) Whitehead Institute for Biomedical Research
+All Rights Reserved.  No warranty expressed or implied.
+Author: David Benjamin Gordon
+
+
+*****************************************************************
+***                                                           ***
+***               Contents                                    ***
+***                                                           ***
+***    Installation Instructions                              ***
+***                                                           ***
+***       System Requirements                                 ***
+***       Step 1: setup.py                                    ***
+***       Step 2: $TAMO variable                              ***
+***       Step 3: Install support programs                    ***
+***                                                           ***
+***    Documentation available through                        ***
+***       http://web.wi.mit.edu/fraenkel/TAMO/                ***
+***                                                           ***
+*****************************************************************
+
+*********************************
+***                           ***
+***     System Requirements   ***
+***                           ***
+*********************************
+
+* Python >= 2.3 (might work with 2.2, but with missing functionality)
+* C/C++ compiler (for the MDsupport and Swilk libraries)
+* Numpy ("Numeric") available at http://sourceforge.net/projects/numpy
+* Motif discovery programs (AlignACE, Meme, MDscan, etc...) [Installation instructions below]
+
+If you have all these things already installed, you're ready to install TAMO.
+
+****************************************************
+***                                              ***
+*** Step 1:  setup.py                            ***
+***                                              ***
+****************************************************
+
+"cd" in to the distribution directory (where this README file resides), and type: 
+
+python setup.py install
+
+After compiling and installing the base package, the script will ask you enter a
+path to store data that TAMO will download from the web (e.g. SGD, Whitehead 
+Institute ChIP-chip, Human sequence, etc...).  This can be any directory in
+which TAMO users have read permission and the installer has write permission.
+
+**********************************************
+***                                        ***
+***      Step 2: $TAMO variable            ***
+***                                        ***
+**********************************************
+
+Set a "TAMO" environmental variable equal to TAMOroot in the
+TAMO/paths.py file.  THIS STEP IS OPTIONAL, but will be useful when
+invoking TAMO command-line utilities.  For example, after you've set
+up TAMO, you'll be able to simply invoke "$TAMO/Sitemap.py" in order
+to build a motif map from a fasta-formatted file with occurences of
+your favorite motif or "$TAMO/AlignAce.py" to run the multi-pass
+AlignACE wrapper program.
+
+If your shell is a csh/tcsh derivative, the variable is set executing the line:
+
+   setenv TAMO "/<path-to-TAMOroot/"
+
+and by also putting a line with this command into your .cshrc or .tcshrc.
+
+For sh/bash shells, type
+   
+   TAMO="/<path-to-TAMOroot/"
+   export TAMO
+
+You'll also need to put these lines into your .bashrc file.
+
+***************************************************
+***                                             ***
+***   Step 3: Install support programs          ***
+***                                             ***
+***************************************************
+
+TAMO supplies interfaces to AlignACE, MDscan, and Meme.  After these
+programs installed, manually set the locations of these programs by
+editing $TAMO/paths.py.
+
+Download and build information for each MD program is included here and in
+$TAMO/paths.py.
+
+AlignACE can be downloaded after a click-through licence agreement at
+the http://atlas.med.harvard.edu/download/.  NOTE: It _does_ work to
+download the "linux" AlignACE package and compile under cygwin on 
+windows machines.
+
+MEME can be downloaded from http://meme.sdsc.edu/meme/website/meme-download.html.
+NOTE: It _does_ work to build MEME under cygwin.
+
+MDscan is available only for linux (as far as I know) after faxing a
+licence agreement to the Brutlag Group.  Instructions are at:
+http://motif.stanford.edu/distributions/
+
+*** Other Supporing Programs: ROC AUC and WebLogo ***
+
+You may want to install the ROC AUC and MNCP metrics described by
+Clarke and Granek, Bioinformatics 2003.  These routines may be
+downloaded from the authors' website.  The GetDataFiles.py program can
+also be used:
+
+   {full path to TAMO}/TAMO/GetDataFiles.py --Clarke
+
+Finally, the Motif.giflogo() method is an interface to the WebLogo package,
+which is available from http://weblogo.berkeley.edu.  If you want
+this functionality, you'll need to install the package manually after
+running:
+
+   {full path to TAMO}/TAMO/GetDataFiles.py --weblogo
+
+*****************************
+***                       ***
+***     Documentation     ***
+***                       ***
+*****************************
+
+Documentation for TAMO modules and routines is available at the TAMO
+website (http://jura.wi.mit.edu/fraenkel/TAMO) and is embedded in the
+python source code.  For many of the executable programs, instructions
+on usage are displayed by invoking the program without arguments.
+
+Documentation can also be accessed from python:
+
+% python
+>>> from TAMO import HT
+>>> help(HT)
+
+Documentation is not yet redundant throught the source code.  If the
+function doesn't have help associated with it, check the module, or,
+if appropriate, the object of which the function is a member.
+

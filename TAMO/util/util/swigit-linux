@@ -1,0 +1,22 @@
+#!/bin/csh -f 
+set PYTHONVERSION="python2.4"
+set PYTHONINCLUDE="/usr/include/python2.4/"
+
+# NOT NEEDED UNLESS YOU WANT TO RE-SWIG
+#echo "swig -python -shadow -c++ $1.i"
+#swig -python -shadow -c++ $1.i
+
+
+echo "g++ -O3  -c $1.cpp $1_wrap.cxx -I$PYTHONINCLUDE
+g++ -O3 -c $1.cpp $1_wrap.cxx -I$PYTHONINCLUDE
+
+echo "g++ -shared $1.o $1_wrap.o -o _$1.so"
+g++ -shared $1.o $1_wrap.o -o _$1.so
+
+echo "(cd .. && ln -s ${1}_source/_$1.dll .)"
+(cd .. && rm -f _$1.dll && ln -s ${1}_source/_$1.so .)
+
+echo "(cd .. && ln -s $1.py .)"
+(cd .. && rm -f $1.py && ln -s ${1}_source/$1.py .)
+
+
