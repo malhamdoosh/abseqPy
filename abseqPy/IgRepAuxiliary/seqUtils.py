@@ -260,8 +260,7 @@ def findMotifClusters(ighvMotifs, outputPrefix, stream=None):
 
             printto(stream, "\tMotif clusters were written to " + os.path.basename(motifClustersFile))
         except Exception as e:
-            print(e)
-            printto(stream, "Motifs couldn't be clustered!", LEVEL.ERR)
+            printto(stream, "Motifs couldn't be clustered! Error: {}".format(str(e)), LEVEL.ERR)
 
 
 def saveNewickdendrogram(newickClusterFile, tree, stream, title="", logger=None):
