@@ -2,14 +2,15 @@
 As of Fri Jun 29 14:42:16 AEST 2018
 The only plots that STILL PLOTS IN PYTHON despite pythonPlotOn = False, because abseqR hasn't supported them are:
     1) plotSeqLenDist           - only one that still depends on this is -t seqlen
+                                  (abseqR still doesn't have support for this task)
     2) plotVenn                 - used by restriction sites and primer analysis
-    3) plotHeatMap              - generateStatsHeatmap
     4) plotHeatmapFromDF        - restriction sites analysis (detailed and simple)
 The plots that OBEY pythonPlotOn() = False is:
     1) all diversity plots (rarefaction, duplication, recapture)
     2) plotDist()
     3) plotSeqLenDistClasses
     4) barLogo                  - generateCumulativeLogo
+    5) plotHeatMap              - generateStatsHeatmap
 """
 
 
