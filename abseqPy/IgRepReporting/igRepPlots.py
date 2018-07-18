@@ -670,29 +670,30 @@ def exportMatrix(matrix, xlabel, ylabel, filename, sep="\t", metadata=None):
 def plotHeatmap(hm, extent, xticks, yticks,
                 filename,
                 axlabels=None, title=None):
-    fig, ax = plt.subplots()
-    cax = ax.imshow(hm, cmap='jet', interpolation='nearest',
-                    extent=extent)
-    if axlabels is not None:
-        ax.set_xlabel(axlabels[0])
-        ax.set_ylabel(axlabels[1])
-    ax.set_title(title)
-    ax.set_xticks(np.array(xticks).astype(int))
-    ax.set_yticks(np.array(yticks).astype(int))
-    ax.tick_params(axis='both', which='major', labelsize=8)
-    #     ax.set_xticklabels(np.round(np.linspace(xedges[0], xedges[-1], BINS/2)))
-    cbar = fig.colorbar(cax,
-                        ticks=np.linspace(np.min(hm),
-                                          np.max(hm),
-                                          5),
-                        orientation='horizontal')
-    #     print(np.percentile(heatmap, [0, 25, 50, 75, 100]))
-    #     labels = np.percentile(heatmap, [0, 25, 50, 75, 100])
-    #     cbar.set_ticklabels(labels)
+    if PlotManager.pythonPlotOn():
+        fig, ax = plt.subplots()
+        cax = ax.imshow(hm, cmap='jet', interpolation='nearest',
+                        extent=extent)
+        if axlabels is not None:
+            ax.set_xlabel(axlabels[0])
+            ax.set_ylabel(axlabels[1])
+        ax.set_title(title)
+        ax.set_xticks(np.array(xticks).astype(int))
+        ax.set_yticks(np.array(yticks).astype(int))
+        ax.tick_params(axis='both', which='major', labelsize=8)
+        #     ax.set_xticklabels(np.round(np.linspace(xedges[0], xedges[-1], BINS/2)))
+        cbar = fig.colorbar(cax,
+                            ticks=np.linspace(np.min(hm),
+                                              np.max(hm),
+                                              5),
+                            orientation='horizontal')
+        #     print(np.percentile(heatmap, [0, 25, 50, 75, 100]))
+        #     labels = np.percentile(heatmap, [0, 25, 50, 75, 100])
+        #     cbar.set_ticklabels(labels)
 
-    forceAspect(ax, aspect=1)
-    fig.savefig(filename, dpi=300)
-    plt.close()
+        forceAspect(ax, aspect=1)
+        fig.savefig(filename, dpi=300)
+        plt.close()
 
 
 def plotHeatmapFromDF(df, filename, title=None, stream=None):
