@@ -64,7 +64,7 @@ setup(name="abseqPy",
       entry_points={
           'console_scripts': ['abseq=abseqPy.abseqQC:main'],
       },
-      classifiers=(
+      classifiers=[
             "Programming Language :: Python :: 2.7",
             "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
             "Operating System :: MacOS",
@@ -74,5 +74,5 @@ setup(name="abseqPy",
             "Topic :: Scientific/Engineering :: Bio-Informatics",
             "Intended Audience :: Science/Research",
             "Environment :: Console"
-      )
+      ]
 )
