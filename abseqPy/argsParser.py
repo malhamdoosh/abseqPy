@@ -370,14 +370,15 @@ def parseYAML(yamlFile):
     outputArgs = []
 
     defaults = {}
-    for doc in yaml.load_all(contents):
+    documents = filter(lambda x: x is not None, yaml.load_all(contents))
+    for doc in documents:
         if DEFAULTS_KEY in doc:
             # make sure the only key in the 'defaults' document is 'defaults'
             if len(doc) != 1:
                 raise ValueError("'defaults' expects one key:value pair, got {} instead".format(len(doc)))
             defaults = doc[DEFAULTS_KEY]
 
-    for doc in yaml.load_all(contents):
+    for doc in documents:
         if DEFAULTS_KEY not in doc:
             # create a fresh copy of "defaults" filled in with default arg values.
             args = deepcopy(defaults)
