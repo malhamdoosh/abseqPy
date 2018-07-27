@@ -16,13 +16,13 @@ def test_loadRestrictionSites(tmpdir):
     sites = loadRestrictionSites(tmp_file)
 
     # make sure that the IUPAC letters are translated to ACGT regex form:
-    assert "ENZ1" in sites and sites["ENZ1"] == "AAAAA"
-    assert "ENZ2" in sites and sites["ENZ2"] == "AAAA[CGT]"
-    assert "ENZ3" in sites and sites["ENZ3"] == "[AG][CT][GC]"
-    assert "ENZ4" in sites and sites["ENZ4"] == "..."
+    assert "ENZ1" in sites and sites["ENZ1"].pattern == "AAAAA"
+    assert "ENZ2" in sites and sites["ENZ2"].pattern == "AAAA[CGT]"
+    assert "ENZ3" in sites and sites["ENZ3"].pattern == "[AG][CT][GC]"
+    assert "ENZ4" in sites and sites["ENZ4"].pattern == "..."
 
     # make sure that unknown IUPAC letters are left as-is
-    assert "ENZ5" in sites and sites["ENZ5"] == "XFI"
+    assert "ENZ5" in sites and sites["ENZ5"].pattern == "XFI"
 
 
 def test_replaceIUPACLetters():
