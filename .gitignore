@@ -4,3 +4,12 @@
 /config.pyc
 /igBlastWorker.pyc
 /igLibraryQC.pyc
+**/.idea/
+**/*.pyc
+*.eggs/
+/*.egg-info/
+/dist/
+**/3rd_party*/
+.pytest_cache/
+.cache/
+abseq
