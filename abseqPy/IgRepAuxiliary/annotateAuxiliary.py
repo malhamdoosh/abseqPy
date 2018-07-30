@@ -32,7 +32,7 @@ def annotateIGSeqRead(fastaFile, chain, db, noWorkers, seqsPerFile,
             noSeqs = sum(1 for line in f if line.startswith(">"))
         totalFiles = int(ceil(noSeqs / seqsPerFile))
         if totalFiles < noWorkers:
-            seqsPerFile = int(noSeqs / noWorkers)
+            seqsPerFile = int(noSeqs / noWorkers) if noSeqs >= noWorkers else noSeqs
             totalFiles = int(ceil(noSeqs / seqsPerFile))
         noSplit = noSeqs <= seqsPerFile
         printto(stream, "\t{0:,} sequences were found to be distributed into {1:,} file(s)"
