@@ -186,8 +186,18 @@ def _get_software_version(prog):
 def _needs_installation(prog):
     v = versions[prog]
     software_version = _get_software_version(prog)
-    if isinstance(v, bool) or isinstance(software_version, bool):
-        return software_version == v
+
+    if isinstance(software_version, bool):
+        # OS/CalledProcess Error
+        if not software_version:
+            return True
+
+        if isinstance(v, bool):
+            return software_version == v
+        else:
+            # expected bool but got something else
+            return True
+
     if isinstance(v, list):
         if len(v) == 1:
             return parse_version(software_version) < parse_version(v[0])
