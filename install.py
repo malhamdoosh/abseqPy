@@ -13,7 +13,7 @@ import re
 import argparse
 
 from subprocess import check_output
-from distutils.version import LooseVersion
+from pkg_resources import parse_version
 
 MAC = 'Darwin'
 LIN = 'Linux'
@@ -48,6 +48,7 @@ class NCBI:
 
     @staticmethod
     def _try_con(url, tries=20):
+        import requests
         try:
             r = requests.get(url, timeout=8)
             timeout = False
@@ -120,6 +121,7 @@ def _get_sys_info():
 
 
 def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
+    import requests
     try:
         r = requests.get(url, timeout=timeout)
         timeout = False
@@ -149,10 +151,22 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
 def _get_software_version(prog):
     try:
         if prog == 'igblast':
-            retval = check_output(['igblastn', '-version']).split('\n')[1].strip().split()[2].rstrip(',')
+            try:
+                # python3
+                retval = check_output(['igblastn', '-version']).decode()
+            except AttributeError:
+                # python2
+                retval = check_output(['igblastn', '-version'])
+            retval = retval.split('\n')[1].strip().split()[2].rstrip(',')
             return retval
         elif prog == 'clustalo' or prog == 'fastqc' or prog == 'gs':
-            retval = check_output([prog, '--version']).strip()
+            try:
+                # python3
+                retval = check_output([prog, '--version']).decode()
+            except AttributeError:
+                # python2
+                retval = check_output([prog, '--version'])
+            retval = retval.strip()
             if prog == 'fastqc':
                 retval = retval.split()[-1].strip().lstrip("v")
             return retval
@@ -174,9 +188,9 @@ def _needs_installation(prog):
         return software_version == v
     if isinstance(v, list):
         if len(v) == 1:
-            return LooseVersion(software_version) < LooseVersion(v[0])
+            return parse_version(software_version) < parse_version(v[0])
         elif len(v) == 2:
-            return not (LooseVersion(v[0]) <= LooseVersion(software_version) <= LooseVersion(v[1]))
+            return not (parse_version(str(v[0])) <= parse_version(str(software_version)) <= parse_version(str(v[1])))
         else:
             _error("Unknown versioning scheme")
 
@@ -470,9 +484,6 @@ def install(directory):
     for pack in setup_requires:
         # pip.main(['install', pack]) no longer supported in pip >= 10
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
-
-    # can't import this at the top level until we've verified that we've installed it
-    import requests
 
     d = _setup_dir(directory)
 
