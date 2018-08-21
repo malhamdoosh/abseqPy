@@ -196,5 +196,7 @@ Some features are *disabled* when running in *Windows* due to software incompati
 
 > `abseqPy` runs on Python 2.7 &mdash; fret not, Python 3.6 support is under way.
 
+<small>
 <b id="foot1">1</b> long option names are option names with a double dash prefix, for example,
 `--help` is a long option while `-h` is not [↩](#sup1)
+</small>
