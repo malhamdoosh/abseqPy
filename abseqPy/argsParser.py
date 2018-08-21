@@ -295,11 +295,11 @@ def parseCommandLineArguments(arguments=None):
                                                        "and 5UTR analysis. Index starts from 1. [default=[1, inf)]",
                               default=None)
     optional.add_argument('-d', '--database', help="fully qualified path to germline database directory. "
-                                                   "It should contain the FASTA files \"imgt_<species>_ig[khl][vdj]\" "
-                                                   "used by igblastn's -germline_db_V, -germline_db_D, and"
-                                                   " -germline_db_J arguments. If this option is not specified, "
+                                                   "It should contain the FASTA files "
+                                                   "used by igblastn's -germline_db_V, -germline_db_D, and "
+                                                   "-germline_db_J arguments. If this option is not specified, "
                                                    "the environment variable $IGBLASTDB should contain the "
-                                                   "fully qualified path.",
+                                                   "fully qualified path. See abseqPy's README for more information.",
                           default=None)
     optional.add_argument('-q', '--threads', help="number of threads to use (spawns separate processes). [default=1]",
                           type=int, default=1)
