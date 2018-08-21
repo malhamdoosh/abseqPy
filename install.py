@@ -47,25 +47,26 @@ class NCBI:
         return [d for d in self.atag.findall(raw_string) if not d.startswith("Parent")]
 
     @staticmethod
-    def _try_con(url, tries=20):
+    def _try_con(url, max_tries=20, timeout=TIMEOUT):
         import requests
         try:
-            r = requests.get(url, timeout=8)
+            r = requests.get(url, timeout=timeout)
             timed_out = False
         except:
             timed_out = True
-        attempts = 0
 
-        while (timed_out or r.status_code != 200) and attempts < tries:
-            try:
-                r = requests.get(url, timeout=8)
-                timed_out = False
-            except:
-                timed_out = True
-            attempts += 1
-
-        if timed_out or attempts == tries or r.status_code != 200:
-            raise Exception("Cannot download {}, fatal error".format(url))
+        if timed_out or r.status_code != 200:
+            for _ in range(max_tries):
+                try:
+                    r = requests.get(url, timeout=timeout)
+                    if r.status_code == 200:
+                        break
+                except:
+                    pass
+            else:
+                raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
+                                .format(url, timeout))
+        assert r.status_code == 200
         return r
 
     def install_bins(self, binary, installation_dir):
@@ -128,18 +129,19 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
     except:
         timed_out = True
 
-    attempts = 0
-    # keep trying until we get it
-    while (timed_out or r.status_code != 200) and attempts < max_attempts:
-        try:
-            r = requests.get(url, timeout=timeout)
-            timed_out = False
-        except:
-            timed_out = True
-        attempts += 1
+    if timed_out or r.status_code != 200:
+        for _ in range(max_attempts):
+            try:
+                r = requests.get(url, timeout=timeout)
+                if r.status_code == 200:
+                    break
+            except:
+                pass
+        else:
+            raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
+                            .format(url, timeout))
 
-    if timed_out or attempts == max_attempts or r.status_code != 200:
-        raise Exception("Cannot download {}, fatal error".format(url))
+    assert r.status_code == 200
 
     with open(fname, 'wb') as fp:
         for c in r:
@@ -587,7 +589,7 @@ def install(directory):
 
 
 def ask_permission(directory):
-    msg = "\nYou are about to install abseqPy's third party external dependencies in '{}'.\nIt is your \
+    msg = "\nYou are about to install abseqPy's external dependencies in '{}'.\nIt is your \
 responsibility to make sure that the folder is empty or \nthat the downloaded dependencies \
 will not override your existing files.\n\nProceed? [y/N]: ".format(directory)
     try:
@@ -610,17 +612,16 @@ def _binary_file(binary):
 def _parse_args():
     parser = argparse.ArgumentParser(description="abseqPy's third-party dependencies installer script.")
     parser.add_argument('installation_directory', help="Installation directory; this script will dump all external "
-                                                       "dependencies here and request that you update your PATH, "
-                                                       "IGBLASTDB, and IGDATA environment variables after installation "
-                                                       "is successful. NOTE: there will be a bunch of "
+                                                       "dependencies here. "
+                                                       "NOTE: there will be a bunch of "
                                                        "post-installation and build artifacts after "
                                                        "this script executes. It is highly recommended to use "
                                                        "an empty directory for this. If in doubt, create a new "
-                                                       "directory in your home directory and place it here.")
+                                                       "directory in your home directory and use it here.")
     parser.add_argument('-t', '--timeout', default=31, help="If your internet is slow, increase this value to something"
-                                                           " higher. Timeout controls how long we will patiently wait"
-                                                           " before hanging up the server during downloads. "
-                                                           "[default=31]")
+                                                            " higher. Timeout controls how long we will patiently wait"
+                                                            " before hanging up the server during downloads. "
+                                                            "[default=31]")
     return parser.parse_args(), parser
 
 
