@@ -10,7 +10,6 @@ import zipfile
 import struct
 import subprocess
 import re
-import requests
 import argparse
 
 from subprocess import check_output
@@ -471,6 +470,9 @@ def install(directory):
     for pack in setup_requires:
         # pip.main(['install', pack]) no longer supported in pip >= 10
         subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
+
+    # can't import this at the top level until we've verified that we've installed it
+    import requests
 
     d = _setup_dir(directory)
 
