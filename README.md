@@ -2,17 +2,16 @@
 * [Introduction](#introduction)
     * [AbSeq](#abseq)
        * [About](#about)
-* [Setup](#setup)
-    * [Supported platforms](#supported-platforms)
-    * [External dependencies](#external-dependencies)
-        * [The easy way](#the-easy-way)
-        * [The hard way](#the-hard-way)
-            * [Mandatory dependencies](#mandatory-dependencies)
-            * [Optional dependencies](#optional-dependencies)
-            * [IgBLAST configuration](#igblast-configuration)
-    * [Installation](#installation)
-        * [The recommended way](#the-recommended-way)
-        * [From source](#from-source)
+* [Supported platforms](#supported-platforms)
+* [External dependencies](#external-dependencies)
+    * [The easy way](#the-easy-way)
+    * [The hard way](#the-hard-way)
+        * [Mandatory dependencies](#mandatory-dependencies)
+        * [Optional dependencies](#optional-dependencies)
+        * [IgBLAST configuration](#igblast-configuration)
+* [Installation](#installation)
+    * [The recommended way](#the-recommended-way)
+    * [From source](#from-source)
 * [Usage](#usage)
     * [Help](#help)
     * [YAML](#yaml)
@@ -35,9 +34,8 @@ in a HTML document.
 * For comments and suggestions, email m.hamdoosh \<at\> gmail \<dot\> com
 
 
-# Setup
 
-## Supported platforms
+# Supported platforms
 
 `abseqPy` works on most Linux distros, macOS, and Windows.
 
@@ -49,12 +47,12 @@ Some features are *disabled* when running in *Windows* due to software incompati
 > `abseqPy` runs on Python 2.7 &mdash; fret not, Python 3.6 support is under way.
 
 
-## External dependencies
+# External dependencies
 
 `abseqPy` depends on a few external software to work and they should be properly
 installed and configured before running `abseqPy`
 
-### The easy way
+## The easy way
 
 This is the __recommended installation process__.
 
@@ -91,7 +89,7 @@ The script will also remind users to update their environment variables if the i
 succeeded. Likewise, if the directory was moved (in the future), these environment variables need to be updated.
 
 
-### The hard way
+## The hard way
 
 This section is for when one:
 
@@ -100,7 +98,7 @@ This section is for when one:
 
 The installation script mentioned above automates the following installation procedure:
 
-##### Mandatory dependencies 
+#### Mandatory dependencies 
 * [Clustal Omega](http://www.clustal.org/omega/) v1.2.1 or higher
     - Download and extract the tarball or download and use the pre-compiled binaries
 * [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/download.html#fastqc) v0.11.5 or higher
@@ -117,7 +115,7 @@ The installation script mentioned above automates the following installation pro
 * [Ghostscript](https://www.ghostscript.com/download/gsdnld.html) v9.22 or higher
     - Download and follow the instructions to install [here](https://www.ghostscript.com/doc/9.22/Install.htm)
 
-##### Optional dependencies
+#### Optional dependencies
 * [FLASH](https://sourceforge.net/projects/flashpage/files/) v1.2.11 or higher
     - Required if `leeHom` and `PEAR` is not installed
     - Download, extract, `make` or download the pre-built binary
@@ -125,7 +123,7 @@ The installation script mentioned above automates the following installation pro
     - Required if `FLASH` and `leeHom` is not installed
 
 
-#### IgBLAST configuration
+### IgBLAST configuration
 
 A final note, if the installation script was not used, be sure to set the environment variable `IGBLASTDB` to
 the path where the germline V, D, and J gene sequences are. (i.e. the directory where `my_seq_file` lives in the
@@ -135,17 +133,17 @@ If `IGBLASTDB` is not configured, `abseqPy` will require the `-d` or `--database
 to be specified with the same directory as `IGBLASTDB` would have had. Otherwise, it is implied that the database
 is found in `IGBLASTDB`.
 
-## Installation
+# Installation
 
 This section demonstrates how to install `abseqPy`.
 
-### The recommended way
+## The recommended way
 
 ```bash
 pip install abseqPy
 ```
 
-### From source
+## From source
 ```bash
 $ git clone <abseq url>
 $ cd abseqPy
