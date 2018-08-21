@@ -11,6 +11,7 @@ import struct
 import subprocess
 import re
 import requests
+import argparse
 
 from subprocess import check_output
 from distutils.version import LooseVersion
@@ -18,6 +19,7 @@ from distutils.version import LooseVersion
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
+TIMEOUT = 8
 
 # VERSION-ING:
 # 1. [singleton] ==> minimum version
@@ -118,24 +120,24 @@ def _get_sys_info():
     return platform.system(), 8 * struct.calcsize("P")
 
 
-def _save_as(url, fname, chmod=True):
+def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
     try:
-        r = requests.get(url, timeout=8)
+        r = requests.get(url, timeout=timeout)
         timeout = False
     except:
         timeout = True
 
     attempts = 0
     # keep trying until we get it
-    while (timeout or r.status_code != 200) and attempts < 10:
+    while (timeout or r.status_code != 200) and attempts < max_attempts:
         try:
-            r = requests.get(url, timeout=8)
+            r = requests.get(url, timeout=timeout)
             timeout = False
         except:
             timeout = True
         attempts += 1
 
-    if r.status_code != 200:
+    if attempts == max_attempts or r.status_code != 200:
         raise Exception("Cannot download {}, fatal error".format(url))
 
     with open(fname, 'wb') as fp:
@@ -170,7 +172,7 @@ def _needs_installation(prog):
     v = versions[prog]
     software_version = _get_software_version(prog)
     if isinstance(v, bool) or isinstance(software_version, bool):
-        return software_version != v
+        return software_version == v
     if isinstance(v, list):
         if len(v) == 1:
             return LooseVersion(software_version) < LooseVersion(v[0])
@@ -253,7 +255,7 @@ def _install_fastqc(installation_dir=".", version=versions['fastqc'][-1]):
     plat, _ = _get_sys_info()
     addr = 'http://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{}.zip'.format(version)
     zipname = os.path.join(installation_dir, os.path.basename(addr).strip())
-    _save_as(addr, zipname, chmod=False)
+    _save_as(addr, zipname, chmod=False, timeout=None)      # don't time out, this file is huge
     unzipped_name = 'FastQC'
     zip_ref = zipfile.ZipFile(zipname, 'r')
     zip_ref.extractall(installation_dir)
@@ -572,7 +574,7 @@ def install(directory):
 
 
 def ask_permission(directory):
-    msg = "\nYou are about to install abseqPy's external dependencies in {}.\nIt is your \
+    msg = "\nYou are about to install abseqPy's third party external dependencies in '{}'.\nIt is your \
 responsibility to make sure that the folder is empty or \nthat the downloaded dependencies \
 will not override your existing files.\n\nProceed? [y/N]: ".format(directory)
     try:
@@ -592,15 +594,33 @@ def _binary_file(binary):
     return binary
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: {} <installation directory>".format(sys.argv[0]), file=sys.stderr)
-        return 0
+def _parse_args():
+    parser = argparse.ArgumentParser(description="abseqPy's third-party dependencies installer script.")
+    parser.add_argument('installation_directory', help="Installation directory; this script will dump all external "
+                                                       "dependencies here and request that you update your PATH, "
+                                                       "IGBLASTDB, and IGDATA environment variables after installation "
+                                                       "is successful. NOTE: there will be a bunch of "
+                                                       "post-installation and build artifacts after "
+                                                       "this script executes. It is highly recommended to use "
+                                                       "an empty directory for this. If in doubt, create a new "
+                                                       "directory in your home directory and place it here.")
+    parser.add_argument('-t', '--timeout', default=8, help="If your internet is slow, increase this value to something"
+                                                           " higher. Timeout controls how long we will patiently wait"
+                                                           " before hanging up the server during downloads. "
+                                                           "[default=8]")
+    return parser.parse_args(), parser
 
-    directory = sys.argv[1]
+
+def main():
+    args, parser = _parse_args()
+
+    directory = args.installation_directory
+
+    global TIMEOUT
+    TIMEOUT = int(args.timeout)
+
     if ' ' in directory:
-        print("Installation directory is not allowed to contain spaces!")
-        return 1
+        parser.error("Installation directory is not allowed to contain spaces!")
 
     proceed = ask_permission(directory)
 
