@@ -10,16 +10,16 @@ import zipfile
 import struct
 import subprocess
 import re
+import requests
 
 from subprocess import check_output
-from ftplib import FTP
 from distutils.version import LooseVersion
 
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
 
-# VERSIONING:
+# VERSION-ING:
 # 1. [singleton] ==> minimum version
 # 2. [min, max]  ==> accepted range of versions
 # 3. True        ==> any version
@@ -33,25 +33,45 @@ versions = {
 }
 
 
-class FTPBlast:
-    def __init__(self, addr, version):
-        self.ftp = FTP(addr)
-        self.ftp.login()
-        self.version = version
+class NCBI:
+    def __init__(self, version):
+        self._url = "https://ftp.ncbi.nih.gov/blast/executables/igblast/release/"
+        # a text dump shows that all directories in internal_data/ are <a> tags
+        # we can extract the directory names out
+        self.atag = re.compile(r".*<a.*>(.*)</a>")
+        self._version = version
 
-    def __enter__(self):
-        return self
+    def _extract_directories(self, url):
+        raw_string = str(self._try_con(url).text)
+        return [d for d in self.atag.findall(raw_string) if not d.startswith("Parent")]
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.ftp.quit()
+    @staticmethod
+    def _try_con(url, tries=20):
+        try:
+            r = requests.get(url, timeout=8)
+            timeout = False
+        except:
+            timeout = True
+        attempts = 0
+
+        while (timeout or r.status_code != 200) and attempts < tries:
+            try:
+                r = requests.get(url, timeout=8)
+                timeout = False
+            except:
+                timeout = True
+            attempts += 1
+
+        if r.status_code != 200:
+            raise Exception("Cannot download {}, fatal error".format(url))
+        return r
 
     def install_bins(self, binary, installation_dir):
-        path = '/blast/executables/igblast/release/{}/'.format(self.version) + binary
-        installation_path = os.path.join(installation_dir, binary)
+        url = self._url + str(self._version) + "/" + binary
+        save_as_name = os.path.join(installation_dir, binary)
         if not os.path.exists(installation_dir):
             os.makedirs(installation_dir)
-        with open(installation_path, "wb") as fp:
-            self.ftp.retrbinary('RETR ' + path, fp.write)
+        _save_as(url, save_as_name, chmod=False)
 
         old_dir = os.path.abspath(".")
         os.chdir(installation_dir)
@@ -60,43 +80,38 @@ class FTPBlast:
         tar.close()
         os.chdir(old_dir)
 
-        return glob.glob(os.path.join(installation_dir, 'ncbi-igblast-' + self.version, 'bin') + os.path.sep + '*')
+        return glob.glob(os.path.join(installation_dir, 'ncbi-igblast-' + self._version, 'bin')
+                         + os.path.sep + '*')
 
     def download_edit_imgt_pl(self, download_dir):
-        path = '/blast/executables/igblast/release/edit_imgt_file.pl'
+        url = self._url + 'edit_imgt_file.pl'
         if not os.path.exists(download_dir):
             os.makedirs(download_dir)
-        download_path = os.path.join(download_dir, 'edit_imgt_file.pl')
-        with open(download_path, "wb") as fp:
-            self.ftp.retrbinary('RETR ' + path, fp.write)
-        os.chmod(download_path, 0o777)
+        _save_as(url, os.path.join(download_dir, 'edit_imgt_file.pl'), chmod=True)
 
     def download_internal_data(self, download_dir):
-        path = '/blast/executables/igblast/release/internal_data/'
-        self.ftp.cwd(path)
-        species = self.ftp.nlst()
+        url = self._url + 'internal_data/'
+        species = [s.strip('/') for s in self._extract_directories(url)]
         for s in species:
-            self.ftp.cwd(s)
-            filenames = self.ftp.nlst()
+            species_url = url + s
+            filenames = self._extract_directories(species_url)
             download_path = os.path.join(download_dir, 'internal_data', s)
-            os.makedirs(download_path)
+            if not os.path.exists(download_path):
+                os.makedirs(download_path)
             for filename in filenames:
                 # ignore rhesus_monkey's CVS directory
                 if filename == 'CVS':
                     continue
-                with open(os.path.join(download_path, filename), "wb") as fp:
-                    self.ftp.retrbinary('RETR ' + filename, fp.write)
-            self.ftp.cwd('../')
+                _save_as(species_url + '/' + filename, os.path.join(download_path, filename), chmod=False)
 
     def download_optional_file(self, download_dir):
-        path = '/blast/executables/igblast/release/optional_file/'
-        self.ftp.cwd(path)
-        filenames = self.ftp.nlst()
+        url = self._url + 'optional_file/'
+        filenames = self._extract_directories(url)
         download_path = os.path.join(download_dir, 'optional_file')
-        os.makedirs(download_path)
+        if not os.path.exists(download_path):
+            os.makedirs(download_path)
         for filename in filenames:
-            with open(os.path.join(download_path, filename), "wb") as fp:
-                self.ftp.retrbinary('RETR ' + filename, fp.write)
+            _save_as(url + "/" + filename, os.path.join(download_path, filename), chmod=False)
 
 
 def _get_sys_info():
@@ -104,13 +119,20 @@ def _get_sys_info():
 
 
 def _save_as(url, fname, chmod=True):
-    import requests
-    r = requests.get(url)
-    attempts = 0
+    try:
+        r = requests.get(url, timeout=8)
+        timeout = False
+    except:
+        timeout = True
 
+    attempts = 0
     # keep trying until we get it
-    while r.status_code != 200 and attempts < 10:
-        r = requests.get(url)
+    while (timeout or r.status_code != 200) and attempts < 10:
+        try:
+            r = requests.get(url, timeout=8)
+            timeout = False
+        except:
+            timeout = True
         attempts += 1
 
     if r.status_code != 200:
@@ -319,18 +341,17 @@ def _install_ghost_script(installation_dir='.', threads=2, version=versions['gs'
 
 def _install_igblast(installation_dir='.', version=versions['igblast'][-1]):
     plat, _ = _get_sys_info()
-
-    with FTPBlast('ftp.ncbi.nih.gov', version) as blast:
-        if plat == MAC:
-            bins = blast.install_bins('ncbi-igblast-{}-x64-macosx.tar.gz'.format(version), installation_dir)
-        elif plat == WIN:
-            bins = blast.install_bins('ncbi-igblast-{}-x64-win64.tar.gz'.format(version), installation_dir)
-            for bin_ in bins:
-                shutil.move(bin_, os.path.join(installation_dir, 'bin', os.path.basename(bin_)))
-        elif plat == LIN:
-            bins = blast.install_bins('ncbi-igblast-{}-x64-linux.tar.gz'.format(version), installation_dir)
-        else:
-            _error("Unknown platform detected")
+    ncbi = NCBI(version)
+    if plat == MAC:
+        bins = ncbi.install_bins('ncbi-igblast-{}-x64-macosx.tar.gz'.format(version), installation_dir)
+    elif plat == WIN:
+        bins = ncbi.install_bins('ncbi-igblast-{}-x64-win64.tar.gz'.format(version), installation_dir)
+        for bin_ in bins:
+            shutil.move(bin_, os.path.join(installation_dir, 'bin', os.path.basename(bin_)))
+    elif plat == LIN:
+        bins = ncbi.install_bins('ncbi-igblast-{}-x64-linux.tar.gz'.format(version), installation_dir)
+    else:
+        _error("Unknown platform detected")
     # noinspection PyUnboundLocalVariable
     return bins
 
@@ -497,27 +518,26 @@ def install(directory):
 
     # install TAMO regardless, bug fixes + custom functions / constructors used in AbSeq
     # _install_TAMO()
+    ncbi = NCBI(versions['igblast'][-1])
+    if "IGDATA" in os.environ:
+        igdata_path_contents = os.listdir(os.path.expandvars("$IGDATA"))
+        duplicate_igdata = True
+    else:
+        igdata_path_contents = []
+        duplicate_igdata = False
 
-    with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-        if "IGDATA" in os.environ:
-            igdata_path_contents = os.listdir(os.path.expandvars("$IGDATA"))
-            duplicate_igdata = True
-        else:
-            igdata_path_contents = []
-            duplicate_igdata = False
+    igdata_dir = os.path.join(d, 'igdata')
+    if 'internal_data' not in igdata_path_contents:
+        if not os.path.exists(igdata_dir):
+            os.makedirs(igdata_dir)
+        ncbi.download_internal_data(igdata_dir)
+        igdata_downloaded = True
 
-        igdata_dir = os.path.join(d, 'igdata')
-        if 'internal_data' not in igdata_path_contents:
-            if not os.path.exists(igdata_dir):
-                os.makedirs(igdata_dir)
-            blast.download_internal_data(igdata_dir)
-            igdata_downloaded = True
-
-        if 'optional_file' not in igdata_path_contents:
-            if not os.path.exists(igdata_dir):
-                os.makedirs(igdata_dir)
-            blast.download_optional_file(igdata_dir)
-            igdata_downloaded = True
+    if 'optional_file' not in igdata_path_contents:
+        if not os.path.exists(igdata_dir):
+            os.makedirs(igdata_dir)
+        ncbi.download_optional_file(igdata_dir)
+        igdata_downloaded = True
 
     if 'IGBLASTDB' not in os.environ:
         # download human and mouse IMGT GeneDB
@@ -531,8 +551,7 @@ def install(directory):
 
         # if we don't have edit_imgt_file.pl script, download it!
         if not os.path.exists(os.path.join(d, 'edit_imgt_file.pl')):
-            with FTPBlast('ftp.ncbi.nih.gov', versions['igblast'][-1]) as blast:
-                blast.download_edit_imgt_pl(d)
+            ncbi.download_edit_imgt_pl(d)
 
         # if we don't have makeblastdb, download it!
         if not os.path.exists(os.path.join(d_bin, _binary_file('makeblastdb'))):
@@ -636,3 +655,4 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
+
