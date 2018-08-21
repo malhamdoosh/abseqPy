@@ -18,7 +18,7 @@ from pkg_resources import parse_version
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
-TIMEOUT = 8
+TIMEOUT = 31
 
 # VERSION-ING:
 # 1. [singleton] ==> minimum version
@@ -51,20 +51,20 @@ class NCBI:
         import requests
         try:
             r = requests.get(url, timeout=8)
-            timeout = False
+            timed_out = False
         except:
-            timeout = True
+            timed_out = True
         attempts = 0
 
-        while (timeout or r.status_code != 200) and attempts < tries:
+        while (timed_out or r.status_code != 200) and attempts < tries:
             try:
                 r = requests.get(url, timeout=8)
-                timeout = False
+                timed_out = False
             except:
-                timeout = True
+                timed_out = True
             attempts += 1
 
-        if r.status_code != 200:
+        if timed_out or attempts == tries or r.status_code != 200:
             raise Exception("Cannot download {}, fatal error".format(url))
         return r
 
@@ -124,21 +124,21 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
     import requests
     try:
         r = requests.get(url, timeout=timeout)
-        timeout = False
+        timed_out = False
     except:
-        timeout = True
+        timed_out = True
 
     attempts = 0
     # keep trying until we get it
-    while (timeout or r.status_code != 200) and attempts < max_attempts:
+    while (timed_out or r.status_code != 200) and attempts < max_attempts:
         try:
             r = requests.get(url, timeout=timeout)
-            timeout = False
+            timed_out = False
         except:
-            timeout = True
+            timed_out = True
         attempts += 1
 
-    if attempts == max_attempts or r.status_code != 200:
+    if timed_out or attempts == max_attempts or r.status_code != 200:
         raise Exception("Cannot download {}, fatal error".format(url))
 
     with open(fname, 'wb') as fp:
@@ -617,10 +617,10 @@ def _parse_args():
                                                        "this script executes. It is highly recommended to use "
                                                        "an empty directory for this. If in doubt, create a new "
                                                        "directory in your home directory and place it here.")
-    parser.add_argument('-t', '--timeout', default=8, help="If your internet is slow, increase this value to something"
+    parser.add_argument('-t', '--timeout', default=31, help="If your internet is slow, increase this value to something"
                                                            " higher. Timeout controls how long we will patiently wait"
                                                            " before hanging up the server during downloads. "
-                                                           "[default=8]")
+                                                           "[default=31]")
     return parser.parse_args(), parser
 
 
