@@ -109,7 +109,7 @@ The installation script mentioned above automates the following installation pro
     the default merger if it detects Windows; Windows users might find it easier to just download the pre-built
     `FLASH` binary.
     - Follow the installation guide in their README , leeHom uses `CMake` and `make` as their build tool.
-* [IgBLAST](ftp://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.7
+* [IgBLAST](https://ftp.ncbi.nih.gov/blast/executables/igblast/release/) v1.7
     - Make sure to follow **_every_** step detailed in the [guide](https://ncbi.github.io/igblast/cook/How-to-set-up.html)
     - **_Important_**: The environment variable `$IGDATA` must be exported, as stated in the guide.
 * [Ghostscript](https://www.ghostscript.com/download/gsdnld.html) v9.22 or higher
