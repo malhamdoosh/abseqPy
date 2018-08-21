@@ -13,9 +13,10 @@
     * [The recommended way](#the-recommended-way)
     * [From source](#from-source)
 * [Usage](#usage)
-    * [Help](#help)
+    * [Basic usage](#basic-usage)
     * [YAML](#yaml)
     * [Gotchas](#gotchas)
+    * [Help](#help)
 
 # Introduction
 
@@ -158,10 +159,16 @@ or [conda](https://conda.io/docs/user-guide/tasks/manage-environments.html).
 
 
 # Usage
-## Help
 
-Invoking `abseq -h` in the command line will display the arguments `AbSeq` uses.
+## Basic usage
 
+To get up and running, the following command is often sufficient:
+
+```bash
+$ abseq -f1 <read 1> -f2 <read 2> -o results --threads 4 --task all
+```
+
+`-f2` is only required if it is a paired-end read.
 
 ## YAML
 
@@ -181,16 +188,16 @@ defaults:
     sstart: 1-3
 ---
 name: PCR1
-file1: fastq/PCR1_ACGT_L001_R1.fastq.gz
-file2: fastq/PCR1_ACGT_L001_R2.fastq.gz
+file1: fastq/PCR1_R1.fastq.gz
+file2: fastq/PCR1_R2.fastq.gz
 ---
 name: PCR2
-file1: fastq/PCR2_ACGT_L001_R1.fastq.gz
-file2: fastq/PCR2_ACGT_L001_R2.fastq.gz
+file1: fastq/PCR2_R1.fastq.gz
+file2: fastq/PCR2_R2.fastq.gz
 ---
 name: PCR3
-file1: fastq/PCR3_ACGT_L001_R1.fastq.gz
-file2: fastq/PCR3_ACGT_L001_R2.fastq.gz
+file1: fastq/PCR3_R1.fastq.gz
+file2: fastq/PCR3_R2.fastq.gz
 bitscore: 300
 task: abundance
 detailedComposition: ~
@@ -201,11 +208,11 @@ then executing `abseq -y example.yml` is equivalent to running 3 simultaneous in
 
 ```bash
 $ abseq --task all --outdir results --threads 7 --bitscore 350 --alignlen 260 --sstart 1-3 \
->   --name PCR1 --file1 fastq/PCR1_ACGT_L001_R1.fastq.gz --file2 fastq/PCR1_ACGT_L001_R2.fastq.gz
+>   --name PCR1 --file1 fastq/PCR1_R1.fastq.gz --file2 fastq/PCR1_R2.fastq.gz
 $ abseq --task all --outdir results --threads 7 --bitscore 350 --alignlen 260 --sstart 1-3 \
->   --name PCR2 --file1 fastq/PCR2_ACGT_L001_R1.fastq.gz --file2 fastq/PCR2_ACGT_L001_R2.fastq.gz
+>   --name PCR2 --file1 fastq/PCR2_R1.fastq.gz --file2 fastq/PCR2_R2.fastq.gz
 $ abseq --task abundance --outdir results --threads 7 --bitscore 300 --alignlen 260 --sstart 1-3 \
->   --name PCR3 --detailedComposition --file1 fastq/PCR3_ACGT_L001_R1.fastq.gz --file2 fastq/PCR3_ACGT_L001_R2.fastq.gz
+>   --name PCR3 --detailedComposition --file1 fastq/PCR3_R1.fastq.gz --file2 fastq/PCR3_R2.fastq.gz
 ```
 
 > The sample PCR3 *overrides* the `bitscore` and `task` argument with `300` and `abundance` and enables the `--detailedComposition` flag.
@@ -214,3 +221,7 @@ $ abseq --task abundance --outdir results --threads 7 --bitscore 300 --alignlen 
 
 1. In the above example, specifying `threads: 7` in the `defaults` key of `example.yml` will run _each_ sample with
 7 threads, that is, `abseqPy` will be running with 7 * `number of samples` total threads.
+
+## Help
+
+Invoking `abseq -h` in the command line will display the arguments `AbSeq` uses.
