@@ -491,13 +491,6 @@ def install(directory):
     igdata_downloaded = False
     igblastdb_downloaded = False
 
-    # create external deps dir
-    if len(sys.argv) != 2:
-        _error("ERROR: Usage: python {} install_path".format(sys.argv[0]))
-
-    # if not os.path.exists('TAMO.tar.gz'):
-    #     _error("ERROR: Please use this script in the directory where TAMO.tar.gz is in")
-
     # although setup() has this, it's installed locally in abseq's installation dir.
     # By pip.installing here, it's going to be available globally
     setup_requires = ['requests', 'numpy>=1.11.3', 'biopython>=1.66']
