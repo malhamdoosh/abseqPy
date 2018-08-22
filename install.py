@@ -18,6 +18,8 @@ from pkg_resources import parse_version
 MAC = 'Darwin'
 LIN = 'Linux'
 WIN = 'Windows'
+
+# CHANGE THIS VALUE IF YOU HAVE SLOW INTERNET (to something higher)
 TIMEOUT = 31
 
 # VERSION-ING:
@@ -68,7 +70,7 @@ class NCBI:
                 except Exception:
                     raise
             else:
-                raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
+                raise Exception("Cannot download {}, try increasing timeout value. Currently timeout = {}"
                                 .format(url, timeout))
         assert r.status_code == 200
         return r
@@ -146,7 +148,7 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
             except Exception:
                 raise
         else:
-            raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
+            raise Exception("Cannot download {}, try increasing timeout value. Currently timeout = {}"
                             .format(url, timeout))
 
     assert r.status_code == 200
@@ -629,10 +631,10 @@ def _parse_args():
                                                        "this script executes. It is highly recommended to use "
                                                        "an empty directory for this. If in doubt, create a new "
                                                        "directory in your home directory and use it here.")
-    parser.add_argument('-t', '--timeout', default=31, help="If your internet is slow, increase this value to something"
-                                                            " higher. Timeout controls how long we will patiently wait"
-                                                            " before hanging up the server during downloads. "
-                                                            "[default=31]")
+    # parser.add_argument('-t', '--timeout', default=31, help="If your internet is slow, increase this value to something"
+    #                                                         " higher. Timeout controls how long we will patiently wait"
+    #                                                         " before hanging up the server during downloads. "
+    #                                                         "[default=31]")
     return parser.parse_args(), parser
 
 
@@ -641,8 +643,8 @@ def main():
 
     directory = args.installation_directory
 
-    global TIMEOUT
-    TIMEOUT = int(args.timeout)
+    # global TIMEOUT
+    # TIMEOUT = int(args.timeout)
 
     if ' ' in directory:
         parser.error("Installation directory is not allowed to contain spaces!")
