@@ -52,8 +52,10 @@ class NCBI:
         try:
             r = requests.get(url, timeout=timeout)
             timed_out = False
-        except:
+        except requests.exceptions.ReadTimeout:
             timed_out = True
+        except Exception:
+            raise
 
         if timed_out or r.status_code != 200:
             for _ in range(max_tries):
@@ -61,8 +63,10 @@ class NCBI:
                     r = requests.get(url, timeout=timeout)
                     if r.status_code == 200:
                         break
-                except:
+                except requests.exceptions.ReadTimeout:
                     pass
+                except Exception:
+                    raise
             else:
                 raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
                                 .format(url, timeout))
@@ -126,8 +130,10 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
     try:
         r = requests.get(url, timeout=timeout)
         timed_out = False
-    except:
+    except requests.exceptions.ReadTimeout:
         timed_out = True
+    except Exception:
+        raise
 
     if timed_out or r.status_code != 200:
         for _ in range(max_attempts):
@@ -135,8 +141,10 @@ def _save_as(url, fname, chmod=True, max_attempts=10, timeout=TIMEOUT):
                 r = requests.get(url, timeout=timeout)
                 if r.status_code == 200:
                     break
-            except:
+            except requests.exceptions.ReadTimeout:
                 pass
+            except Exception:
+                raise
         else:
             raise Exception("Cannot download {}, try increasing --timeout value. Currently timeout = {}"
                             .format(url, timeout))
