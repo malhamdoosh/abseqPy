@@ -180,7 +180,7 @@ then executing `abseq -y example.yml` is equivalent to simultaneously running 2 
 equivalent:
 
 ```bash
-$ abseq --task all --outdir results --threads 7 --sstart 1-3 \
+$ abseq --task all --outdir results --threads 7 --bitscore 350 --sstart 1-3 \
 >   --name PCR1 --file1 fastq/PCR1_R1.fastq.gz --file2 fastq/PCR1_R2.fastq.gz
 $ abseq --task abundance --outdir results --threads 7 --bitscore 300 --sstart 1-3 \
 >   --name PCR2 --file1 fastq/PCR2_R1.fastq.gz --file2 fastq/PCR2_R2.fastq.gz \
