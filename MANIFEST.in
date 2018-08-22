@@ -1,8 +1,5 @@
-include TAMO.tar.gz
 include README.md
-include NEWS
 include LICENSE
 include requirements.txt
-include NUC.4.4.txt
 include NEWS
 recursive-include TAMO/MD/MDsupport_source *.h

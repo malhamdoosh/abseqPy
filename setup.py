@@ -42,7 +42,7 @@ setup(name="abseqPy",
       author_email="m.hamdoosh@gmail.com",
       url="https://github.com/malhamdoosh/abseqPy",
       maintainer="Jia Hong Fong",
-      maintainer_email="jfong361@gmail.com",
+      maintainer_email="jiahfong@gmail.com",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
       setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1',
