@@ -18,7 +18,7 @@
 # Introduction
 
 ## AbSeq
-`abseqPy` is part of the `AbSeq` pipeline -–- a comprehensive bioinformatic pipeline that 
+`abseqPy` is part of the `AbSeq` pipeline - a comprehensive bioinformatic pipeline that 
 validates the quality of antibody libraries using next-generation sequencing technologies.
 Given FASTQ (paired or single-ended) or FASTA files, `abseqPy`
 _generates clonotypes tables_, _V-(D)-J germline annotations_, _functional rates_, and
