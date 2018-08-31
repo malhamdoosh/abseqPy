@@ -1,8 +1,9 @@
 from __future__ import print_function
 import os
 import sys
+import math
 
-from multiprocessing import Queue
+from multiprocessing import Queue, cpu_count
 
 from abseqPy.config import AUX_FOLDER
 from abseqPy.IgMultiRepertoire.AbSeqWorker import AbSeqWorker, AbSeqWorkerException, ResourcePool
@@ -14,7 +15,6 @@ class IgMultiRepertoire:
     def __init__(self, args):
         self.result = Queue()
         self.buffer = []
-        sampleNames = []
         if args.yaml is not None:
             outdirs = set()
             for yamlArg in parseYAML(args.yaml):
@@ -22,13 +22,33 @@ class IgMultiRepertoire:
                 arg.outdir = os.path.abspath(arg.outdir) + os.path.sep
                 outdirs.add(arg.outdir)
                 arg.log = os.path.join(arg.outdir, AUX_FOLDER, arg.name, arg.name + ".log")
-                sampleNames.append(arg.name)
                 self.buffer.append(IgRepertoire(**vars(arg)))
         else:
             # <outdir>/result/<sample_name>/<sample_name>.log
             args.log = os.path.join(args.outdir, AUX_FOLDER, args.name, "{}.log".format(args.name))
             self.buffer.append(IgRepertoire(**vars(args)))
         self.sampleCount = len(self.buffer)
+        availCPUs = cpu_count()
+        requestedCPU = sum([s.threads for s in self.buffer])
+
+        if availCPUs and  requestedCPU > availCPUs:
+            # only use 80% of max CPU please
+            cappedCPU = math.floor(availCPUs * 0.8)
+
+            print("Detected {} available CPUs but jobs are running {}"
+                  " processes in total.".format(availCPUs, requestedCPU))
+            print("Capping total processes to {}.".format(cappedCPU))
+            print("Please refer to abseqPy's README, under the 'Gotcha' section to learn more about this message.")
+
+            perSampleProcess = math.floor((cappedCPU * 1.0) / len(self.buffer))
+
+            for sample in self.buffer:
+                sample.threads = max(perSampleProcess, 1)
+
+            # make sure that we're not going over the capped value unless there's already more samples than there
+            # are CPU counts, in that occasion, the code snippet above should've assigned (1) to sample.threads for
+            # all samples.
+            assert sum([s.threads for s in self.buffer]) <= cappedCPU or all([s.threads == 1 for s in self.buffer])
 
     def __enter__(self):
         return self
