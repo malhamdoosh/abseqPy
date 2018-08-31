@@ -61,11 +61,11 @@ def generateSpectraTypePlots(spectraTypes, name, outDir, stream=None):
         os.makedirs(specFolder)
 
     for k in spectraTypes.keys():
-        filename = os.path.join(specFolder, name + ('_{}_spectratype.png'.format(k)))
+        filename = os.path.join(specFolder, name + ('_{}_spectratype.csv'.format(k)))
         plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
                        seqName=k.upper(), normed=True, maxbins=40, stream=stream)
         if k == 'cdr3':
-            filename = os.path.join(specFolder, name + ('_{}_spectratype_no_outliers.png'.format(k)))
+            filename = os.path.join(specFolder, name + ('_{}_spectratype_no_outliers.csv'.format(k)))
             plotSeqLenDist(spectraTypes[k], name, filename, dna=False,
                            seqName=k.upper(), normed=True, maxbins=40,
                            removeOutliers=True, stream=stream)
@@ -93,21 +93,21 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
         cdrRegions.append(region.upper())
         cdrSeqs.append(clonoTypes[region].keys())
         cdrWeights.append(map(lambda x: clonoTypes[region][x], cdrSeqs[-1]))
-    filename = os.path.join(outDir, name + "_cdr_duplication.png")
+    filename = os.path.join(outDir, name + "_cdr_duplication.csv")
     printto(stream, "\tThe duplication levels is being generated for CDRs .... ")
     plotSeqDuplication(cdrWeights,
                        cdrRegions,
                        filename,
                        'Duplication of CDR Sequences', stream=stream)
     printto(stream, "\tThe rarefaction is being generated for CDRs .... ")
-    filename = os.path.join(outDir, name + "_cdr_rarefaction.png")
+    filename = os.path.join(outDir, name + "_cdr_rarefaction.csv")
     plotSeqRarefaction(cdrSeqs,
                        cdrRegions,
                        filename,
                        cdrWeights,
                        'Rarefaction of CDR Sequences', threads=threads, stream=stream)
     printto(stream, " \tThe percent recapture is being generated for CDRs .... ")
-    filename = os.path.join(outDir, name + "_cdr_recapture.png")
+    filename = os.path.join(outDir, name + "_cdr_recapture.csv")
     plotSeqRecaptureNew(cdrSeqs,
                         cdrRegions,
                         filename,
@@ -122,21 +122,21 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
         frRegions.append(region.upper())
         frSeqs.append(clonoTypes[region].keys())
         frWeights.append(map(lambda x: clonoTypes[region][x], frSeqs[-1]))
-    filename = os.path.join(outDir, name + "_fr_duplication.png")
+    filename = os.path.join(outDir, name + "_fr_duplication.csv")
     printto(stream, "\tThe duplication levels is being generated for FRs .... ")
     plotSeqDuplication(frWeights,
                        frRegions,
                        filename,
                        'Duplication of FR Sequences', stream=stream)
     printto(stream, "\tThe rarefaction is being generated for FRs .... ")
-    filename = os.path.join(outDir,  name + "_fr_rarefaction.png")
+    filename = os.path.join(outDir,  name + "_fr_rarefaction.csvn")
     plotSeqRarefaction(frSeqs,
                        frRegions,
                        filename,
                        frWeights,
                        'Rarefaction of FR Sequences', threads=threads, stream=stream)
     printto(stream, "\tThe percent recapture is being generated for FRs .... ")
-    filename = os.path.join(outDir, name + "_fr_recapture.png")
+    filename = os.path.join(outDir, name + "_fr_recapture.csv")
     plotSeqRecaptureNew(frSeqs,
                         frRegions,
                         filename,
@@ -151,21 +151,21 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
         cdrRegions.append(region.upper())
         cdrSeqs.append(clonoTypes[region].keys())
         cdrWeights.append(map(lambda x: clonoTypes[region][x], cdrSeqs[-1]))
-    filename = os.path.join(outDir, name + "_cdr_v_duplication.png")
+    filename = os.path.join(outDir, name + "_cdr_v_duplication.csv")
     printto(stream, "\tThe duplication levels is being generated for CDRs and V domains .... ")
     plotSeqDuplication(cdrWeights,
                        cdrRegions,
                        filename,
                        'Duplication of CDRs and V Domains', stream=stream)
     printto(stream, "\tThe rarefaction is being generated for CDRs and V domains .... ")
-    filename = os.path.join(outDir, name + "_cdr_v_rarefaction.png")
+    filename = os.path.join(outDir, name + "_cdr_v_rarefaction.csv")
     plotSeqRarefaction(cdrSeqs,
                        cdrRegions,
                        filename,
                        cdrWeights,
                        'Rarefaction of CDRs and V Domains', threads=threads, stream=stream)
     printto(stream, "\tThe percent recapture is being generated for CDRs and V domains .... ")
-    filename = os.path.join(outDir, name + "_cdr_v_recapture.png")
+    filename = os.path.join(outDir, name + "_cdr_v_recapture.csv")
     plotSeqRecaptureNew(cdrSeqs,
                         cdrRegions,
                         filename,
@@ -226,7 +226,7 @@ def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detail
 
                 regionDirectory = os.path.join(logosFolder, region.upper())
                 createIfNot(regionDirectory)
-                filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.png"
+                filename = os.path.join(regionDirectory, name + "_{}_cumulative_logo.csv"
                                         .format(vgerm.replace(os.path.sep, '_')))
                 if hasLargeMem():
                     printto(stream, "\tbuffering {} for {}".format(region, vgerm))
@@ -257,7 +257,7 @@ def compositionLogos(name, clonoTypes, flatClonoTypes, outDir, threads=2, detail
 
         regionDirectory = os.path.join(logosFolder, region.upper())
         createIfNot(regionDirectory)
-        filename = os.path.join(regionDirectory, name + "_cumulative_logo.png")
+        filename = os.path.join(regionDirectory, name + "_cumulative_logo.csv")
         generateCumulativeLogo(seqs, weights, region, filename, stream=stream)
 
 
