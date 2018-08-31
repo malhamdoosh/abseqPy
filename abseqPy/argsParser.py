@@ -227,7 +227,7 @@ def parseCommandLineArguments(arguments=None):
                           .format(DEFAULT_TOP_CLONE_VALUE),
                           default=None)
     optional.add_argument('-dc', '--detailedComposition', help="if specified, segregate each FR and CDR amino acid "
-                                                               "composition logo plot by their IGV gene name. "
+                                                               "composition logos by their IGV gene name. "
                                                                "This shows FR and CDR composition logos "
                                                                "for *each* IGV gene individually. "
                                                                "Otherwise, FR and CDR composition logos will "

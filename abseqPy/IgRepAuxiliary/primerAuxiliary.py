@@ -130,7 +130,7 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All", stream=N
         'Intact': len(known[(known[INDEL] == 0) & (known[MISMATCH] == 0)])
     }
 
-    plotDist(integrity, name, fileprefix + 'integrity_dist.png',
+    plotDist(integrity, name, fileprefix + 'integrity_dist.csv',
              title='Integrity of {}\'-end Primer Sequence (%s)'.format(end) % (category),
              proportion=True, rotateLabels=False)
 
@@ -141,13 +141,13 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All", stream=N
 
     c1 = Counter(known[known[INDEL] != 0][PRIMER].tolist())
     plotDist(c1, name, fileprefix +
-             'indelled_dist.png',
+             'indelled_dist.csv',
              title='Abundance of Indelled {}\'-end Primers ({})'.format(end, category),
              proportion=False, rotateLabels=False, vertical=False, top=50)
 
     c = Counter(known[known[INDEL] != 0][INDEL].tolist())
     plotDist(c, name, fileprefix +
-             'indel_pos_dist.png',
+             'indel_pos_dist.csv',
              title='Abundance of Indel Positions in {}\'-end Primers ({})'.format(end, category),
              proportion=False, rotateLabels=False, vertical=True,
              sortValues=False, top=50)
@@ -161,7 +161,7 @@ def writePrimerStats(end, name, cloneAnnot, fileprefix, category="All", stream=N
 
         germLineDist = compressCountsGeneLevel(Counter(df['vgene'].tolist()))
         plotDist(germLineDist, name, fileprefix + primer +
-                 '_igv_dist.png',
+                 '_igv_dist.csv',
                  title='IGV Abundance of indelled {} ({})'.format(primer, category),
                  proportion=False, vertical=False, top=20, rotateLabels=False)
 
