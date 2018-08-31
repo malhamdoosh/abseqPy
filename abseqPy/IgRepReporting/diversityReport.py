@@ -129,7 +129,7 @@ def generateRarefactionPlots(clonoTypes, name, outDir, threads=2, stream=None):
                        filename,
                        'Duplication of FR Sequences', stream=stream)
     printto(stream, "\tThe rarefaction is being generated for FRs .... ")
-    filename = os.path.join(outDir,  name + "_fr_rarefaction.csvn")
+    filename = os.path.join(outDir,  name + "_fr_rarefaction.csv")
     plotSeqRarefaction(frSeqs,
                        frRegions,
                        filename,
