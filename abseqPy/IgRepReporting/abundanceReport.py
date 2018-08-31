@@ -32,7 +32,7 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
     #             ksub = k.split('*')[0]
     #             igvDistSub[ksub] = igvDistSub.get(ksub, 0) + igvDist[k]
     plotDist(igvDistSub, sampleName, os.path.join(outDir, sampleName +
-                                                  '_igv_dist_gene_level.png'), rotateLabels=False, vertical=False,
+                                                  '_igv_dist_gene_level.csv'), rotateLabels=False, vertical=False,
              stream=stream)
 
     # Group IGVs based on the families and then write into a text file
@@ -43,39 +43,39 @@ def writeVAbundanceToFiles(stats, sampleName, outDir, stream=None):
 
     # Plot the family level distribution
     plotDist(igvDistfam, sampleName, os.path.join(outDir, sampleName +
-                                                  '_igv_dist_family_level.png'), stream=stream)
+                                                  '_igv_dist_family_level.csv'), stream=stream)
 
     # plot alignment length vs %identity
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'identity'],
                          ['Alignment Length', '%Identity'], os.path.join(outDir, sampleName +
-                                                                         '_igv_align_quality_identity_hm.png'),
+                                                                         '_igv_align_quality_identity_hm.tsv'),
                          stream=stream)
 
     # plot alignment length vs bitScore
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'bitscore'],
                          ['Alignment Length', 'bitScore'], os.path.join(outDir, sampleName +
-                                                                        '_igv_align_quality_bitscore_hm.png'),
+                                                                        '_igv_align_quality_bitscore_hm.tsv'),
                          stream=stream)
 
     # plot query start vs. subject start
     generateStatsHeatmap(stats, sampleName, ['vqstart', 'vstart'],
                          ['Query Start', 'Subject Start'], os.path.join(outDir, sampleName +
-                                                                        '_igv_align_quality_start_hm.png'),
+                                                                        '_igv_align_quality_start_hm.tsv'),
                          stream=stream)
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'vmismatches'],
                          ['Alignment Length', 'Mismatches'], os.path.join(outDir, sampleName +
-                                                                          '_igv_align_quality_mismatches_hm.png'),
+                                                                          '_igv_align_quality_mismatches_hm.tsv'),
                          stream=stream)
     c = Counter(stats['vmismatches'].tolist())
     plotDist(c, sampleName, os.path.join(outDir, sampleName +
-                                         '_igv_mismatches_dist.png'), title='Number of Mismatches in V gene',
+                                         '_igv_mismatches_dist.csv'), title='Number of Mismatches in V gene',
              proportion=True, rotateLabels=False, top=20, stream=stream)
     generateStatsHeatmap(stats, sampleName, ['alignlen', 'vgaps'],
                          ['Alignment Length', 'Gaps'], os.path.join(outDir, sampleName +
-                                                                    '_igv_align_quality_gaps_hm.png'), stream=stream)
+                                                                    '_igv_align_quality_gaps_hm.tsv'), stream=stream)
     c = Counter(stats['vgaps'].tolist())
     plotDist(c, sampleName, os.path.join(outDir, sampleName +
-                                         '_igv_gaps_dist.png'), title='Number of Gaps in V gene',
+                                         '_igv_gaps_dist.csv'), title='Number of Gaps in V gene',
              proportion=True, rotateLabels=False, top=20, stream=stream)
     #     print(np.percentile(stats, [0, 100], 0))
     #     summarizeStats(stats, outputDir+sampleName+'_stats_summary.txt')
@@ -89,19 +89,19 @@ def writeJAbundanceToFiles(stats, sampleName, outDir, stream=None):
         return
 
     plotDist(igjDist, sampleName, os.path.join(outDir, sampleName +
-                                               '_igj_dist_variant_level.png'), rotateLabels=False, vertical=False,
+                                               '_igj_dist_variant_level.csv'), rotateLabels=False, vertical=False,
              stream=stream)
 
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igjDistSub = compressCountsGeneLevel(igjDist)
     #     plotDist(igjDistSub, sampleName, outDir + sampleName +
-    #              '_igj_dist_gene_level.png', rotateLabels=False, vertical=False)
+    #              '_igj_dist_gene_level.csv', rotateLabels=False, vertical=False)
     #
     # Group IGVs based on the families and then write into a text file
     igjDistfam = compressCountsFamilyLevel(igjDistSub)
     # Plot the family level distribution
     plotDist(igjDistfam, sampleName, os.path.join(outDir, sampleName +
-                                                  '_igj_dist_family_level.png'),
+                                                  '_igj_dist_family_level.csv'),
              title='IGJ Abundance in Sample ' + sampleName, stream=stream)
 
 
@@ -122,14 +122,14 @@ def writeDAbundanceToFiles(stats, sampleName, outDir, stream=None):
     # Group IGVs based on the subfamilies (gene level) and then write into a text file
     igdDistSub = compressCountsGeneLevel(igdDist)
     plotDist(igdDistSub, sampleName, os.path.join(outDir, sampleName +
-                                                  '_igd_dist_gene_level.png'), rotateLabels=False, vertical=False,
+                                                  '_igd_dist_gene_level.csv'), rotateLabels=False, vertical=False,
              title='IGD Abundance in Sample ' + sampleName, stream=stream)
 
     # Group IGVs based on the families and then write into a text file
     igdDistfam = compressCountsFamilyLevel(igdDistSub)
     # Plot the family level distribution
     plotDist(igdDistfam, sampleName, os.path.join(outDir, sampleName +
-                                                  '_igd_dist_family_level.png'),
+                                                  '_igd_dist_family_level.csv'),
              title='IGD Abundance in Sample ' + sampleName, stream=stream)
 
 
