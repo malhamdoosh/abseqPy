@@ -80,9 +80,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    removeOutliers=False, stream=None):
 
     if eitherExists(outputFile):
-        printto(stream, "\tSequence length distribution plot found ... " + os.path.basename(outputFile), LEVEL.WARN)
+        printto(stream, "\tSequence length distribution file found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
-    printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
+    printto(stream, "\tThe sequence length distribution is being calculated for " + sampleName)
 
     if isinstance(counts, str):
         with abseqPy.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
@@ -103,11 +103,11 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     try:
         # guard against max(sizes) ValueError: max() arg is an empty sequence (len(sizes) must be at least one!)
         if len(sizes) == 0:
-            printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+            printto(stream, "No length to calculate, skipping ...", LEVEL.INFO)
             return
     except NameError:
         # guard against size not defined (NameError: name 'sizes' is not defined)
-        printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+        printto(stream, "No length to calculate, skipping ...", LEVEL.INFO)
         return
 
     if removeOutliers:
@@ -537,7 +537,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
     if total == 0:
-        printto(stream, "Will not plot {} because there is no distribution."
+        printto(stream, "Will not calculate {} because there is no distribution."
                 .format(os.path.basename(filename.rstrip(os.sep))),
                 LEVEL.WARN)
         return
