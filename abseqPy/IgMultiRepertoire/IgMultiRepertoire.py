@@ -44,6 +44,7 @@ class IgMultiRepertoire:
 
             for sample in self.buffer:
                 sample.threads = max(perSampleProcess, 1)
+                sample.args['threads'] = sample.threads
 
             # make sure that we're not going over the capped value unless there's already more samples than there
             # are CPU counts, in that occasion, the code snippet above should've assigned (1) to sample.threads for
