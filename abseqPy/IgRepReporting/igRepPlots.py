@@ -66,9 +66,9 @@ def plotSeqLenDistClasses(seqFile, sampleName, outputFile, fileFormat='fasta', m
             ax.set_xticks(ind)
             ax.set_xticklabels(classes, rotation=45)
             ax.set_title("Sequence Lengths in " + sampleName)
-            fig.savefig(outputFile, dpi=300)
+            fig.savefig(outputFile.replace(".csv", ".png"), dpi=300)
             plt.close()
-        writeCSV(outputFile.replace('.png', '.csv'), 'x,y\n', "{},{}\n",
+        writeCSV(outputFile, 'x,y\n', "{},{}\n",
                  [(klass, val) for klass in classes for val in ighvSizes[klass]])
         for k in classes:
             printto(stream, (k, ighvDist[k], min(ighvSizes[k]), max(ighvSizes[k])), LEVEL.INFO)
@@ -80,9 +80,9 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                    removeOutliers=False, stream=None):
 
     if eitherExists(outputFile):
-        printto(stream, "\tSequence length distribution plot found ... " + os.path.basename(outputFile), LEVEL.WARN)
+        printto(stream, "\tSequence length distribution file found ... " + os.path.basename(outputFile), LEVEL.WARN)
         return
-    printto(stream, "\tThe sequence length distribution is being plotted for " + sampleName)
+    printto(stream, "\tThe sequence length distribution is being calculated for " + sampleName)
 
     if isinstance(counts, str):
         with abseqPy.IgRepertoire.igRepUtils.safeOpen(counts) as fp:
@@ -103,11 +103,11 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     try:
         # guard against max(sizes) ValueError: max() arg is an empty sequence (len(sizes) must be at least one!)
         if len(sizes) == 0:
-            printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+            printto(stream, "No length to calculate, skipping ...", LEVEL.INFO)
             return
     except NameError:
         # guard against size not defined (NameError: name 'sizes' is not defined)
-        printto(stream, "No length to plot, skipping ...", LEVEL.INFO)
+        printto(stream, "No length to calculate, skipping ...", LEVEL.INFO)
         return
 
     if removeOutliers:
@@ -132,7 +132,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
                                           density=normed, weights=weights,
                                           histtype=histtype)
         # write to intermediate csv file too
-        writeCSV(outputFile.replace(".png", ".csv"), "length,count\n", "{},{}\n",
+        writeCSV(outputFile, "length,count\n", "{},{}\n",
                  [(k, v) for k, v in zip(sizes, weights)])
         if normed:
             mu, sigma = weightedAvgAndStd(sizes, weights)
@@ -163,7 +163,7 @@ def plotSeqLenDist(counts, sampleName, outputFile, fileFormat='fasta',
     else:
         ax.set_ylabel("Proportion")
     # ax.set_ylim(top=1)
-    fig.savefig(outputFile, dpi=300)
+    fig.savefig(outputFile.replace(".csv", ".png"), dpi=300)
     plt.close()
     return histcals
 
@@ -220,7 +220,7 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
                    np.linspace(10, 10000, (len(xticks) - len(xlabels)) * 2).tolist()[1::2])
 
     # write to csv too - let metadata tell the plotting program to re-scale the X axis to the provided values
-    writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData,
+    writeCSV(filename, "x,y,region\n", "{},{},{}\n", csvData,
              metadata=(str(xticks).strip('[]') + "\n" + str(xlabels).strip('[]') + "\n"))
 
     if PlotManager.pythonPlotOn():
@@ -230,7 +230,7 @@ def plotSeqDuplication(frequencies, labels, filename, title='', grouped=False, s
         ax.legend(loc="upper left")
         # plt.tight_layout()
         plt.subplots_adjust(bottom=0.2)
-        fig.savefig(filename, dpi=300)
+        fig.savefig(filename.replace(".csv", ".png"), dpi=300)
         plt.close()
 
 
@@ -321,7 +321,7 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', threads=2
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks[:-1])
     xticks.append(total)
 
-    writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
+    writeCSV(filename, "x,y,region\n", "{},{},{}\n", csvData, zip=True,
              metadata=(str(xticks).strip('[]') + "\n"))
 
     if PlotManager.pythonPlotOn():
@@ -329,7 +329,7 @@ def plotSeqRarefaction(seqs, labels, filename, weights=None, title='', threads=2
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticks, rotation=90)
         plt.subplots_adjust(bottom=0.21)
-        fig.savefig(filename, dpi=300)
+        fig.savefig(filename.replace(".csv", ".png"), dpi=300)
         plt.close()
 
 
@@ -407,7 +407,7 @@ def plotSeqRecapture(seqs, labels, filename, weights=None, title='', stream=None
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticks, rotation=90)
         plt.subplots_adjust(bottom=0.21)
-        fig.savefig(filename, dpi=300)
+        fig.savefig(filename.replace(".csv", ".png"), dpi=300)
         plt.close()
 
 
@@ -482,7 +482,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', threads=2, stream=None
 
     xticks = np.linspace(0, total, 15).astype(int)
     xticks = map(lambda x: x - x % 1000 if x > 1000 else x, xticks)
-    writeCSV(filename.replace('.png', '.csv'), "x,y,region\n", "{},{},{}\n", csvData, zip=True,
+    writeCSV(filename, "x,y,region\n", "{},{},{}\n", csvData, zip=True,
              metadata=(str(xticks).strip('[]') + "\n"))
 
     if PlotManager.pythonPlotOn():
@@ -490,7 +490,7 @@ def plotSeqRecaptureNew(seqs, labels, filename, title='', threads=2, stream=None
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticks, rotation=90)
         plt.subplots_adjust(bottom=0.21)
-        fig.savefig(filename, dpi=300)
+        fig.savefig(filename.replace(".csv", ".png"), dpi=300)
         plt.close()
 
 
@@ -537,7 +537,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         allClasses = allClasses[::-1]
     total = sum(ighvDistfam.values()) * 1.0
     if total == 0:
-        printto(stream, "Will not plot {} because there is no distribution."
+        printto(stream, "Will not calculate {} because there is no distribution."
                 .format(os.path.basename(filename.rstrip(os.sep))),
                 LEVEL.WARN)
         return
@@ -560,7 +560,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
         topvalFormat = '{:,}'
     # Create the bar plot and format it      
     if vertical:
-        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+        writeCSV(filename, "x,y,raw\n", "{},{},{}\n",
                  [(x, y, ighvDistfam[x])
                   for x, y in zip(allClasses, map(lambda i: ighvDistfam[i] / total * 100, allClasses))],
                  metadata="vert,total=" + str(total) + "\n")
@@ -584,7 +584,7 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
                         (topvalFormat.format(height)),
                         ha='center', va='bottom', size=10, color='red')
     else:
-        writeCSV(filename.replace(".png", ".csv"), "x,y,raw\n", "{},{},{}\n",
+        writeCSV(filename, "x,y,raw\n", "{},{},{}\n",
                  [(x, y, ighvDistfam[y])
                   for x, y in zip(map(lambda i: ighvDistfam[i] / total * 100, allClasses), allClasses)],
                  metadata="hori,total=" + str(total) + "\n")
@@ -608,19 +608,19 @@ def plotDist(ighvDistfam, sampleName, filename, title='', proportion=True,
                         (topvalFormat.format(width)),
                         ha='center', va='bottom', size=10, color='red')
 
-    if (title == ''):
+    if title == '':
         title = 'IGV Abundance in Sample ' + sampleName
     title += '\nTotal is {:,}'.format(int(total))
     ax.set_title(title)
     plt.tight_layout()
     if PlotManager.pythonPlotOn():
-        fig.savefig(filename, dpi=300)
+        fig.savefig(filename.replace(".csv", ".png"), dpi=300)
     plt.close()
 
 
 def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=None):
     if eitherExists(filename):
-        printto(stream, "File found ... " + os.path.basename(filename), LEVEL.WARN)
+        printto(stream, "File {} found, skipping generation ... ".format(os.path.basename(filename)), LEVEL.WARN)
         return
     x = data[xyCol[0]].tolist()
     y = data[xyCol[1]].tolist()
@@ -641,7 +641,7 @@ def generateStatsHeatmap(data, sampleName, xyCol, axlabels, filename, stream=Non
     exportMatrix(heatmap.transpose(),
                  centrizeBins(xedges),
                  centrizeBins(yedges),
-                 filename.replace(".png", ".tsv"),
+                 filename,
                  metadata="total="+str(total))
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
     #     c = cmap_discretize('coolwarm', 5)
@@ -896,10 +896,10 @@ def generateCumulativeLogo(seqs, weights, region, filename, stream=None):
         # Generate a cumulative bar plot
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
-                filename, removeOutliers=(region != "cdr3"), stream=stream)
+                filename.replace(".csv", ".png"), removeOutliers=(region != "cdr3"), stream=stream)
         barLogo(aaCounts,
                 "{} ({:,})".format(region.upper(), sum(weights)),
-                filename.replace(".png", "_scaled.png"),
+                filename.replace(".csv", "_scaled.png"),
                 scaled=True, stream=stream)
 
         # write raw barLogo csv file - in a human friendly way
@@ -936,6 +936,8 @@ def writeCSV(filename, header, template, vals, zip=False, metadata=""):
     :param metadata: Prints metadata before csv header. [default=""]
     :return: None. Outputs a CSV file
     """
+    assert ".csv" in filename
+
     # if the file or the gzipped file exists, then don't have to write again
     if exists(filename) or exists(filename + '.gz'):
         return

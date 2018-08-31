@@ -358,8 +358,8 @@ class IgRepertoire:
         self.cloneAnnot = self.cloneAnnot[selectedRows]
 
         # generate plot of clone sequence length distribution
-        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist.png')
-        noOutlierOutputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.png')
+        outputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist.csv')
+        noOutlierOutputFile = os.path.join(outResDir, self.name + '_all_clones_len_dist_no_outliers.csv')
         seqLengths = defaultdict(int)
         if not eitherExists(outputFile) or not eitherExists(noOutlierOutputFile):
             for record in SeqIO.parse(gunzip(self.readFile), self.format):
@@ -797,12 +797,12 @@ class IgRepertoire:
             self.mergePairedReads()
 
         if klass:
-            outputFile = os.path.join(outResdir, self.name + '_length_dist_classes.png')
+            outputFile = os.path.join(outResdir, self.name + '_length_dist_classes.csv')
             plotSeqLenDistClasses(self.readFile, self.name, outputFile, self.format, stream=logger)
         else:
-            outputFile = os.path.join(outResdir, self.name + '_seq_length_dist.png')
+            outputFile = os.path.join(outResdir, self.name + '_seq_length_dist.csv')
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format, maxbins=-1, stream=logger)
-            outputFile = os.path.join(outResdir, self.name + '_seq_length_dist_no_outliers.png')
+            outputFile = os.path.join(outResdir, self.name + '_seq_length_dist_no_outliers.csv')
             plotSeqLenDist(self.readFile, self.name, outputFile, self.format, removeOutliers=True,
                            maxbins=-1, stream=logger)
 

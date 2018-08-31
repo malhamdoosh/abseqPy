@@ -56,19 +56,19 @@ def plotUpstreamLenDist(upstreamFile, expectLength, name, outDir, stream=None):
 
     fileExt = 'fasta'
 
-    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist.png'))
+    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist.csv'))
     plotSeqLenDist(upstreamFile, name, outputFile, fileExt, stream=stream)
 
-    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_class.png'))
+    outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_class.csv'))
     plotSeqLenDistClasses(upstreamFile, name, outputFile, fileExt, stream=stream)
 
     # if user provided values to upstream (and it's not Inf)
     if expectLength != Inf:
         # plot seqs that do not meet the expectedLength (shorter than expected length)
-        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short.png'))
+        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short.csv'))
         plotSeqLenDist(upstreamFile, name, outputFile, fileExt, expectLength - 1, stream=stream)
 
-        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short_class.png'))
+        outputFile = os.path.join(outDir, os.path.basename(upstreamFile).replace('.fasta', '_dist_short_class.csv'))
         plotSeqLenDistClasses(upstreamFile, name, outputFile, fileExt, expectLength - 1, stream=stream)
 
 
@@ -459,10 +459,10 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
 def writeCountsCategoriesToFile(countsVariant, sampleName, filePrefix, title=''):
     # gene level
     countsVariant = compressCountsGeneLevel(countsVariant)
-    plotDist(countsVariant, sampleName, filePrefix + 'gene.png', title)
+    plotDist(countsVariant, sampleName, filePrefix + 'gene.csv', title)
     # family level
     countsVariant = compressCountsFamilyLevel(countsVariant)
-    plotDist(countsVariant, sampleName, filePrefix + 'family.png', title)
+    plotDist(countsVariant, sampleName, filePrefix + 'family.csv', title)
 
 
 def _loadIGVSeqsFromFasta(filename):

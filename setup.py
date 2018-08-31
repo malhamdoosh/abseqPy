@@ -45,10 +45,10 @@ setup(name="abseqPy",
       maintainer_email="jiahfong@gmail.com",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
-      setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1',
+      setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1, <3.0',
                       'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'] +
                      ['weblogo>=3.4'] if platform.system() != 'Windows' else [],
-      install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1',
+      install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1, <3.0',
                         'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml', 'scipy>=0.19.0'] +
                        ['weblogo>=3.4'] if platform.system() != 'Windows' else [],
       packages=filter(windows_filter, find_packages()),
