@@ -40,7 +40,7 @@ class IgMultiRepertoire:
             print("Capping total processes to {}.".format(cappedCPU))
             print("Please refer to abseqPy's README, under the 'Gotcha' section to learn more about this message.")
 
-            perSampleProcess = math.floor((cappedCPU * 1.0) / len(self.buffer))
+            perSampleProcess = int(math.floor((cappedCPU * 1.0) / len(self.buffer)))
 
             for sample in self.buffer:
                 sample.threads = max(perSampleProcess, 1)
