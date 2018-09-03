@@ -35,6 +35,7 @@ def parseArgs(arguments=None):
     args.seqtype = args.seqtype.lower()
     args.chain = args.chain.lower()
     args.merger = args.merger.lower() if args.merger is not None else args.merger
+    args.outdir = os.path.abspath(args.outdir)
 
     # --------------------------------------------------------------------------------------------------------
     #                              Check for -f1, -f2 file existence and expand path
