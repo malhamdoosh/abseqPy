@@ -31,7 +31,7 @@ backup if manual installation is required.
 
 ## IgBLAST configuration
 
-A final note, if the [installation script](install_dependencies.py) was not used, be sure to set the environment variable `IGBLASTDB` to
+A final note, if the [installation script](install_dependencies.py) was not used, be sure to set the environment variable `$IGBLASTDB` to
 the path where the germline V, D, and J gene sequences are. (i.e. the directory where `my_seq_file` lives in the
 example in IgBLAST's [how to setup](https://ncbi.github.io/igblast/cook/How-to-set-up.html)).
 
