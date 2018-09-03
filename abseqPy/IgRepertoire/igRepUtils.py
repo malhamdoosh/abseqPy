@@ -169,7 +169,7 @@ def runIgblastn(blastInput, chain, threads=8,
     this function simply runs the igblastn command and returns the output file name
 
     :param blastInput: path to input fasta file
-    :param chain: chain type, one of hv, kv, or lv
+    :param chain: chain type, one of hv, kv, lv, or klv
     :param threads: int
     :param db: path to the directory containing imgt_<species>_ig[hkl][vdj]. Will also read
     the environment variable $IGBLASTDB if not provided
@@ -181,9 +181,6 @@ def runIgblastn(blastInput, chain, threads=8,
     :param stream: logger stream object
     :return: output filename
     """
-    if chain not in ['hv', 'kv', 'lv']:
-        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
-
     if outputDir:
         head, tail = os.path.split(blastInput)
         blastOutput = os.path.join(outputDir, tail.replace('.' + tail.split('.')[-1], '.out'))
@@ -235,9 +232,6 @@ def runIgblastp(blastInput, chain, threads=8, db='$IGBLASTDB', igdata='$IGDATA',
     :param stream: logger stream object
     :return: output filename
     """
-    if chain not in ['hv', 'kv', 'lv']:
-        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'kv', 'hv'.".format(chain))
-
     blastOutput = os.path.join(outputDir, blastInput.replace('.' + blastInput.split('.')[-1], '.out'))
 
     if exists(blastOutput):
@@ -832,8 +826,9 @@ def createIfNot(directory):
 
 def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, blastOutput, threads,
                         vOnly=False, protein=False, stream=None):
-    if chain not in ['hv', 'lv', 'kv']:
-        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'hv', 'kv'.".format(chain))
+    if chain not in ['hv', 'lv', 'kv', 'klv']:
+        raise ValueError("Unsupported chain type {}, expected one of 'lv', 'hv', 'kv', 'klv'.".format(chain))
+
     igdata = os.path.expandvars(igdata)
     db = os.path.expandvars(db)
     exe = IGBLASTP if protein else IGBLASTN
@@ -842,11 +837,11 @@ def buildIgBLASTCommand(igdata, db, chain, species, domainSystem, blastInput, bl
 
     cmd = {}
     for germ in germs:
-        # c = first letter of chain except when chains are lv or kv, in that case, the D germline database still comes
-        # from imgt_<species>_ighd
-        c = 'h' if germ == 'D' and chain[0] != 'h' else chain[0]
+        # if germline is D, then even the light chain will borrow imgt_<species>_ighd's database
+        # otherwise it'll just be imgt_<species>_ig[kl(kl)][vj]
+        chainLetter = 'h' if germ == 'D' else chain[:chain.find('v')]
         cmd['germline_db_' + germ] = os.path.join(db, 'imgt_{}_ig{}{}{}'.format(species,
-                                                                                c,
+                                                                                chainLetter,
                                                                                 germ.lower(),
                                                                                 '_p' if protein else ''))
     blast = ShortOpts(exe,

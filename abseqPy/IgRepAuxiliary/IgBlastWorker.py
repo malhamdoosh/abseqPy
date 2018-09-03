@@ -15,7 +15,7 @@ from abseqPy.IgRepertoire.igRepUtils import runIgblastn, runIgblastp
 from abseqPy.logger import printto, LEVEL
 
 ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vgaps',
-                     'identity', 'alignlen', 'bitscore',
+                     'identity', 'alignlen', 'bitscore', 'chain',
                      'dgene', 'dqstart', 'dqend', 'dstart', 'dmismatches', 'dgaps',
                      'jgene', 'jqstart', 'jqend', 'jstart', 'jend', 'jmismatches', 'jgaps',
                      'strand', 'stopcodon', 'v-jframe',
@@ -32,7 +32,7 @@ ANNOTATION_FIELDS = ['queryid', 'vgene', 'vqstart', 'vstart', 'vmismatches', 'vg
 def getAnnotationFields(chain):
     if chain == 'hv':
         return ANNOTATION_FIELDS
-    elif chain in ['kv', 'lv']:
+    elif chain in ['kv', 'lv', 'klv']:
         return filter(lambda x: not x.startswith("d"), ANNOTATION_FIELDS)
     else:
         # should never happen (argparse takes care of this for us)
@@ -119,11 +119,13 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['vgene'] = line[0].split(',')[0]
                     cloneRecord['dgene'] = line[1].split(',')[0]
                     cloneRecord['jgene'] = line[2].split(',')[0]
+                    cloneRecord['chain'] = line[3]
                 else:
                     cloneRecord['stopcodon'] = line[3]
                     cloneRecord['v-jframe'] = line[4]
                     cloneRecord['vgene'] = line[0].split(',')[0]
                     cloneRecord['jgene'] = line[1].split(',')[0]
+                    cloneRecord['chain'] = line[2]
                 line = ' '.join(line)
 
                 # Parse Sub-region analysis and ignore it if there's no CDR3 hit by IGBLAST
@@ -269,7 +271,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
                     cloneRecord['jmismatches'] = to_int(hit[5])
                     cloneRecord['jgaps'] = to_int(hit[7])
                 cloneAnnot.append(convertCloneRecordToOrderedList(cloneRecord, chain))
-            except Exception as e:
+            except Exception:
                 warning = True
                 continue
     if len(cloneAnnot) > 0:
@@ -277,12 +279,11 @@ def extractCDRInfo(blastOutput, chain, stream=None):
         # v-jframe: in-frame, out-of-frame, N/A (no J gene) 
         # stopcodon: yes, no
         cloneAnnot = DataFrame(cloneAnnot, columns=getAnnotationFields(chain))
-        cloneAnnot.index = cloneAnnot.queryid
-        del cloneAnnot['queryid']
+        cloneAnnot.set_index('queryid', drop=True, inplace=True)
     else:
         cloneAnnot = DataFrame()
     if warning:
-        printto(stream, "Warning: something went wrong while parsing %s" % (blastOutput), LEVEL.WARN)
+        printto(stream, "WARNING: something went wrong while parsing {}".format(blastOutput), LEVEL.WARN)
     return cloneAnnot, filteredIDs
 
 
@@ -327,7 +328,7 @@ class IgBlastWorker(Process):
                                           self.seqType, self.threads, domainSystem=self.domainSystem,
                                           stream=self.stream)
                 self.resultsQueue.put(result)
-            except Exception as e:
+            except Exception:
                 printto(self.stream, "An error occurred while processing " + os.path.basename(nextTask), LEVEL.EXCEPT)
                 self.resultsQueue.put(None)
                 continue

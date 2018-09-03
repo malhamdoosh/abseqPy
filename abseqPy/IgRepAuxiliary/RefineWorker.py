@@ -55,9 +55,8 @@ class RefineWorker(Process):
                     flags[f] = []
                 for (record, qsRec) in zip(nextTask[0], nextTask[1]):
                     seqs = refineCloneAnnotation(qsRec, record,
-                                                 self.actualQstart, self.fr4cut,
-                                                 self.trim5End, self.trim3End,
-                                                 self.chain, flags, stream=self.stream)
+                                                 self.actualQstart, self.chain, self.fr4cut,
+                                                 self.trim5End, self.trim3End, flags, stream=self.stream)
                     # out-of-frame clones are excluded
                     if qsRec['v-jframe'] != 'Out-of-frame':
                         stillInFrame = refineInFramePrediction(qsRec, record, self.actualQstart,
@@ -78,14 +77,30 @@ class RefineWorker(Process):
         return
 
 
-def refineCloneAnnotation(qsRec, record, actualQstart, fr4cut,
-                          trim5End, trim3End, chain, flags, stream=None):
+def refineCloneAnnotation(qsRec, record, actualQstart, chain, fr4cut,
+                          trim5End, trim3End, flags, stream=None):
     seqs = [record.id, qsRec['vgene']]
+
+    if qsRec['chain'] in ['VH', 'VK', 'VL']:
+        chain = qsRec['chain']
+    else:
+        # convert hv, kv, lv and klv to VH, VK, or VL
+        if chain == 'klv':
+            if 'K' in qsRec['vgene']:
+                chain = "VK"
+            else:
+                # we run a risk that it's not VL, but we honestly have no other clue to deduce what chain this is
+                chain = "VL"
+        else:
+            # if user provided a chain type, just use it as-is, although we will need to convert it to VH, VK, or VL
+            # instead of hv, kv, lv
+            chain = chain[::-1].upper()
+
+        printto(stream, "Chain had unknown type {}".format(qsRec['chain']), LEVEL.WARN)
 
     try:
         if qsRec['strand'] == "reversed":
-            record = SeqRecord(record.seq.reverse_complement(), id=record.id,
-                               name="", description="")
+            record = SeqRecord(record.seq.reverse_complement(), id=record.id, name="", description="")
 
         record = record[trim5End:]
         # if trim3End was a user provided int, use it to cut the sequence, or else it will be a list of seqs
