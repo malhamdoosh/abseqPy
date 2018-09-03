@@ -420,13 +420,20 @@ def _download_imgt(download_dir, species, species_layman):
 
     path = os.path.join(download_dir, 'imgt_' + species_layman)
     os.makedirs(path)
+    lights = {'v': [], 'j': []}
     for url in links:
         gene = url[url.find("+") + 1:url.find("&")].lower()
         output = "{}_{}.imgt.raw".format(os.path.join(path, species_layman), gene)
         _save_as(url + species, output, chmod=False)
-        with open(output[:output.rfind(".")], "w") as writer, \
-                open(output) as reader:
 
+        fasta = output[:output.rfind(".")]
+
+        if gene in ['igkv', 'iglv']:
+            lights['v'].append(fasta)
+        elif gene in ['igkj', 'iglj']:
+            lights['j'].append(fasta)
+
+        with open(fasta, "w") as writer, open(output) as reader:
             line = reader.readline()
             while not line.startswith("<b>Number of results"):
                 line = reader.readline()
@@ -443,6 +450,14 @@ def _download_imgt(download_dir, species, species_layman):
                 writer.write(line)
             # remove raw
         os.remove(output)
+    for gene, files in lights.items():
+        assert len(files) == 2
+        _cat(files[0], files[1], "{}_{}.imgt".format(os.path.join(path, species_layman), "igkl" + gene))
+
+
+def _cat(file1, file2, output):
+    with open(file1, "r") as f1, open(file2, "r") as f2, open(output, "w") as out:
+        out.write(f1.read() + "\n" + f2.read())
 
 
 def _igblast_compat(edit_imgt_bin, make_blast_bin, data_dir, output_dir):
@@ -505,7 +520,7 @@ def install(directory):
     d_bin = os.path.join(d, 'bin')
     if not os.path.exists(d_bin):
         os.makedirs(d_bin)
-        
+
     plat, _ = _get_sys_info()
 
     if _needs_installation('clustalo'):
@@ -670,8 +685,8 @@ def main():
                     "\nyou should move these file(s) to {ori} in order for abseqPy to work.\n"
                     "\nIf you do not have permission to do so, you can copy all the files from\n{ori} to {dup},"
                     " and append\n\n\texport IGDATA=\"{dup}\"\n\nto your ~/.bashrc (or equivalent) instead.".format(
-                        ori=os.path.expandvars("$IGDATA"), dup=os.path.join(os.path.abspath(directory), "igdata"))
-                    , file=sys.stderr)
+                        ori=os.path.expandvars("$IGDATA"), dup=os.path.join(os.path.abspath(directory), "igdata")),
+                    file=sys.stderr)
             else:
                 print("\texport IGDATA=\"{}\"".format(os.path.join(os.path.abspath(directory), "igdata")),
                       file=sys.stderr)
