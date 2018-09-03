@@ -38,8 +38,8 @@ example in IgBLAST's [how to setup](https://ncbi.github.io/igblast/cook/How-to-s
 If `$IGBLASTDB` is not set, `abseqPy` will require the `-d` or `--database` flag (see `abseq -h`)
 to be specified with the same directory as `$IGBLASTDB` would have had.
 
-Regardless, the database files `my_seq_file` in `$IGBLASTDB`
-(or the files in `-d`) __must__ be named:
+Regardless, the database files (`my_seq_file`s) in `$IGBLASTDB`
+(or the files in `-d` / `--database`) __must__ be named:
 
 1. imgt_human_ighv, imgt_human_ighd, imgt_human_ighj for Heavy chain VDJ (used when `-c hv`)
 2. imgt_human_igkv, imgt_human_igkj for Kappa chain VJ (used when `-c kv`)
