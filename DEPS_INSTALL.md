@@ -33,7 +33,15 @@ backup if manual installation is required.
 
 A final note, if the [installation script](install_dependencies.py) was not used, be sure to set the environment variable `IGBLASTDB` to
 the path where the germline V, D, and J gene sequences are. (i.e. the directory where `my_seq_file` lives in the
-example in IgBLAST's [how to setup](https://ncbi.github.io/igblast/cook/How-to-set-up.html))
+example in IgBLAST's [how to setup](https://ncbi.github.io/igblast/cook/How-to-set-up.html)).
 
-If `IGBLASTDB` is not set, `abseqPy` will require the `-d` or `--database` flag (see `abseq -h`)
-to be specified with the same directory as `IGBLASTDB` would have had.
+If `$IGBLASTDB` is not set, `abseqPy` will require the `-d` or `--database` flag (see `abseq -h`)
+to be specified with the same directory as `$IGBLASTDB` would have had.
+
+Regardless, the database files `my_seq_file` in `$IGBLASTDB`
+(or the files in `-d`) __must__ be named:
+
+1. imgt_human_ighv, imgt_human_ighd, imgt_human_ighj for Heavy chain VDJ (used when `-c hv`)
+2. imgt_human_igkv, imgt_human_igkj for Kappa chain VJ (used when `-c kv`)
+3. imgt_human_iglv, imgt_human_iglj for Lambda chain VJ (used when `-c lv`)
+4. imgt_human_igklv, imgt_human_igklj for Kappa and Lambda chains combined (used when `-c klv`)
