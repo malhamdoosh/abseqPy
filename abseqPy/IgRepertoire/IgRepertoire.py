@@ -74,8 +74,8 @@ class IgRepertoire:
                                 accepted values are fasta, fa, fastq, fq. f1 and f2(if present) should have the
                                 same format
         :param chain: string
-                                accepted values are lv, hv, kv for lambda variable, heavy variable and kappa variable
-                                respectively
+                                accepted values are lv, hv, kv, klv for lambda variable, heavy variable, kappa variable
+                                and combined light chain (kappa + lambda) respectively
         :param seqtype: string
                                 accepted values are dna or protein
         :param domainSystem: string

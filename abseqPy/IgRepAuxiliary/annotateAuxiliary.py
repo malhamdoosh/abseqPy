@@ -64,7 +64,6 @@ def annotateIGSeqRead(fastaFile, chain, db, noWorkers, seqsPerFile,
             cloneAnnot, filteredIDs = analyzeSmallFile(newFastFile, chain, db,
                                                        seqType, noWorkers, outdir,
                                                        domainSystem=domainSystem, stream=stream)
-            sys.stdout.flush()
         else:
             # split FASTA file into smaller files
             prefix, ext = os.path.splitext(os.path.basename(fastaFile))
