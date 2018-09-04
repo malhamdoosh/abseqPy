@@ -198,8 +198,10 @@ def parseCommandLineArguments(arguments=None):
                                                             " omit this option if sequences are not paired end or if"
                                                             " -f1 is a path to directory of samples.",
                           default=None)
-    optional.add_argument('-c', '--chain', default="hv", help="chain type. [default=hv]",
-                          choices=['hv', 'lv', 'kv'])
+    optional.add_argument('-c', '--chain', default="hv", help="chain type. hv, lv, and kv denotes heavy, lambda, "
+                                                              "kappa variable chains respectively. klv can be used when"
+                                                              " both kappa and lambda are mixed. [default=hv]",
+                          choices=['hv', 'lv', 'kv', 'klv'])
     optional.add_argument('-t', '--task', default=DEFAULT_TASK, help="analysis task, supported tasks: \
                                                     all, annotate, abundance, \
                                                     diversity, fastqc, productivity, primer, 5utr, rsasimple, rsa, \

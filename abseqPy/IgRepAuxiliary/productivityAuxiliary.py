@@ -129,8 +129,9 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
                 printto(stream, "\t{}: {}".format(region.upper(), str(counts)), LEVEL.INFO)
 
         # flag them if they're filtered based on FR len
+        annotationFields = getAnnotationFields(chain)
         for clone in cloneAnnotList:
-            flags['filterFRLength'] += markClones(clone, frameworkLengths, chain)
+            flags['filterFRLength'] += markClones(clone, frameworkLengths, annotationFields)
 
         filtered = len(flags['filterFRLength'])
         printto(stream, "\t{:.2%} ({}/{}) clones were marked as filtered-out using Framework region 1, 2, 3 "
@@ -168,8 +169,7 @@ def refineClonesAnnotation(outDir, sampleName, cloneAnnotOriginal, readFile, for
     return cloneAnnot, cloneSeqs
 
 
-def markClones(clone, frameworkLengths, chain):
-    annotationFields = getAnnotationFields(chain)
+def markClones(clone, frameworkLengths, annotationFields):
     id_ = []
     if clone[annotationFields.index('v-jframe')] == 'In-frame':
         if _isExpectedFRLength(annotationFields, frameworkLengths, clone):

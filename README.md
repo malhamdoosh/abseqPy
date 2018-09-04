@@ -88,7 +88,7 @@ This section demonstrates how to install `abseqPy`.
 ## Install from `pip`
 
 ```bash
-pip install abseqPy
+$ pip install abseqPy
 ```
 
 ## Install from source
