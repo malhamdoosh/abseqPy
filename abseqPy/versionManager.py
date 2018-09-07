@@ -47,7 +47,7 @@ def writeParams(args, outDir):
         out.write("Clustalo version: " + _getSoftwareVersion('clustalo') + "\n")
         out.write("Executed AbSeqPy with the following parameters:\n")
         for key, val in args.items():
-            out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, str(val)))
+            out.write("Parameter: {:17}\tValue: {:>20}\n".format(key, os.path.expandvars(str(val))))
     return os.path.basename(filename)
 
 
