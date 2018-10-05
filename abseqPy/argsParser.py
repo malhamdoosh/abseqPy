@@ -168,7 +168,21 @@ def parseArgs(arguments=None):
     args.alignlen = [250, Inf] if args.alignlen is None else extractRanges(args.alignlen)[0]
     args.bitscore = [300, Inf] if args.bitscore is None else extractRanges(args.bitscore)[0]
 
-    args.database = os.path.abspath(args.database) if args.database is not None else "$IGBLASTDB"
+    # --------------------------------------------------------------------------------------------------------
+    #                      Check that ENVs are setup properly
+    # --------------------------------------------------------------------------------------------------------
+    if args.database is not None:
+        args.database = os.path.abspath(args.database)
+    else:
+        args.database = os.getenv("IGBLASTDB")
+        if args.database is None:
+            parser.error("$IGBLASTDB environment variable is not configured "
+                         "and --database argument is not specified.\nPlease refer "
+                         "to the README file for instructions on configuring $IGBLASTDB "
+                         "or alternatively specify the --database argument.")
+    if os.getenv("IGDATA") is None:
+        parser.error("$IGDATA environment variable is not configured.\nPlease refer to "
+                     "the README file for instructions on configuring $IGDATA.")
 
     # done
     return args
