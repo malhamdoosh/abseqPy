@@ -705,7 +705,7 @@ def main():
                   "\tor 'Edit...' to append your PATH variable (remember to use ';'). Ask your local administrator\n"
                   "\tif this message is confusing to you.")
         else:
-            print("\texport PATH=\"${{PATH}}:{}\"".format(os.path.join(os.path.abspath(directory), "bin")),
+            print("\texport PATH=\"{}:${{PATH}}\"".format(os.path.join(os.path.abspath(directory), "bin")),
                   file=sys.stderr)
 
         print("", file=sys.stderr)
