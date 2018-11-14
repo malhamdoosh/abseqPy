@@ -204,7 +204,7 @@ class IgRepertoire:
         self.readFile2 = f2
         self.format = fmt if fmt is not None else detectFileFormat(self.readFile1)
         self.merger = merger
-        self.merge = 'no' if self.merger is None else 'yes'
+        self.merge = self.merger is not None
 
         self.seqsPerFile = int(10.0 ** 5 / 2)
         self.cloneAnnot = None
@@ -248,12 +248,12 @@ class IgRepertoire:
 
     def mergePairedReads(self):
         logger = logging.getLogger(self.name)
-        if self.merge != 'yes':
-            self.readFile = self.readFile1
-        else:
+        if self.merge:
             mergedFastq = mergeReads(self.readFile1, self.readFile2,
                                      self.threads, self.merger, self.hdfDir, stream=logger)
             self.readFile = mergedFastq
+        else:
+            self.readFile = self.readFile1
 
     def annotateClones(self, filterOutDir=None, inplaceProductive=False):
         """
@@ -593,6 +593,8 @@ class IgRepertoire:
             else:
                 # always take the refined dataframe, in contrast to RSA simple which takes any available one
                 self.analyzeProductivity(inplaceFiltered=True, inplaceProductive=True)
+            if self.readFile is None:
+                self.mergePairedReads()
             (rsaResults, overlapResults) = scanRestrictionSites(self.name, self.readFile, self.cloneAnnot,
                                                                 self.sitesFile, self.threads, simple=simple,
                                                                 stream=logger)
