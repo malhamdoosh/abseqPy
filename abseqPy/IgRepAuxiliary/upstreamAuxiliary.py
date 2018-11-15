@@ -173,7 +173,7 @@ def extractUpstreamSeqs(cloneAnnot, recordFile, upstream, upstreamFile, stream=N
     gc.collect()
 
 
-def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAuxDir,
+def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outHdfDir,
                         startCodon=True, type='secsig', plotDist=True, stream=None):
     """
     segregates and plots upstream file sequences. They are segregated as sequences with no start codon,
@@ -192,7 +192,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
     :param outResDir: string
                         name of result output directory
 
-    :param outAuxDir: string
+    :param outHdfDir: string
                         name of auxiliary output directory
 
     :param startCodon: bool
@@ -274,7 +274,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
                         "length ({} to {}) and startCodon={}"
                 .format(sum(ighvSignalsCounts.values()), title, expectLength[0], expectLength[1], startCodon),
                 LEVEL.INFO)
-        validSeqFile = os.path.join(outAuxDir, _VALID_SEQ_FASTA_TEMPLATE
+        validSeqFile = os.path.join(outHdfDir, _VALID_SEQ_FASTA_TEMPLATE
                                     .format(sampleName, type, *expectLength))
         SeqIO.write(flattenRecs, validSeqFile, 'fasta')
         if plotDist:
@@ -286,7 +286,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
     if sum(faultyTransCounts.values()):
         flattenRecs = (itertools.chain.from_iterable(faultyTrans.values()))
         assert len(flattenRecs) == sum(faultyTransCounts.values())
-        faultySeqFile = os.path.join(outAuxDir, _FAULTY_SEQ_FASTA_TEMPLATE
+        faultySeqFile = os.path.join(outHdfDir, _FAULTY_SEQ_FASTA_TEMPLATE
                                      .format(sampleName, type, *expectLength))
         SeqIO.write(flattenRecs, faultySeqFile, 'fasta')
         if plotDist:
@@ -305,7 +305,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
     if sum(noStartCodonCounts.values()):
         flattenRecs = list(itertools.chain.from_iterable(ighvSignalsNoATG.values()))
         assert len(flattenRecs) == sum(noStartCodonCounts.values())
-        noStartCodonFile = os.path.join(outAuxDir, _STARTCOD_SEQ_FASTA_TEMPLATE
+        noStartCodonFile = os.path.join(outHdfDir, _STARTCOD_SEQ_FASTA_TEMPLATE
                                         .format(sampleName, type, *expectLength))
         SeqIO.write(flattenRecs, noStartCodonFile, 'fasta')
         if plotDist:
@@ -333,7 +333,7 @@ def collectUpstreamSeqs(upstreamFile, sampleName, expectLength, outResDir, outAu
 
 # generateMotifs will be skipped silently without an exception if TAMO is not found
 @requires("TAMO", fatal=False)
-def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLength, level,
+def findUpstreamMotifs(upstreamFile, sampleName, outHdfDir, outResDir, expectLength, level,
                        startCodon=True, type='secsig', clusterMotifs=False, threads=2, stream=None):
     """
     finds and visualizes motifs from the sequences provided in upstreamFile
@@ -344,7 +344,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
     :param sampleName: string
                     name to refer the sample as
 
-    :param outAuxDir: string
+    :param outHdfDir: string
                     path to aux directory
 
     :param outResDir: string
@@ -395,9 +395,9 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
     # only analyze motifs of secretion signals that have exactly length == expectLength[0] == expectLength[1]
     EXACT_LENGTH = expectLength[0] == expectLength[1]
 
-    validSeqFile = os.path.join(outAuxDir, _VALID_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
-    faultySeqFile = os.path.join(outAuxDir, _FAULTY_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
-    noStartCodonFile = os.path.join(outAuxDir, _STARTCOD_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+    validSeqFile = os.path.join(outHdfDir, _VALID_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+    faultySeqFile = os.path.join(outHdfDir, _FAULTY_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
+    noStartCodonFile = os.path.join(outHdfDir, _STARTCOD_SEQ_FASTA_TEMPLATE.format(*OUTPUT_FILE_PACKET))
 
     allFiles = [validSeqFile, faultySeqFile, noStartCodonFile]
 
@@ -412,7 +412,7 @@ def findUpstreamMotifs(upstreamFile, sampleName, outAuxDir, outResDir, expectLen
     else:
         printto(stream, "Sequences are being analyzed ... ")
         ighvSignals, faultySeq, noStartCodonSeq = collectUpstreamSeqs(upstreamFile, sampleName, expectLength,
-                                                                      outResDir, outAuxDir, startCodon, type,
+                                                                      outResDir, outHdfDir, startCodon, type,
                                                                       stream=stream)
 
     ighvSignals = compressor(ighvSignals)

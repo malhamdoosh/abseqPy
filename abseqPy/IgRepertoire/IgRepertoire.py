@@ -273,14 +273,14 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, "annot")
-        outAuxDir = os.path.join(self.hdfDir, "annot")
+        outHdfDir = os.path.join(self.hdfDir, "annot")
 
         if not os.path.isdir(outResDir):
             os.makedirs(outResDir)
-        if not os.path.isdir(outAuxDir):
-            os.makedirs(outAuxDir)
+        if not os.path.isdir(outHdfDir):
+            os.makedirs(outHdfDir)
 
-        cloneAnnotFile = os.path.join(outAuxDir, self.name + "_clones_annot.h5")
+        cloneAnnotFile = os.path.join(outHdfDir, self.name + "_clones_annot.h5")
 
         if self.readFile is None:
             self.mergePairedReads()
@@ -317,14 +317,14 @@ class IgRepertoire:
 
             # Estimate the IGV family abundance for each library
             (self.cloneAnnot, filteredIDs) = annotateIGSeqRead(readFasta, self.chain, self.db, self.threads,
-                                                               self.seqsPerFile, self.seqType, outdir=outAuxDir,
+                                                               self.seqsPerFile, self.seqType, outdir=outHdfDir,
                                                                domainSystem=self.domainSystem,
                                                                stream=logger)
             sys.stdout.flush()
             gc.collect()
 
             if len(filteredIDs):
-                writeListToFile(filteredIDs, os.path.join(outAuxDir, self.name + "_unmapped_clones.txt"))
+                writeListToFile(filteredIDs, os.path.join(outHdfDir, self.name + "_unmapped_clones.txt"))
             # export the CDR/FR annotation to a file
             printto(logger, "\tClones annotation file is being written to " +
                     os.path.basename(cloneAnnotFile))
@@ -338,7 +338,7 @@ class IgRepertoire:
         printto(logger, "Number of clones that are annotated is {0:,}".format(
             int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
-        filterOutDir = outAuxDir if filterOutDir is None else filterOutDir
+        filterOutDir = outHdfDir if filterOutDir is None else filterOutDir
         # Filter clones based on bitscore, alignLen, qStart, and sStart
         selectedRows = self._cloneAnnotFilteredRows(logger)
         filteredIDs = self.cloneAnnot[logical_not(selectedRows)]
@@ -392,13 +392,13 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, "abundance")
-        outAuxDir = os.path.join(self.hdfDir, "abundance")
+        outHdfDir = os.path.join(self.hdfDir, "abundance")
 
         createIfNot(outResDir)
-        createIfNot(outAuxDir)
+        createIfNot(outHdfDir)
 
         if self.cloneAnnot is None:
-            self.annotateClones(outAuxDir)
+            self.annotateClones(outHdfDir)
 
         writeAbundanceToFiles(self.cloneAnnot, self.name, outResDir, self.chain, stream=logger)
         gc.collect()
@@ -421,17 +421,17 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, "productivity")
-        outAuxDir = os.path.join(self.hdfDir, "productivity")
+        outHdfDir = os.path.join(self.hdfDir, "productivity")
 
         createIfNot(outResDir)
-        createIfNot(outAuxDir)
+        createIfNot(outHdfDir)
 
-        refinedCloneAnnotFile = os.path.join(outAuxDir, self.name + "_refined_clones_annot.h5")
-        cloneSeqFile = os.path.join(outAuxDir, self.name + "_clones_seq.h5")
+        refinedCloneAnnotFile = os.path.join(outHdfDir, self.name + "_refined_clones_annot.h5")
+        cloneSeqFile = os.path.join(outHdfDir, self.name + "_clones_seq.h5")
 
         if not os.path.exists(refinedCloneAnnotFile) or not os.path.exists(cloneSeqFile):
             if self.cloneAnnot is None:
-                self.annotateClones(outAuxDir)
+                self.annotateClones(outHdfDir)
             self._reloadAnnot()
             #             if self.trimmed:
             #                 self.trim3End = 0
@@ -440,7 +440,7 @@ class IgRepertoire:
             #                 print("WARNING: if trimming was applied in the 'annotate' step"
             #                       ", you may not need trimming")
             # print(sys.getsizeof(self.cloneAnnot) / (1024.**3)) # in GB
-            (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outAuxDir, self.name,
+            (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outHdfDir, self.name,
                                                                        self.cloneAnnot, self.readFile,
                                                                        self.format, self.actualQstart,
                                                                        self.chain, self.fr4cut,
@@ -516,7 +516,7 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, "diversity")
-        outAuxDir = os.path.join(self.hdfDir, "diversity")
+        outHdfDir = os.path.join(self.hdfDir, "diversity")
 
         if self.cloneAnnot is None or self.cloneSeqs is None:
             # we analyze productive clones ONLY
@@ -528,7 +528,7 @@ class IgRepertoire:
             return
 
         createIfNot(outResDir)
-        createIfNot(outAuxDir)
+        createIfNot(outHdfDir)
 
         gc.collect()
 
@@ -553,13 +553,13 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
         ssimple = 'simple' if simple else 'detailed'
         outResDir = os.path.join(self.auxDir, "restriction_sites")
-        outAuxDir = os.path.join(self.hdfDir, "restriction_sites")
+        outHdfDir = os.path.join(self.hdfDir, "restriction_sites")
 
         if not os.path.isdir(outResDir):
             os.makedirs(outResDir)
 
-        if not os.path.isdir(outAuxDir):
-            os.makedirs(outAuxDir)
+        if not os.path.isdir(outHdfDir):
+            os.makedirs(outHdfDir)
         else:
             # RSA uses filtered dataframes, and saves its data files with filtered results. If the user has changed
             # any of their filtering criteria, they should remove or rename the directory before regenerating the files
@@ -589,7 +589,7 @@ class IgRepertoire:
                             "productive reads only", LEVEL.INFO)
             if simple:
                 # take the best available cloneAnnot dataframe, if available, otherwise just use unrefined cloneAnnot
-                self._getBestCloneAnnot(outAuxDir, inplaceFiltered=True, inplaceProductive=True, stream=logger)
+                self._getBestCloneAnnot(outHdfDir, inplaceFiltered=True, inplaceProductive=True, stream=logger)
             else:
                 # always take the refined dataframe, in contrast to RSA simple which takes any available one
                 self.analyzeProductivity(inplaceFiltered=True, inplaceProductive=True)
@@ -613,13 +613,13 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, 'secretion')
-        outAuxDir = os.path.join(self.hdfDir, 'secretion')
+        outHdfDir = os.path.join(self.hdfDir, 'secretion')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
 
-        if not os.path.exists(outAuxDir):
-            os.makedirs(outAuxDir)
+        if not os.path.exists(outHdfDir):
+            os.makedirs(outHdfDir)
         else:
             # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'secretion' directory if you've changed the filtering criteria.",
@@ -627,11 +627,11 @@ class IgRepertoire:
 
         # need self.cloneAnnot dataframe for further analysis
         if self.cloneAnnot is None:
-            self.annotateClones(outAuxDir)
+            self.annotateClones(outHdfDir)
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"
+        upstreamFile = os.path.join(outHdfDir, self.name + "_secsig_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
@@ -656,7 +656,7 @@ class IgRepertoire:
             #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
             printto(logger, "\tAnalyzing intact secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir,
+                findUpstreamMotifs(upstreamFile, self.name, outHdfDir, outResDir,
                                    [expectLength, expectLength], level=level, startCodon=True,
                                    threads=self.threads, stream=logger)
 
@@ -665,7 +665,7 @@ class IgRepertoire:
             # ----------------------------------------------------------------
             printto(logger, "\tAnalyzing trimmed secretion signals", LEVEL.DEBUG)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [1, expectLength - 1], level=level,
+                findUpstreamMotifs(upstreamFile, self.name, outHdfDir, outResDir, [1, expectLength - 1], level=level,
                                    startCodon=True, threads=self.threads, stream=logger)
 
         paramFile = writeParams(self.args, outResDir)
@@ -675,13 +675,13 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, 'utr5')
-        outAuxDir = os.path.join(self.hdfDir, 'utr5')
+        outHdfDir = os.path.join(self.hdfDir, 'utr5')
 
         if not os.path.exists(outResDir):
             os.makedirs(outResDir)
 
-        if not os.path.exists(outAuxDir):
-            os.makedirs(outAuxDir)
+        if not os.path.exists(outHdfDir):
+            os.makedirs(outHdfDir)
         else:
             # abseq will load the files in this directory if they are found, to reduce time recomputing them
             printto(logger, "WARNING: Remove 'utr5' directory if you've changed the filtering criteria",
@@ -689,11 +689,11 @@ class IgRepertoire:
 
         # requires self.cloneAnnot dataframe for further analysis
         if self.cloneAnnot is None:
-            self.annotateClones(outAuxDir)
+            self.annotateClones(outHdfDir)
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
-        upstreamFile = os.path.join(outAuxDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"
+        upstreamFile = os.path.join(outHdfDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"
                                     .format(self.upstream[0], self.upstream[1]))
 
         if not os.path.exists(upstreamFile):
@@ -714,7 +714,7 @@ class IgRepertoire:
             # ----------------------------------------------------------------
             #  this means expectLength[0] == expectLength[1] (sequences with exactly expectLength in length only)
             for level in ['variant', 'gene', 'family']:
-                findUpstreamMotifs(upstreamFile, self.name, outAuxDir, outResDir, [expectLength, expectLength],
+                findUpstreamMotifs(upstreamFile, self.name, outHdfDir, outResDir, [expectLength, expectLength],
                                    level=level, startCodon=True, type='5utr', clusterMotifs=True,
                                    threads=self.threads, stream=logger)
 
@@ -725,19 +725,19 @@ class IgRepertoire:
         logger = logging.getLogger(self.name)
 
         outResDir = os.path.join(self.auxDir, 'primer_specificity')
-        outAuxDir = os.path.join(self.hdfDir, 'primer_specificity')
+        outHdfDir = os.path.join(self.hdfDir, 'primer_specificity')
 
         createIfNot(outResDir)
-        createIfNot(outAuxDir)
+        createIfNot(outHdfDir)
 
-        primerAnnotFile = os.path.join(outAuxDir, self.name + "_primer_annot.h5")
+        primerAnnotFile = os.path.join(outHdfDir, self.name + "_primer_annot.h5")
 
         # if we can't find hdf file, create it, else read it
         if not os.path.exists(primerAnnotFile):
             # Load self.cloneAnnot for further analysis.
             # skip checking for existence of dataframes, analyzeProd/Abun will do it for us
             if self.cloneAnnot is None:
-                self.annotateClones(outAuxDir)
+                self.annotateClones(outHdfDir)
 
             # addPrimerData on an unfiltered self.cloneAnnot
             self._reloadAnnot()
@@ -829,7 +829,7 @@ class IgRepertoire:
         )
         return selectedRows
 
-    def _getBestCloneAnnot(self, outAuxDir, inplaceFiltered, inplaceProductive, stream=None):
+    def _getBestCloneAnnot(self, outHdfDir, inplaceFiltered, inplaceProductive, stream=None):
         """
         populate self.cloneAnnot by the following order:
             1. if the refined dataframe exists, load it into self.cloneAnnot
@@ -839,7 +839,7 @@ class IgRepertoire:
 
         note that self.cloneAnnot will be filtered inplace if any of the inplace* arguments are true, to save space
 
-        :param outAuxDir: string.
+        :param outHdfDir: string.
                 Will dump a filtered ids text file here if it's required to annotate clones
 
         :param inplaceFiltered: bool
@@ -869,7 +869,7 @@ class IgRepertoire:
             printto(stream, "\t\tFR1, FR2, FR3, FR4 consensus lengths: {}".format(str(inplaceFiltered)))
             printto(stream, "\t\tUnrefined productivity: {}".format(str(inplaceProductive)))
             # take the unrefined "productive" clones, since we do not have refined dataframe
-            self.annotateClones(outAuxDir, inplaceProductive=inplaceProductive)
+            self.annotateClones(outHdfDir, inplaceProductive=inplaceProductive)
 
     def _reloadAnnot(self):
         """
