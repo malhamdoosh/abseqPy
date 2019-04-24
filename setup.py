@@ -34,7 +34,7 @@ for pack in setup_requires:
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
 
 setup(name="abseqPy",
-      version="0.99.0",
+      version="0.99.1",
       description="Quality control pipeline for antibody libraries",
       long_description=readme(),
       long_description_content_type="text/markdown",
