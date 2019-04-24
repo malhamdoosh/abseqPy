@@ -320,11 +320,13 @@ def generateSeqMotifs(flatClonoTypes, name, outDir, threads=2, stream=None):
         # generate  logos after alignment
         filename = os.path.join(motifsFolder, name + ("_{}_motif_aligned_logo.png".format(region)))
         alphabet = createAlphabet(align=True, protein=True, extendAlphabet=True)
-        if hasLargeMem():
-            argBuffer.append((seqs, region, alphabet, filename, True, False, True, weights, outDir, threads))
-        else:
-            generateMotif(seqs, region, alphabet, filename,  align=True,
-                          protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        # if hasLargeMem():
+        #     argBuffer.append((seqs, region, alphabet, filename, True, False, True, weights, outDir, 1))
+        # else:
+        #     generateMotif(seqs, region, alphabet, filename,  align=True,
+        #                   protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
+        generateMotif(seqs, region, alphabet, filename,  align=True,
+                      protein=True, weights=weights, outDir=outDir, threads=threads, stream=stream)
 
     if len(argBuffer):
         printto(stream, "Asynchronously generating motifs from buffer ...")

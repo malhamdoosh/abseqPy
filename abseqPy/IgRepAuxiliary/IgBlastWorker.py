@@ -113,7 +113,7 @@ def extractCDRInfo(blastOutput, chain, stream=None):
 
                 # XXX: the or len(line) == 8 may happen to light chains too, when there is
                 # a rogue D-gene that was a hit. It then follows heavy chain's indexing
-                if (chain == 'hv') or len(line) == 8:
+                if len(line) == 8:
                     cloneRecord['stopcodon'] = line[4]
                     cloneRecord['v-jframe'] = line[5]
                     cloneRecord['vgene'] = line[0].split(',')[0]
