@@ -338,6 +338,9 @@ class IgRepertoire:
         printto(logger, "Number of clones that are annotated is {0:,}".format(
             int(self.cloneAnnot.shape[0])), LEVEL.INFO)
 
+        if self.cloneAnnot.shape[0] <= 0:
+            return
+
         filterOutDir = outHdfDir if filterOutDir is None else filterOutDir
         # Filter clones based on bitscore, alignLen, qStart, and sStart
         selectedRows = self._cloneAnnotFilteredRows(logger)
@@ -400,10 +403,13 @@ class IgRepertoire:
         if self.cloneAnnot is None:
             self.annotateClones(outHdfDir)
 
-        writeAbundanceToFiles(self.cloneAnnot, self.name, outResDir, self.chain, stream=logger)
-        gc.collect()
-        paramFile = writeParams(self.args, outResDir)
-        printto(logger, "The analysis parameters have been written to " + paramFile)
+        if self.cloneAnnot.shape[0] > 0:
+            writeAbundanceToFiles(self.cloneAnnot, self.name, outResDir, self.chain, stream=logger)
+            gc.collect()
+            paramFile = writeParams(self.args, outResDir)
+            printto(logger, "The analysis parameters have been written to " + paramFile)
+        else:
+            printto(logger, "Skipping abundance analysis, no annotated sequences found.", level=LEVEL.WARN)
 
     def analyzeProductivity(self, inplaceProductive=True, inplaceFiltered=True):
         """
@@ -432,36 +438,40 @@ class IgRepertoire:
         if not os.path.exists(refinedCloneAnnotFile) or not os.path.exists(cloneSeqFile):
             if self.cloneAnnot is None:
                 self.annotateClones(outHdfDir)
-            self._reloadAnnot()
-            #             if self.trimmed:
-            #                 self.trim3End = 0
-            #                 self.trim5End = 0
-            #             elif self.trim3End > 0 or self.trim5End > 0:
-            #                 print("WARNING: if trimming was applied in the 'annotate' step"
-            #                       ", you may not need trimming")
-            # print(sys.getsizeof(self.cloneAnnot) / (1024.**3)) # in GB
-            (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outHdfDir, self.name,
-                                                                       self.cloneAnnot, self.readFile,
-                                                                       self.format, self.actualQstart,
-                                                                       self.chain, self.fr4cut,
-                                                                       self.trim5End, self.trim3End,
-                                                                       self.seqsPerFile, self.threads,
-                                                                       stream=logger)
-            gc.collect()
-            # if generateReport:
-            # export the CDR/FR annotation to a file                
-            printto(logger, "The refined clone annotation file is being written to "
-                    + os.path.basename(refinedCloneAnnotFile))
-            self.cloneAnnot.to_hdf(refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', complib='blosc')
+            if self.cloneAnnot.shape[0] > 0:
+                self._reloadAnnot()
+                #             if self.trimmed:
+                #                 self.trim3End = 0
+                #                 self.trim5End = 0
+                #             elif self.trim3End > 0 or self.trim5End > 0:
+                #                 print("WARNING: if trimming was applied in the 'annotate' step"
+                #                       ", you may not need trimming")
+                # print(sys.getsizeof(self.cloneAnnot) / (1024.**3)) # in GB
+                (self.cloneAnnot, self.cloneSeqs) = refineClonesAnnotation(outHdfDir, self.name,
+                                                                           self.cloneAnnot, self.readFile,
+                                                                           self.format, self.actualQstart,
+                                                                           self.chain, self.fr4cut,
+                                                                           self.trim5End, self.trim3End,
+                                                                           self.seqsPerFile, self.threads,
+                                                                           stream=logger)
+                gc.collect()
+                # if generateReport:
+                # export the CDR/FR annotation to a file
+                printto(logger, "The refined clone annotation file is being written to "
+                        + os.path.basename(refinedCloneAnnotFile))
+                self.cloneAnnot.to_hdf(refinedCloneAnnotFile, "refinedCloneAnnot", mode='w', complib='blosc')
 
-            printto(logger, "The clone protein sequences are being written to " + os.path.basename(cloneSeqFile))
-            self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w', complib='blosc')
+                printto(logger, "The clone protein sequences are being written to " + os.path.basename(cloneSeqFile))
+                self.cloneSeqs.to_hdf(cloneSeqFile, "cloneSequences", mode='w', complib='blosc')
 
-            paramFile = writeParams(self.args, outResDir)
-            printto(logger, "The analysis parameters have been written to " + paramFile)
-            # although self.cloneAnnot is already filtered,
-            # reapply filtering because vqstart might've changed post refinement
-            printto(logger, "Applying filtering criteria to refined datafames")
+                paramFile = writeParams(self.args, outResDir)
+                printto(logger, "The analysis parameters have been written to " + paramFile)
+                # although self.cloneAnnot is already filtered,
+                # reapply filtering because vqstart might've changed post refinement
+                printto(logger, "Applying filtering criteria to refined datafames")
+            else:
+                printto(logger, "Skipping productivity analysis, no annotated sequences found.", level=LEVEL.WARN)
+                return
         else:
             printto(logger, "The refined clone annotation files were found and being loaded ... " +
                     os.path.basename(refinedCloneAnnotFile))
@@ -476,41 +486,42 @@ class IgRepertoire:
             printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
 
         before = self.cloneAnnot.shape[0]
-        selectedRows = self._cloneAnnotFilteredRows(logger)
-        self.cloneAnnot = self.cloneAnnot[selectedRows]
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
-        printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
-                .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
-
-        # update number of filtered reads "POST REFINEMENT"
-        writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
-
-        # display statistics
-        printto(logger, "Productivity report is being generated ... ")
-        generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outResDir, stream=logger)
-
-        before = int(self.cloneAnnot.shape[0])
-        inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
-
-        # do not filter out "filtered" yet! - that has nothing to do with productivity
-        if inplaceProductive:
-            cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+        if before > 0:
+            selectedRows = self._cloneAnnotFilteredRows(logger)
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
             self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
-        else:
-            cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
-        printto(logger, "Percentage of productive clones {:.2%} ({:,}/{:,})".format(
-            0 if before == 0 else cloneAnnot.shape[0] / before,
-            int(cloneAnnot.shape[0]),
-            int(before)
-        ), LEVEL.INFO)
+            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
-        # write number of productive reads
-        writeSummary(self._summaryFile, "ProductiveReads", cloneAnnot.shape[0])
+            # update number of filtered reads "POST REFINEMENT"
+            writeSummary(self._summaryFile, "FilteredReads", self.cloneAnnot.shape[0])
 
-        # filter out "filtered" now
-        if inplaceFiltered:
-            self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['filtered'] == 'No']
-            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+            # display statistics
+            printto(logger, "Productivity report is being generated ... ")
+            generateProductivityReport(self.cloneAnnot, self.cloneSeqs, self.name, self.chain, outResDir, stream=logger)
+
+            before = int(self.cloneAnnot.shape[0])
+            inFrame = self.cloneAnnot[self.cloneAnnot['v-jframe'] == 'In-frame']
+
+            # do not filter out "filtered" yet! - that has nothing to do with productivity
+            if inplaceProductive:
+                cloneAnnot = self.cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+                self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+            else:
+                cloneAnnot = inFrame[inFrame['stopcodon'] == 'No']
+            printto(logger, "Percentage of productive clones {:.2%} ({:,}/{:,})".format(
+                0 if before == 0 else cloneAnnot.shape[0] / before,
+                int(cloneAnnot.shape[0]),
+                int(before)
+            ), LEVEL.INFO)
+
+            # write number of productive reads
+            writeSummary(self._summaryFile, "ProductiveReads", cloneAnnot.shape[0])
+
+            # filter out "filtered" now
+            if inplaceFiltered:
+                self.cloneAnnot = self.cloneAnnot[self.cloneAnnot['filtered'] == 'No']
+                self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
 
     def analyzeDiversity(self):
         logger = logging.getLogger(self.name)
@@ -522,9 +533,9 @@ class IgRepertoire:
             # we analyze productive clones ONLY
             self.analyzeProductivity(inplaceProductive=True, inplaceFiltered=True)
 
-        if len(self.cloneAnnot) == 0:
-            printto(logger, "WARNING: There are no productive sequences found (post-refinement) in {},"
-                            " skipping diversity analysis.".format(self.name), LEVEL.WARN)
+        if self.cloneAnnot.shape[0] <= 0:
+            printto(logger, "There are no productive sequences found (post-refinement) in {},".format(self.name) +
+                    " skipping diversity analysis.", LEVEL.WARN)
             return
 
         createIfNot(outResDir)
@@ -595,13 +606,17 @@ class IgRepertoire:
                 self.analyzeProductivity(inplaceFiltered=True, inplaceProductive=True)
             if self.readFile is None:
                 self.mergePairedReads()
-            (rsaResults, overlapResults) = scanRestrictionSites(self.name, self.readFile, self.cloneAnnot,
-                                                                self.sitesFile, self.threads, simple=simple,
-                                                                stream=logger)
-            rsaResults.to_csv(siteHitsFile, header=True, index=False)
-            printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
-            if "order2" in overlapResults:
-                overlapResults["order2"].to_csv(overlap2File, header=True, index=True)
+            if self.cloneAnnot.shape[0] > 0:
+                (rsaResults, overlapResults) = scanRestrictionSites(self.name, self.readFile, self.cloneAnnot,
+                                                                    self.sitesFile, self.threads, simple=simple,
+                                                                    stream=logger)
+                rsaResults.to_csv(siteHitsFile, header=True, index=False)
+                printto(logger, "RSA results were written to " + os.path.basename(siteHitsFile))
+                if "order2" in overlapResults:
+                    overlapResults["order2"].to_csv(overlap2File, header=True, index=True)
+            else:
+                printto(logger, "Skipping RSS analysis, no annotated sequences found.", level=LEVEL.WARN)
+                return
         # # print out the results        
         generateOverlapFigures(overlapResults,
                                rsaResults.loc[rsaResults.shape[0] - 1, "No.Molecules"],
@@ -628,6 +643,10 @@ class IgRepertoire:
         # need self.cloneAnnot dataframe for further analysis
         if self.cloneAnnot is None:
             self.annotateClones(outHdfDir)
+
+        if self.cloneAnnot.shape[0] <= 0:
+            printto(logger, "Skipping secretion signal analysis, no annotated sequences found.", level=LEVEL.WARN)
+            return
 
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
@@ -691,6 +710,10 @@ class IgRepertoire:
         if self.cloneAnnot is None:
             self.annotateClones(outHdfDir)
 
+        if self.cloneAnnot.shape[0] <= 0:
+            printto(logger, "Skipping 5UTR analysis, no annotated sequences found.", level=LEVEL.WARN)
+            return
+
         printto(logger, "The diversity of the upstream of IGV genes is being analyzed ... ")
 
         upstreamFile = os.path.join(outHdfDir, self.name + "_5utr_{:.0f}_{:.0f}.fasta"
@@ -739,6 +762,10 @@ class IgRepertoire:
             if self.cloneAnnot is None:
                 self.annotateClones(outHdfDir)
 
+            if self.cloneAnnot.shape[0] <= 0:
+                printto(logger, "Skipping 5UTR analysis, no annotated sequences found.", level=LEVEL.WARN)
+                return
+
             # addPrimerData on an unfiltered self.cloneAnnot
             self._reloadAnnot()
 
@@ -761,18 +788,19 @@ class IgRepertoire:
             printto(logger, "\tApplying filtering criteria to loaded HDF5 dataframes")
 
         before = self.cloneAnnot.shape[0]
-        selectedRows = self._cloneAnnotFilteredRows(logger)
-        self.cloneAnnot = self.cloneAnnot[selectedRows]
-        self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
-        printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
-                .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
+        if before > 0:
+            selectedRows = self._cloneAnnotFilteredRows(logger)
+            self.cloneAnnot = self.cloneAnnot[selectedRows]
+            self.cloneSeqs = self.cloneSeqs.loc[self.cloneAnnot.index]
+            printto(logger, "\tPercentage of retained clones is {:.2%} ({:,}/{:,})"
+                    .format(self.cloneAnnot.shape[0] / before, self.cloneAnnot.shape[0], before))
 
-        # TODO: Fri Feb 23 17:13:09 AEDT 2018
-        # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
-        generatePrimerPlots(self.cloneAnnot, outResDir, self.name, self.end5, self.end3, stream=logger)
+            # TODO: Fri Feb 23 17:13:09 AEDT 2018
+            # TODO: check findBestMatchAlignment of primer specificity best match, see if align.localxx is used correctly!
+            generatePrimerPlots(self.cloneAnnot, outResDir, self.name, self.end5, self.end3, stream=logger)
 
-        paramFile = writeParams(self.args, outResDir)
-        printto(logger, "The analysis parameters have been written to " + paramFile)
+            paramFile = writeParams(self.args, outResDir)
+            printto(logger, "The analysis parameters have been written to " + paramFile)
 
     def analyzeSeqLen(self, klass=False):
         """
