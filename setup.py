@@ -28,13 +28,13 @@ def windows_filter(package):
 
 
 # weird bug where setup_requires numpy is not obeyed
-setup_requires = ['numpy>=1.11.3']
+setup_requires = ['numpy==1.15.2']
 for pack in setup_requires:
     # pip.main(['install', pack]) no longer supported in pip >= 10
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', pack])
 
 setup(name="abseqPy",
-      version="0.99.0",
+      version="0.99.4",
       description="Quality control pipeline for antibody libraries",
       long_description=readme(),
       long_description_content_type="text/markdown",
@@ -45,12 +45,12 @@ setup(name="abseqPy",
       maintainer_email="jiahfong@gmail.com",
       # pandas requires numpy installed, it's a known bug in setuptools - put in both setup and install requires
       # UPDATE Wed Feb 21 13:15:43 AEDT 2018 - moved into pre-installation stage
-      setup_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1, <3.0',
-                      'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml'] +
-                     ['weblogo>=3.4'] if platform.system() != 'Windows' else [],
-      install_requires=['numpy>=1.11.3', 'pandas>=0.20.1', 'biopython>=1.66', 'matplotlib>=1.5.1, <3.0',
-                        'tables>=3.2.3.1', 'psutil', 'matplotlib-venn', 'pyyaml', 'scipy>=0.19.0'] +
-                       ['weblogo>=3.4'] if platform.system() != 'Windows' else [],
+      setup_requires=['numpy==1.15.2', 'pandas==0.23.4', 'biopython==1.72', 'matplotlib==2.2.3',
+                      'tables==3.4.4', 'psutil', 'matplotlib-venn==0.11.5', 'pyyaml', 'scipy==1.1.0'] +
+                     ['weblogo==3.6.0'] if platform.system() != 'Windows' else [],
+      install_requires=['numpy==1.15.2', 'pandas==0.23.4', 'biopython==1.72', 'matplotlib==2.2.3',
+                        'tables==3.4.4', 'psutil', 'matplotlib-venn==0.11.5', 'pyyaml', 'scipy==1.1.0'] +
+                       ['weblogo==3.6.0'] if platform.system() != 'Windows' else [],
       packages=filter(windows_filter, find_packages()),
       ext_modules=([
                        Extension('TAMO.MD._MDsupport',
